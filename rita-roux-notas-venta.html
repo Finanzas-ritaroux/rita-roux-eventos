@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rita Roux Producciones · Notas de Venta</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<script src="gsheets.js"></script>
 <style>
   :root {
     --rojo: #CC1F1F;
@@ -496,24 +496,11 @@
 
 <!-- Google Auth Bar -->
 <div id="google-auth-bar">
-  <span id="auth-status" class="auth-status">⚪ No conectado a Google Drive</span>
-  <button class="btn-auth" onclick="handleAuthClick()">
+  <span id="auth-status" class="auth-status">⚪ No conectado a Google</span>
+  <button class="btn-auth" onclick="gsAuth()">
     <svg viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
     Conectar Google Drive
   </button>
-  <span id="user-info" style="font-size:12px; color: #2E7D32;"></span>
-  <div style="width:1px; height:24px; background:var(--gris-medio); margin:0 4px;"></div>
-  <button class="btn-auth" onclick="seleccionarCarpetaLocal()" id="btn-carpeta">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
-    Seleccionar carpeta de destino
-  </button>
-  <span id="carpeta-status" style="font-size:12px; color: var(--gris-texto);"></span>
-  <div style="width:1px; height:24px; background:var(--gris-medio); margin:0 4px;"></div>
-  <button class="btn-auth" onclick="seleccionarPresupuestosFolder()" id="btn-presupuestos">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-    Carpeta Presupuestos
-  </button>
-  <span id="presupuestos-status" style="font-size:12px; color: var(--gris-texto);"></span>
   <div style="width:1px; height:24px; background:var(--gris-medio); margin:0 4px;"></div>
   <button class="btn-auth" onclick="window.open('seguimiento-eventos.html','_blank')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
@@ -526,47 +513,30 @@
   <!-- STEPS -->
   <div class="steps">
     <div class="step active" id="step1-ind">
-      <div class="step-num">1</div> Subir Cotización
+      <div class="step-num">1</div> Seleccionar Presupuesto
     </div>
     <span class="step-sep">›</span>
     <div class="step" id="step2-ind">
-      <div class="step-num">2</div> Revisar Datos
+      <div class="step-num">2</div> Completar Datos
     </div>
     <span class="step-sep">›</span>
     <div class="step" id="step3-ind">
-      <div class="step-num">3</div> Generar Nota
+      <div class="step-num">3</div> Nota Generada
     </div>
   </div>
 
-  <!-- STEP 1: UPLOAD -->
+  <!-- STEP 1: SELECTOR DE PRESUPUESTO -->
   <div id="step1">
     <div class="card">
-      <div class="card-title">Subir Excel de Cotización Aprobada</div>
-      <div class="upload-zone" id="dropzone"
-           ondragover="event.preventDefault(); this.classList.add('dragover')"
-           ondragleave="this.classList.remove('dragover')"
-           ondrop="handleDrop(event)">
-        <input type="file" accept=".xlsx,.xls" onchange="handleFile(this.files[0])">
-        <span class="upload-icon">📄</span>
-        <h3>Arrastra el archivo aquí o haz clic para buscar</h3>
-        <p>Archivos .xlsx o .xls · Plantilla estándar Rita Roux</p>
+      <div class="card-title">Seleccionar Presupuesto Aprobado</div>
+      <div id="presupuestos-list">
+        <div class="empty-state">Conecta Google para ver los presupuestos disponibles.</div>
       </div>
-
-      <div class="or-divider">o</div>
-
-      <div class="paste-zone" id="paste-zone">
-        <p><strong>Copia las celdas en Excel</strong> (Ctrl+A o selección) y pégalas aquí con Ctrl+V</p>
-        <textarea
-          class="paste-textarea"
-          id="paste-textarea"
-          placeholder="Ctrl+V aquí para pegar las celdas copiadas desde Excel..."
-          oninput="handlePasteInput(this)"
-          onpaste="handlePasteEvent(event)"
-        ></textarea>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--gris-medio);display:flex;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="crearSinPresupuesto()">Crear sin presupuesto →</button>
       </div>
     </div>
 
-    <!-- HISTORICO -->
     <div class="card">
       <div class="card-title">Historial de Notas de Venta</div>
       <div id="historico-container">
@@ -588,35 +558,26 @@
         </div>
       </div>
       <div class="emisor-data">
-        <div class="emisor-field">
-          <span class="emisor-field-label">RUT</span>
-          <span class="emisor-field-value">76.208.211-K</span>
-        </div>
-        <div class="emisor-field">
-          <span class="emisor-field-label">Dirección</span>
-          <span class="emisor-field-value">Mac Iver 484, Oficina 105</span>
-        </div>
-        <div class="emisor-field">
-          <span class="emisor-field-label">Email</span>
-          <span class="emisor-field-value">finanzas@ritaroux.cl</span>
-        </div>
-        <div class="emisor-field">
-          <span class="emisor-field-label">Banco</span>
-          <span class="emisor-field-value">Santander · Cta. 90557599</span>
-        </div>
+        <div class="emisor-field"><span class="emisor-field-label">RUT</span><span class="emisor-field-value">76.208.211-K</span></div>
+        <div class="emisor-field"><span class="emisor-field-label">Dirección</span><span class="emisor-field-value">Mac Iver 484, Oficina 105</span></div>
+        <div class="emisor-field"><span class="emisor-field-label">Email</span><span class="emisor-field-value">finanzas@ritaroux.cl</span></div>
+        <div class="emisor-field"><span class="emisor-field-label">Banco</span><span class="emisor-field-value">Santander · Cta. 90557599</span></div>
       </div>
     </div>
 
     <div class="card">
       <div class="client-box-header">
         <div>
-          <div class="client-box-title">Empresa Receptora · Datos de Facturación</div>
-          <div class="client-box-sub">Datos del cliente para emisión de factura</div>
+          <div class="client-box-title">Datos Nota de Venta</div>
         </div>
         <div style="display:flex;gap:12px;">
           <div class="form-group" style="margin:0">
             <label>Nº Nota de Venta</label>
             <input type="text" id="f-nv" readonly style="background:#f9f9f9;font-weight:700;color:var(--rojo);width:160px;">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Nº Cotización</label>
+            <input type="text" id="f-nv-cot" readonly style="background:#f9f9f9;color:var(--gris-texto);width:140px;">
           </div>
           <div class="form-group" style="margin:0">
             <label>Fecha de Emisión</label>
@@ -625,39 +586,73 @@
         </div>
       </div>
 
-      <div style="background:#f9f9f9;border:1px solid var(--gris-medio);padding:18px 20px;margin-bottom:20px;">
-        <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gris-texto);margin-bottom:14px;">Datos de Facturación</div>
+      <!-- SECCIÓN 1: DATOS DEL CLIENTE -->
+      <div style="background:#F0F4FF;border:1px solid #C5D5F5;padding:18px 20px;margin-bottom:16px;border-radius:3px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#1565C0;margin-bottom:14px;">Datos del Cliente (Contacto)</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nombre del Contacto</label>
+            <input type="text" id="f-nombre-contacto" placeholder="Nombre de quien solicita">
+          </div>
+          <div class="form-group">
+            <label>Empresa / Organización</label>
+            <input type="text" id="f-empresa-contacto" placeholder="Nombre de la empresa">
+          </div>
+          <div class="form-group">
+            <label>Teléfono</label>
+            <input type="text" id="f-telefono" placeholder="+56 9 1234 5678">
+          </div>
+          <div class="form-group">
+            <label>Mail de Contacto</label>
+            <input type="text" inputmode="email" id="f-mail-contacto" placeholder="contacto@empresa.cl">
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 2: DATOS DE FACTURACIÓN -->
+      <div style="background:#f9f9f9;border:1px solid var(--gris-medio);padding:18px 20px;margin-bottom:16px;border-radius:3px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gris-texto);margin-bottom:14px;">Datos de Facturación <span style="font-weight:400;color:#bbb;">(puede diferir del contacto)</span></div>
         <div class="form-grid">
           <div class="form-group">
             <label>Razón Social</label>
-            <input type="text" id="f-empresa" placeholder="Nombre empresa cliente">
+            <input type="text" id="f-razon-social" placeholder="Razón social para la factura">
           </div>
           <div class="form-group">
             <label>RUT Empresa</label>
             <input type="text" id="f-rut" placeholder="12.345.678-9" oninput="onRutInput(this)" onblur="validarRutField(true)">
             <span class="field-error" id="err-rut">RUT inválido. Verifica el dígito verificador.</span>
           </div>
+          <div class="form-group">
+            <label>Giro</label>
+            <input type="text" id="f-giro" placeholder="Giro comercial">
+          </div>
+          <div class="form-group">
+            <label>Dirección</label>
+            <input type="text" id="f-direccion" placeholder="Dirección de la empresa">
+          </div>
           <div class="form-group full">
-            <label>Glosa</label>
-            <input type="text" id="f-glosa" placeholder="Descripción para la factura">
-          </div>
-          <div class="form-group">
-            <label>Mail de Contacto</label>
-            <input type="text" inputmode="email" autocomplete="email" id="f-mail" placeholder="contacto@empresa.cl" onblur="validarMailField(true)" oninput="validarMailField(false)">
+            <label>Mail de Facturación <span style="font-weight:400;color:#bbb;">(para envío de factura SII)</span></label>
+            <input type="text" inputmode="email" autocomplete="email" id="f-mail-factura" placeholder="factura@empresa.cl" onblur="validarMailField(true)" oninput="validarMailField(false)">
             <span class="field-error" id="err-mail">Correo inválido. Debe tener el formato nombre@dominio.cl</span>
-          </div>
-          <div class="form-group">
-            <label>Solicitante</label>
-            <input type="text" id="f-solicitante" placeholder="Nombre contacto">
           </div>
         </div>
       </div>
 
+      <!-- SECCIÓN 3: DATOS DEL EVENTO -->
       <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gris-texto);margin-bottom:14px;">Datos del Evento</div>
       <div class="form-grid">
         <div class="form-group">
-          <label>Evento</label>
+          <label>Nombre del Evento</label>
           <input type="text" id="f-evento" placeholder="Nombre o tipo de evento">
+        </div>
+        <div class="form-group">
+          <label>Tipo de Evento</label>
+          <select id="f-tipo-evento">
+            <option value="corp">Corporativo</option>
+            <option value="matr">Matrimonio</option>
+            <option value="foto">Fotografía</option>
+            <option value="otro">Otro</option>
+          </select>
         </div>
         <div class="form-group">
           <label>Fecha del Evento</label>
@@ -726,228 +721,51 @@
 
 <!-- Google API -->
 <script>
-// ─── CONFIG GOOGLE ────────────────────────────────────────────────────────────
-const GOOGLE_CLIENT_ID = '958779096029-nck5hsvdeh4irli9o96m7r6dnmt1eq8u.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets';
-const FOLDER_NAME = 'Notas de Venta Rita Roux';
-const SHEET_NAME = 'Historico Notas de Venta';
-
 // ─── STATE ────────────────────────────────────────────────────────────────────
-let tokenClient;
-let accessToken = null;
 let parsedData = null;
-let pdfBlob = null;
-let currentNV = null;
-let folderId = null;
-let sheetId = null;
-let historial = [];
-let localDirHandle = null;       // carpeta para guardar PDFs de NV
-let presupuestosDirHandle = null; // carpeta Presupuestos → Excel contador + historial
+let pdfBlob    = null;
+let currentNV  = null;
+let historial  = [];
 
-// ─── CARPETA LOCAL ─────────────────────────────────────────────────────────────
-function mostrarErrorCarpetaUI(elId, msg) {
-  const el = document.getElementById(elId);
-  el.textContent = msg;
-  el.style.color = '#CC1F1F';
-  el.style.fontWeight = '600';
-}
-
-async function seleccionarCarpetaLocal() {
-  if (!window.showDirectoryPicker) {
-    mostrarErrorCarpetaUI('carpeta-status', '⚠ No soportado aquí — abre el archivo en Chrome/Edge (no en la vista previa interna)');
-    return;
-  }
-  try {
-    localDirHandle = await window.showDirectoryPicker({ mode: 'readwrite', startIn: 'documents' });
-    await persistirCarpeta(localDirHandle);
-    actualizarUIcarpeta();
-  } catch(e) {
-    if (e.name !== 'AbortError') mostrarErrorCarpetaUI('carpeta-status', '⚠ Error: ' + e.message);
-  }
-}
-
-function actualizarUIcarpeta() {
-  const el = document.getElementById('carpeta-status');
-  const btn = document.getElementById('btn-carpeta');
-  if (localDirHandle) {
-    el.textContent = '📁 ' + localDirHandle.name;
-    el.style.color = '#2E7D32';
-    el.style.fontWeight = '600';
-    btn.title = 'Cambiar carpeta';
-  } else {
-    el.textContent = '';
-  }
-}
-
-async function persistirCarpeta(handle) {
-  return new Promise((resolve) => {
-    const req = indexedDB.open('rr_config', 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore('cfg');
-    req.onsuccess = e => {
-      const tx = e.target.result.transaction('cfg', 'readwrite');
-      tx.objectStore('cfg').put(handle, 'dirHandle');
-      tx.oncomplete = resolve;
-      tx.onerror = resolve;
-    };
-    req.onerror = resolve;
-  });
-}
-
-async function restaurarCarpeta() {
-  return new Promise((resolve) => {
-    const req = indexedDB.open('rr_config', 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore('cfg');
-    req.onsuccess = e => {
-      try {
-        const tx = e.target.result.transaction('cfg', 'readonly');
-        const getReq = tx.objectStore('cfg').get('dirHandle');
-        getReq.onsuccess = async () => {
-          if (getReq.result) {
-            try {
-              const perm = await getReq.result.queryPermission({ mode: 'readwrite' });
-              if (perm === 'granted') {
-                localDirHandle = getReq.result;
-                actualizarUIcarpeta();
-              }
-            } catch(e) {}
-          }
-          resolve();
-        };
-        getReq.onerror = resolve;
-      } catch(e) { resolve(); }
-    };
-    req.onerror = resolve;
-  });
-}
-
-// ─── CARPETA PRESUPUESTOS (Excel contador + historial) ────────────────────────
-async function seleccionarPresupuestosFolder() {
-  if (!window.showDirectoryPicker) {
-    mostrarErrorCarpetaUI('presupuestos-status', '⚠ No soportado aquí — abre el archivo en Chrome/Edge (no en la vista previa interna)');
-    return;
-  }
-  try {
-    presupuestosDirHandle = await window.showDirectoryPicker({ mode: 'readwrite', startIn: 'documents' });
-    await persistirPresupuestosHandle(presupuestosDirHandle);
-    actualizarUIPresupuestos();
-    document.getElementById('presupuestos-status').textContent = '✓ ' + presupuestosDirHandle.name;
-  } catch(e) {
-    if (e.name !== 'AbortError') mostrarErrorCarpetaUI('presupuestos-status', '⚠ Error: ' + e.message);
-  }
-}
-
-function actualizarUIPresupuestos() {
-  const el = document.getElementById('presupuestos-status');
-  if (presupuestosDirHandle) {
-    el.textContent = '📊 ' + presupuestosDirHandle.name;
-    el.style.color = '#2E7D32';
-    el.style.fontWeight = '600';
-  }
-}
-
-async function persistirPresupuestosHandle(handle) {
-  return new Promise(resolve => {
-    const req = indexedDB.open('rr_nv_config', 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore('cfg');
-    req.onsuccess = e => {
-      const tx = e.target.result.transaction('cfg', 'readwrite');
-      tx.objectStore('cfg').put(handle, 'presupuestosDir');
-      tx.oncomplete = resolve; tx.onerror = resolve;
-    };
-    req.onerror = resolve;
-  });
-}
-
-async function restaurarPresupuestosHandle() {
-  return new Promise(resolve => {
-    const req = indexedDB.open('rr_nv_config', 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore('cfg');
-    req.onsuccess = e => {
-      try {
-        const tx = e.target.result.transaction('cfg', 'readonly');
-        const r = tx.objectStore('cfg').get('presupuestosDir');
-        r.onsuccess = async () => {
-          if (r.result) {
-            const perm = await r.result.queryPermission({ mode: 'readwrite' }).catch(() => 'denied');
-            if (perm === 'granted') {
-              presupuestosDirHandle = r.result;
-              actualizarUIPresupuestos();
-            }
-          }
-          resolve();
-        };
-        r.onerror = resolve;
-      } catch(e) { resolve(); }
-    };
-    req.onerror = resolve;
-  });
-}
-
-// ─── EXCEL CONTADOR NV ────────────────────────────────────────────────────────
+// ─── GOOGLE SHEETS: CONTADOR NV ───────────────────────────────────────────────
 async function leerContadorNV() {
-  if (!presupuestosDirHandle) return null;
+  if (!gsConnected()) return null;
   try {
-    const fh = await presupuestosDirHandle.getFileHandle('contador_NV.xlsx').catch(() => null);
-    if (!fh) return null;
-    const file = await fh.getFile();
-    const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, { type: 'array' });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const año   = ws['B1'] ? parseInt(ws['B1'].v) : 0;
-    const num   = ws['B2'] ? parseInt(ws['B2'].v) : 0;
-    const curYear = new Date().getFullYear();
-    return año === curYear ? (isNaN(num) ? 0 : num) : 0;
+    const res = await gsGet(`${TAB.CONTADOR}!A1:B2`);
+    if (!res.values || res.values.length < 2) return null;
+    const año = parseInt(res.values[0][1]);
+    const num = parseInt(res.values[1][1]);
+    return año === new Date().getFullYear() ? (isNaN(num) ? 0 : num) : 0;
   } catch(e) { return null; }
 }
 
 async function escribirContadorNV(num) {
-  if (!presupuestosDirHandle) return;
-  try {
-    const year = new Date().getFullYear();
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([
-      ['Año',    year],
-      ['Número', num]
-    ]);
-    ws['!cols'] = [{wch:10},{wch:10}];
-    XLSX.utils.book_append_sheet(wb, ws, 'Contador');
-    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const fh = await presupuestosDirHandle.getFileHandle('contador_NV.xlsx', { create: true });
-    const wr = await fh.createWritable();
-    await wr.write(new Blob([out]));
-    await wr.close();
-  } catch(e) { console.warn('Error escribiendo contador NV:', e); }
+  if (!gsConnected()) return;
+  const year = new Date().getFullYear();
+  await gsUpdate(`${TAB.CONTADOR}!A1:B2`, [['Año', year], ['Número', num]]);
 }
 
-// ─── EXCEL HISTORIAL NV ───────────────────────────────────────────────────────
-async function agregarAlHistorialExcel(nota) {
-  if (!presupuestosDirHandle) return;
-  try {
-    const HEADERS = ['Nº Nota de Venta','Fecha Emisión','Empresa','RUT','Solicitante','Mail','Evento','Fecha Evento','Nº Personas','Subtotal','IVA','Total'];
-    let rows = [HEADERS];
-    const fh0 = await presupuestosDirHandle.getFileHandle('historial_notas_venta.xlsx').catch(() => null);
-    if (fh0) {
-      const file = await fh0.getFile();
-      const buf = await file.arrayBuffer();
-      const wb0 = XLSX.read(buf, { type: 'array' });
-      const ws0 = wb0.Sheets[wb0.SheetNames[0]];
-      const existing = XLSX.utils.sheet_to_json(ws0, { header: 1, defval: '' });
-      if (existing.length > 0) rows = existing;
-    }
-    rows.push([nota.nv, nota.fecha_emision, nota.empresa, nota.rut,
-               nota.solicitante, nota.mail, nota.evento, nota.fecha_evento,
-               nota.personas, nota.subtotal, nota.iva, nota.total]);
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [{wch:16},{wch:14},{wch:30},{wch:14},{wch:22},{wch:26},{wch:22},{wch:16},{wch:12},{wch:14},{wch:12},{wch:14}];
-    XLSX.utils.book_append_sheet(wb, ws, 'Historial');
-    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const fh = await presupuestosDirHandle.getFileHandle('historial_notas_venta.xlsx', { create: true });
-    const wr = await fh.createWritable();
-    await wr.write(new Blob([out]));
-    await wr.close();
-  } catch(e) { console.warn('Error guardando historial Excel:', e); }
+// ─── GOOGLE SHEETS: HISTORIAL NV ─────────────────────────────────────────────
+async function agregarAlHistorialGS(nota) {
+  if (!gsConnected()) return;
+  await gsAppend(`${TAB.NOTAS_VENTA}!A:R`, [[
+    nota.nv,
+    nota.nCot || '',
+    nota.fecha_emision,
+    nota.nombre_contacto || nota.solicitante || '',
+    nota.empresa_contacto || nota.empresa || '',
+    nota.telefono || '',
+    nota.mail_contacto || nota.mail || '',
+    nota.razon_social || nota.empresa || '',
+    nota.rut || '',
+    nota.giro || nota.glosa || '',
+    nota.direccion || '',
+    nota.mail_factura || nota.mail || '',
+    nota.evento || '',
+    nota.fecha_evento || '',
+    String(nota.personas || ''),
+    nota.subtotal, nota.iva, nota.total
+  ]]);
 }
 
 // ─── EXCEL SEGUIMIENTO DE EVENTOS ──────────────────────────────────────────────
@@ -978,135 +796,153 @@ function parseFechaFlexible(texto) {
 }
 
 async function agregarEventoSeguimiento(nota) {
-  if (!presupuestosDirHandle) return false;
+  if (!gsConnected()) return false;
   try {
-    let perm = await presupuestosDirHandle.queryPermission({ mode: 'readwrite' });
-    if (perm !== 'granted') perm = await presupuestosDirHandle.requestPermission({ mode: 'readwrite' });
-    if (perm !== 'granted') return false;
-
-    const HEADERS = ['Nº Nota Venta','Nombre Evento','Cliente','Fecha Evento','Tipo','OC','Factura 50%','Pago 50%','Factura 100%','Pago 100%','Fact. Prov. Recibidas','Fact. Prov. Pagadas','Total','Pagado','Diferencia','Comentarios'];
-    let rowsEv = [HEADERS];
-    let wsSalas = null, wsCancelados = null;
-
-    const fh0 = await presupuestosDirHandle.getFileHandle('seguimiento_eventos.xlsx').catch(() => null);
-    if (fh0) {
-      const file = await fh0.getFile();
-      const buf = await file.arrayBuffer();
-      const wb0 = XLSX.read(buf, { type: 'array' });
-      const ws0 = wb0.Sheets['Eventos'] || wb0.Sheets[wb0.SheetNames[0]];
-      const existing = XLSX.utils.sheet_to_json(ws0, { header: 1, defval: '' });
-      if (existing.length > 0) rowsEv = existing;
-      // Preservar las otras hojas que mantiene Seguimiento de Eventos
-      if (wb0.Sheets['Salas']) wsSalas = wb0.Sheets['Salas'];
-      if (wb0.Sheets['Cancelados']) wsCancelados = wb0.Sheets['Cancelados'];
+    const res = await gsGet(`${TAB.SEG}!C:C`);
+    const existentes = (res.values || []).slice(1).map(r => r[0]);
+    if (existentes.includes(nota.nv)) return true;
+    const fechaISO = parseFechaFlexible(nota.fecha_evento);
+    const cliente = nota.empresa_contacto || nota.empresa || '';
+    await gsAppend(`${TAB.SEG}!A:Q`, [[
+      'activo',
+      'evento',
+      nota.nv,
+      nota.evento || nota.glosa || cliente,
+      cliente,
+      fechaISO,
+      '',
+      '', '', '', '', '', '',
+      nota.total, 0, nota.total,
+      fechaISO
+        ? `Creado desde ${nota.nv}`
+        : `Creado desde ${nota.nv} · revisar fecha`
+    ]]);
+    // Marcar presupuesto como convertido si tiene referencia
+    if (nota.nCot && gsConnected()) {
+      try {
+        const rp = await gsGet(`${TAB.PRESUPUESTOS}!A:A`);
+        const filas = (rp.values || []);
+        const idx = filas.findIndex((r, i) => i > 0 && r[0] === nota.nCot);
+        if (idx > 0) await gsUpdate(`${TAB.PRESUPUESTOS}!J${idx + 1}`, [['convertido']]);
+      } catch(e) { /* no critical */ }
     }
-
-    // Evitar duplicados si la NV ya tiene evento creado
-    const yaExiste = rowsEv.slice(1).some(r => r[0] === nota.nv);
-    if (!yaExiste) {
-      const fechaISO = parseFechaFlexible(nota.fecha_evento);
-      rowsEv.push([nota.nv, nota.evento || nota.glosa || nota.empresa, nota.empresa, fechaISO,
-                 'corp', '', '', '', '', '', '', '', nota.total, 0, nota.total,
-                 fechaISO ? `Generado automáticamente desde ${nota.nv}` : `Generado desde ${nota.nv} · revisar fecha del evento ("${nota.fecha_evento}")`]);
-    }
-
-    const wb = XLSX.utils.book_new();
-    const wsEv = XLSX.utils.aoa_to_sheet(rowsEv);
-    wsEv['!cols'] = [{wch:14},{wch:28},{wch:24},{wch:13},{wch:9},{wch:6},{wch:11},{wch:9},{wch:12},{wch:9},{wch:18},{wch:16},{wch:13},{wch:13},{wch:13},{wch:30}];
-    XLSX.utils.book_append_sheet(wb, wsEv, 'Eventos');
-    if (wsSalas) XLSX.utils.book_append_sheet(wb, wsSalas, 'Salas');
-    if (wsCancelados) XLSX.utils.book_append_sheet(wb, wsCancelados, 'Cancelados');
-
-    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const fh = await presupuestosDirHandle.getFileHandle('seguimiento_eventos.xlsx', { create: true });
-    const wr = await fh.createWritable();
-    await wr.write(new Blob([out]));
-    await wr.close();
     return true;
   } catch(e) { console.warn('Error creando evento de seguimiento:', e); return false; }
 }
 
-async function guardarPDFLocal(blob, filename) {
-  if (!localDirHandle) return false;
-  try {
-    let perm = await localDirHandle.queryPermission({ mode: 'readwrite' });
-    if (perm !== 'granted') {
-      perm = await localDirHandle.requestPermission({ mode: 'readwrite' });
-    }
-    if (perm !== 'granted') return false;
-    const fh = await localDirHandle.getFileHandle(filename, { create: true });
-    const w = await fh.createWritable();
-    await w.write(blob);
-    await w.close();
-    return true;
-  } catch(e) {
-    console.warn('No se pudo guardar localmente:', e.message);
-    return false;
-  }
-}
-
 // ─── GOOGLE AUTH ──────────────────────────────────────────────────────────────
 window.onload = () => {
-  const script = document.createElement('script');
-  script.src = 'https://accounts.google.com/gsi/client';
-  script.onload = initGoogle;
-  document.head.appendChild(script);
+  gsInit(async () => {
+    document.getElementById('auth-status').textContent = '🟢 Conectado a Google';
+    document.getElementById('auth-status').className = 'auth-status connected';
+    await loadHistorial();
+    await gsInitSheet();
+    await loadPresupuestosStep1();
+  });
   renderHistoricoLocal();
-  restaurarCarpeta();
-  restaurarPresupuestosHandle().then(() => checkCotizacionPendiente());
+  checkCotizacionPendiente();
 };
 
-// ─── RECEPCIÓN DE COTIZACIÓN DESDE COTIZADOR ──────────────────────────────────
+// ─── RECEPCIÓN DE COTIZACIÓN DESDE HISTÓRICO ──────────────────────────────────
 async function checkCotizacionPendiente() {
-  const raw = localStorage.getItem('rr_cotizacion_pendiente');
+  const raw = localStorage.getItem('rr_cotizacion_para_nv') || localStorage.getItem('rr_cotizacion_pendiente');
   if (!raw) return;
   try {
     const data = JSON.parse(raw);
+    localStorage.removeItem('rr_cotizacion_para_nv');
     localStorage.removeItem('rr_cotizacion_pendiente');
     parsedData = {
       rut_cliente: '', fecha: data.fecha || '',
       evento: data.evento || '', cliente: data.cliente || '',
-      empresa: data.cliente || '', solicitante: data.cliente || '',
-      mail: '', glosa: data.evento || '',
-      fecha_produccion: data.fecha || '', hora: '', personas: data.personas || '',
-      secciones: (data.secciones || []).map(s => ({
-        nombre: s.nombre,
-        items: (s.items || []).map(i => ({
-          desc: i.desc, horas: i.horas, vUnit: i.vUnit, vNeto: i.vNeto
-        }))
-      }))
+      empresa: data.cliente || '', empresa_contacto: data.cliente || '',
+      solicitante: '', mail: '', glosa: data.evento || '',
+      fecha_produccion: data.fechaEvento || data.fecha || '', hora: '',
+      personas: data.personas || '',
+      nCot: data.cotizacion || '',
+      tipo_evento: 'corp',
+      secciones: data.secciones || []
     };
     await populateForm(parsedData);
     goStep(2);
-  } catch(e) { console.error('Error procesando cotización pendiente:', e); }
+  } catch(e) { console.error('Error procesando cotización:', e); }
 }
 
-function initGoogle() {
-  if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.includes('TU_CLIENT_ID')) {
-    document.getElementById('auth-status').textContent = '⚠️ Falta configurar Google Client ID';
+// ─── STEP 1: LISTA DE PRESUPUESTOS ────────────────────────────────────────────
+async function loadPresupuestosStep1() {
+  const el = document.getElementById('presupuestos-list');
+  if (!gsConnected()) {
+    el.innerHTML = '<div class="empty-state">Conecta Google para ver los presupuestos disponibles.</div>';
     return;
   }
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: GOOGLE_CLIENT_ID,
-    scope: SCOPES,
-    callback: (response) => {
-      if (response.error) return;
-      accessToken = response.access_token;
-      document.getElementById('auth-status').textContent = '🟢 Conectado a Google Drive';
-      document.getElementById('auth-status').className = 'auth-status connected';
-      document.getElementById('user-info').textContent = '';
-      loadHistorial();
+  try {
+    const res = await gsGet(`${TAB.PRESUPUESTOS}!A2:J`);
+    const rows = (res.values || []).filter(r => r[0]);
+    if (!rows.length) {
+      el.innerHTML = '<div class="empty-state">No hay presupuestos guardados aún. Crea uno desde el Cotizador.</div>';
+      return;
     }
-  });
+    const pendientes = rows.filter(r => (r[9] || 'pendiente') !== 'convertido');
+    if (!pendientes.length) {
+      el.innerHTML = '<div class="empty-state">Todos los presupuestos ya han sido convertidos a Nota de Venta.</div>';
+      return;
+    }
+    el.innerHTML = `<table style="width:100%;border-collapse:collapse">
+      <thead><tr style="background:var(--negro)">
+        <th style="color:#fff;padding:8px 12px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;text-align:left">Nº</th>
+        <th style="color:#fff;padding:8px 12px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;text-align:left">Fecha</th>
+        <th style="color:#fff;padding:8px 12px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;text-align:left">Cliente</th>
+        <th style="color:#fff;padding:8px 12px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;text-align:left">Evento</th>
+        <th style="color:#fff;padding:8px 12px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;text-align:right">Total</th>
+        <th style="color:#fff;padding:8px 12px"></th>
+      </tr></thead>
+      <tbody>${pendientes.map(r => {
+        const total = (+r[8]||0).toLocaleString('es-CL');
+        const data = encodeURIComponent(JSON.stringify({
+          cotizacion:r[0],fecha:r[1],cliente:r[2],evento:r[3],
+          fechaEvento:r[4],personas:r[5],subtotal:+r[6]||0,iva:+r[7]||0,total:+r[8]||0
+        }));
+        return `<tr style="border-bottom:1px solid var(--gris-medio)">
+          <td style="padding:10px 12px;font-family:monospace;font-size:11px;color:var(--gris-texto)">${r[0]}</td>
+          <td style="padding:10px 12px;font-size:12px">${r[1]||'—'}</td>
+          <td style="padding:10px 12px;font-size:12px;font-weight:600">${r[2]||'—'}</td>
+          <td style="padding:10px 12px;font-size:12px">${r[3]||'—'}</td>
+          <td style="padding:10px 12px;font-size:12px;text-align:right;font-weight:600">$${total}</td>
+          <td style="padding:10px 12px;text-align:right">
+            <button onclick="seleccionarPresupuesto('${data}')" style="padding:5px 14px;font-size:10px;font-weight:700;letter-spacing:.5px;background:var(--rojo);color:#fff;border:none;border-radius:2px;cursor:pointer">Seleccionar →</button>
+          </td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  } catch(e) { el.innerHTML = '<div class="empty-state">Error cargando presupuestos.</div>'; }
 }
 
-function handleAuthClick() {
-  if (!tokenClient) {
-    alert('Primero debes configurar el Google Client ID. Ver instrucciones.');
-    return;
-  }
-  tokenClient.requestAccessToken();
+async function seleccionarPresupuesto(encodedData) {
+  const data = JSON.parse(decodeURIComponent(encodedData));
+  parsedData = {
+    rut_cliente: '', fecha: data.fecha || '',
+    evento: data.evento || '', cliente: data.cliente || '',
+    empresa: data.cliente || '', empresa_contacto: data.cliente || '',
+    solicitante: '', mail: '', glosa: data.evento || '',
+    fecha_produccion: data.fechaEvento || '', hora: '',
+    personas: data.personas || '',
+    nCot: data.cotizacion || '',
+    tipo_evento: 'corp',
+    secciones: []
+  };
+  await populateForm(parsedData);
+  goStep(2);
 }
+
+function crearSinPresupuesto() {
+  parsedData = {
+    rut_cliente:'',fecha:'',evento:'',cliente:'',empresa:'',empresa_contacto:'',
+    solicitante:'',mail:'',glosa:'',fecha_produccion:'',hora:'',personas:'',
+    nCot:'',tipo_evento:'corp',secciones:[]
+  };
+  populateForm(parsedData);
+  goStep(2);
+}
+
 
 // ─── STEP NAVIGATION ──────────────────────────────────────────────────────────
 function goStep(n) {
@@ -1121,219 +957,37 @@ function goStep(n) {
   });
 }
 
-// ─── FILE HANDLING ─────────────────────────────────────────────────────────────
-function handleDrop(ev) {
-  ev.preventDefault();
-  document.getElementById('dropzone').classList.remove('dragover');
-  const file = ev.dataTransfer.files[0];
-  if (file) handleFile(file);
-}
-
-function handleFile(file) {
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const wb = XLSX.read(e.target.result, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      parsedData = parseRitaRoux(ws);
-      populateForm(parsedData);
-      goStep(2);
-    } catch(err) {
-      alert('Error leyendo el archivo. Verifica que sea la plantilla estándar Rita Roux.\n\n' + err.message);
-    }
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-// ─── PASTE HANDLER ─────────────────────────────────────────────────────────────
-function handlePasteEvent(ev) {
-  ev.preventDefault();
-  const text = ev.clipboardData.getData('text/plain');
-  if (!text || !text.trim()) return;
-  procesarTextoPegado(text);
-}
-
-function handlePasteInput(ta) {
-  const text = ta.value;
-  if (!text || !text.trim()) return;
-  procesarTextoPegado(text);
-}
-
-function procesarTextoPegado(text) {
-  try {
-    // Convertir TSV (Excel clipboard) a array 2D
-    const data = text.trim().split('\n').map(row =>
-      row.split('\t').map(c => c.trim())
-    );
-    parsedData = parseData2D(data);
-    // Limpiar textarea
-    const ta = document.getElementById('paste-textarea');
-    if (ta) ta.value = '';
-    populateForm(parsedData);
-    goStep(2);
-  } catch(err) {
-    alert('Error procesando los datos pegados. Asegúrate de copiar las celdas desde la plantilla Rita Roux.\n\n' + err.message);
-  }
-}
-
-// ─── PARSE EXCEL ──────────────────────────────────────────────────────────────
-function parseRitaRoux(ws) {
-  const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-  return parseData2D(data);
-}
-
-function parseData2D(data) {
-  const result = {
-    rut_cliente: '', fecha: '', evento: '', cliente: '',
-    empresa: '', solicitante: '', mail: '', glosa: '',
-    fecha_produccion: '', hora: '', personas: '',
-    secciones: []
-  };
-
-  // Helper: extrae el valor de una fila buscando en cols 2..N
-  function valFila(row) {
-    for (let j = 2; j < row.length; j++) {
-      const v = String(row[j] || '').trim();
-      if (v) return v;
-    }
-    return String(row[1] || '').trim();
-  }
-
-  // Helper: extrae valor después de ":" en cualquier columna
-  function valDespuesDeDosP(row) {
-    for (let j = 0; j < row.length; j++) {
-      const cell = String(row[j] || '');
-      const idx = cell.indexOf(':');
-      if (idx !== -1) {
-        const v = cell.slice(idx + 1).trim();
-        if (v) return v;
-      }
-    }
-    // Si el valor está en la siguiente celda
-    return valFila(row);
-  }
-
-  for (let i = 0; i < data.length; i++) {
-    const row = data[i].map(c => String(c || '').trim());
-    const rowJoined = row.join(' ').toUpperCase();
-    const etiqueta = (row[0] + ' ' + row[1]).toUpperCase();
-
-    if (etiqueta.includes('EVENTO') && !etiqueta.includes('PRODUCCION') && !etiqueta.includes('FECHA') && i < 20) {
-      result.evento = valFila(row);
-    }
-    if (etiqueta.includes('CLIENTE') && i < 20) {
-      result.cliente = valFila(row);
-    }
-    if ((etiqueta.includes('FECHA PRODUCCI') || etiqueta.includes('PRODUCCION')) && i < 20) {
-      result.fecha_produccion = valFila(row);
-    }
-    if (etiqueta.includes('HORA') && !etiqueta.includes('FECHA') && i < 20) {
-      result.hora = valFila(row);
-    }
-    if ((etiqueta.includes('PERSONAS') || etiqueta.includes('Nº PERSONAS')) && i < 20) {
-      result.personas = valFila(row);
-    }
-    if (etiqueta.includes('FECHA') && !etiqueta.includes('PRODUCCI') && i < 20) {
-      const v = row[2] || row[3] || row[4] || '';
-      if (v) result.fecha = v;
-    }
-
-    // Extraer datos del cliente desde sección DATOS FACTURACIÓN (cualquier fila)
-    if (rowJoined.includes('RAZ') && rowJoined.includes('SOCIAL')) {
-      const v = valDespuesDeDosP(row);
-      if (v && !result.empresa) result.empresa = v;
-    }
-    if ((etiqueta.includes('RUT') || rowJoined.includes(' RUT')) && !rowJoined.includes('76.208')) {
-      const v = valDespuesDeDosP(row);
-      if (v && v.includes('-') && !result.rut_cliente) result.rut_cliente = v;
-    }
-    if (rowJoined.includes('MAIL') || rowJoined.includes('E-MAIL') || rowJoined.includes('EMAIL')) {
-      const allCells = row.join(' ');
-      const emailMatch = allCells.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
-      if (emailMatch && !emailMatch[0].includes('ritaroux') && !result.mail) {
-        result.mail = emailMatch[0];
-      }
-    }
-    if (rowJoined.includes('SOLICITANTE') && i < 20) {
-      result.solicitante = valFila(row);
-    }
-
-    // Columnas H-K (índices 7-10): Nombre, RUT, Glosa, Mail para facturación
-    const colH = String(data[i][7] || '').trim();
-    const colI = String(data[i][8] || '').trim();
-    const colJ = String(data[i][9] || '').trim();
-    const colK = String(data[i][10] || '').trim();
-    if (colH && !result.empresa) result.empresa = colH;
-    if (colI && colI.includes('-') && !result.rut_cliente) result.rut_cliente = colI;
-    if (colJ && !result.glosa) result.glosa = colJ;
-    if (colK && colK.includes('@') && !result.mail) result.mail = colK;
-  }
-
-  const SECCIONES_CONOCIDAS = ['ARRIENDO LOCAL', 'CATERING', 'SERVICIOS GENERALES', 'OTROS SERVICIOS'];
-  let seccionActual = null;
-  let itemsActual = [];
-
-  for (let i = 0; i < data.length; i++) {
-    const row = data[i].map(c => String(c || '').trim());
-    const col1 = row[1] ? row[1].toUpperCase() : '';
-    const col0 = row[0] ? row[0].toUpperCase() : '';
-    const contenido = col1 || col0;
-
-    const esSeccion = SECCIONES_CONOCIDAS.some(s => contenido.includes(s));
-    if (esSeccion) {
-      if (seccionActual) result.secciones.push({ nombre: seccionActual, items: itemsActual });
-      seccionActual = row[1] || row[0];
-      itemsActual = [];
-      continue;
-    }
-
-    if (contenido.includes('TOTAL') || col0.includes('TOTAL')) break;
-
-    if (contenido.includes('Nº HORAS') || contenido.includes('VALOR UNITARIO') ||
-        contenido.includes('VALOR NETO') || contenido.includes('COTIZACI')) continue;
-
-    if (seccionActual) {
-      const desc = row[1] || row[0];
-      if (!desc) continue;
-
-      const parseN = s => parseMonto(s);
-      const horas = parseN(row[2]);
-      const vUnit = parseN(row[3]);
-      const vNeto = parseN(row[4]);
-
-      if (desc && (vNeto > 0 || vUnit > 0)) {
-        itemsActual.push({ desc, horas, vUnit, vNeto });
-      }
-    }
-  }
-  if (seccionActual && itemsActual.length > 0) {
-    result.secciones.push({ nombre: seccionActual, items: itemsActual });
-  }
-
-  return result;
-}
-
 // ─── POPULATE FORM ─────────────────────────────────────────────────────────────
 async function populateForm(d) {
   const nextNum = await getNextNV();
   currentNV = nextNum;
   document.getElementById('f-nv').value = nextNum;
+  document.getElementById('f-nv-cot').value = d.nCot || '';
 
   const hoy = new Date().toISOString().split('T')[0];
   document.getElementById('f-fecha-emision').value = hoy;
 
-  document.getElementById('f-empresa').value = d.empresa || d.cliente || '';
+  // Datos del cliente (contacto)
+  document.getElementById('f-nombre-contacto').value = d.solicitante || d.cliente || '';
+  document.getElementById('f-empresa-contacto').value = d.empresa_contacto || d.empresa || d.cliente || '';
+  document.getElementById('f-telefono').value = d.telefono || '';
+  document.getElementById('f-mail-contacto').value = d.mail_contacto || d.mail || '';
+
+  // Datos de facturación
+  document.getElementById('f-razon-social').value = d.razon_social || d.empresa || d.cliente || '';
   document.getElementById('f-rut').value = d.rut_cliente || '';
-  document.getElementById('f-solicitante').value = d.solicitante || d.cliente || '';
-  document.getElementById('f-mail').value = d.mail || '';
-  document.getElementById('f-glosa').value = d.glosa || '';
+  document.getElementById('f-giro').value = d.giro || d.glosa || '';
+  document.getElementById('f-direccion').value = d.direccion || '';
+  document.getElementById('f-mail-factura').value = d.mail_factura || d.mail || '';
+
+  // Datos del evento
   document.getElementById('f-evento').value = d.evento || '';
-  document.getElementById('f-fecha-evento').value = d.fecha_produccion || d.fecha || '';
+  if (d.tipo_evento) document.getElementById('f-tipo-evento').value = d.tipo_evento;
+  document.getElementById('f-fecha-evento').value = d.fecha_produccion || d.fechaEvento || d.fecha || '';
   document.getElementById('f-hora').value = d.hora || '';
   document.getElementById('f-personas').value = d.personas || '';
 
-  renderItems(d.secciones);
+  renderItems(d.secciones || []);
   calcTotales();
 }
 
@@ -1449,11 +1103,11 @@ async function getNextNV() {
 
 // ─── GENERAR NOTA ──────────────────────────────────────────────────────────────
 async function generarNota() {
-  const campos = ['f-empresa','f-rut','f-solicitante','f-mail','f-fecha-evento'];
-  for (const id of campos) {
-    if (!document.getElementById(id).value.trim()) {
-      alert('Por favor completa todos los campos requeridos.');
-      document.getElementById(id).focus();
+  const requeridos = ['f-nombre-contacto','f-empresa-contacto','f-razon-social','f-rut','f-fecha-evento'];
+  for (const id of requeridos) {
+    if (!document.getElementById(id)?.value.trim()) {
+      alert('Por favor completa todos los campos requeridos (marcados en rojo).');
+      document.getElementById(id)?.focus();
       return;
     }
   }
@@ -1465,81 +1119,72 @@ async function generarNota() {
   }
 
   if (!validarMailField(true)) {
-    alert('El correo ingresado no es válido. Debe tener el formato nombre@dominio.cl');
-    document.getElementById('f-mail').focus();
+    alert('El correo de facturación no es válido. Debe tener el formato nombre@dominio.cl');
+    document.getElementById('f-mail-factura').focus();
     return;
   }
 
-  if (!presupuestosDirHandle) {
-    const conectar = confirm('No has conectado la carpeta "Presupuestos".\n\nSin conectarla, esta Nota de Venta NO se guardará en el historial de Excel ni aparecerá en Seguimiento de Eventos.\n\n¿Seleccionar la carpeta ahora?');
-    if (conectar) await seleccionarPresupuestosFolder();
+  if (!gsConnected()) {
+    const conectar = confirm('No estás conectado a Google.\n\nSin conexión la NV NO se guardará en Seguimiento.\n\n¿Conectar ahora?');
+    if (conectar) { gsAuth(); return; }
   }
 
   const { sub, iva, total } = calcTotales();
   const secciones = getItemsFromDOM();
 
   const nota = {
-    nv: document.getElementById('f-nv').value,
-    fecha_emision: document.getElementById('f-fecha-emision').value,
-    empresa: document.getElementById('f-empresa').value,
-    rut: document.getElementById('f-rut').value,
-    glosa: document.getElementById('f-glosa').value,
-    solicitante: document.getElementById('f-solicitante').value,
-    mail: document.getElementById('f-mail').value,
-    evento: document.getElementById('f-evento').value,
-    fecha_evento: document.getElementById('f-fecha-evento').value,
-    hora: document.getElementById('f-hora').value,
-    personas: document.getElementById('f-personas').value,
+    nv:               document.getElementById('f-nv').value,
+    nCot:             document.getElementById('f-nv-cot').value,
+    fecha_emision:    document.getElementById('f-fecha-emision').value,
+    nombre_contacto:  document.getElementById('f-nombre-contacto').value,
+    empresa_contacto: document.getElementById('f-empresa-contacto').value,
+    telefono:         document.getElementById('f-telefono').value,
+    mail_contacto:    document.getElementById('f-mail-contacto').value,
+    razon_social:     document.getElementById('f-razon-social').value,
+    rut:              document.getElementById('f-rut').value,
+    giro:             document.getElementById('f-giro').value,
+    direccion:        document.getElementById('f-direccion').value,
+    mail_factura:     document.getElementById('f-mail-factura').value,
+    tipo_evento:      document.getElementById('f-tipo-evento').value,
+    evento:           document.getElementById('f-evento').value,
+    fecha_evento:     document.getElementById('f-fecha-evento').value,
+    hora:             document.getElementById('f-hora').value,
+    personas:         document.getElementById('f-personas').value,
     secciones,
-    subtotal: sub,
-    iva,
-    total
+    subtotal: sub, iva, total,
+    // aliases para compatibilidad PDF
+    empresa:          document.getElementById('f-razon-social').value,
+    solicitante:      document.getElementById('f-nombre-contacto').value,
+    mail:             document.getElementById('f-mail-factura').value,
+    glosa:            document.getElementById('f-giro').value,
   };
 
   pdfBlob = generarPDF(nota);
 
   const local = JSON.parse(localStorage.getItem('rr_historial') || '[]');
-  local.push({
-    nv: nota.nv,
-    fecha_emision: nota.fecha_emision,
-    empresa: nota.empresa,
-    rut: nota.rut,
-    solicitante: nota.solicitante,
-    mail: nota.mail,
-    fecha_evento: nota.fecha_evento,
-    personas: nota.personas,
-    subtotal: nota.subtotal,
-    iva: nota.iva,
-    total: nota.total
-  });
+  local.push({ nv:nota.nv, fecha_emision:nota.fecha_emision, empresa:nota.razon_social,
+    rut:nota.rut, solicitante:nota.nombre_contacto, mail:nota.mail_factura,
+    fecha_evento:nota.fecha_evento, personas:nota.personas,
+    subtotal:nota.subtotal, iva:nota.iva, total:nota.total });
   localStorage.setItem('rr_historial', JSON.stringify(local));
   historial = local;
 
-  // Guardar contador + historial en Excel (carpeta Presupuestos)
   const nvNum = parseInt(nota.nv.split('-')[2]) || 1;
-  await escribirContadorNV(nvNum);
-  await agregarAlHistorialExcel(nota);
-  const eventoAgregado = await agregarEventoSeguimiento(nota);
-
-  // Guardar PDF en carpeta local
-  const pdfFilename = `${nota.nv}_${nota.empresa.replace(/\s+/g,'_')}.pdf`;
-  const savedLocal = await guardarPDFLocal(pdfBlob, pdfFilename);
-
-  if (accessToken) {
-    await subirADrive(nota, pdfBlob);
-    await actualizarSheet(nota);
+  let eventoAgregado = false;
+  if (gsConnected()) {
+    await escribirContadorNV(nvNum);
+    await agregarAlHistorialGS(nota);
+    eventoAgregado = await agregarEventoSeguimiento(nota);
+    const pdfFilename = `${nota.nv}_${nota.razon_social.replace(/\s+/g,'_')}.pdf`;
+    await gsDriveUpload(pdfBlob, pdfFilename, 'Notas de Venta Rita Roux');
   }
 
   const successEl = document.getElementById('success-nv');
   successEl.textContent = nota.nv;
   const banner = successEl.closest('.success-banner');
   if (banner) {
-    const seguimientoMsg = eventoAgregado
-      ? ' Evento agregado a Seguimiento de Eventos.'
-      : ' ⚠ No se pudo agregar a Seguimiento de Eventos (conecta la carpeta Presupuestos).';
-    banner.innerHTML = savedLocal
-      ? `✓ <strong>${nota.nv}</strong> generada y guardada en <strong>${localDirHandle.name}</strong>.${seguimientoMsg}`
-      : `✓ <strong>${nota.nv}</strong> generada correctamente.${accessToken ? ' Guardada en Google Drive.' : ''}${seguimientoMsg}`;
+    const msg = eventoAgregado ? ' Evento creado en Seguimiento.' : '';
+    banner.innerHTML = `✓ <strong>${nota.nv}</strong> generada${gsConnected() ? ' y guardada.' : ' (sin conexión).'}${msg}`;
   }
   goStep(3);
   renderHistoricoLocal();
@@ -1745,103 +1390,22 @@ function generarPDF(nota) {
   return doc.output('blob');
 }
 
-// ─── GOOGLE DRIVE ──────────────────────────────────────────────────────────────
-async function ensureFolder() {
-  if (folderId) return folderId;
-  const q = encodeURIComponent(`name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-  const res = await gfetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
-  if (res.files && res.files.length > 0) { folderId = res.files[0].id; return folderId; }
-  const created = await gfetch('https://www.googleapis.com/drive/v3/files', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
-  });
-  folderId = created.id;
-  return folderId;
-}
-
-async function subirADrive(nota, blob) {
-  const folder = await ensureFolder();
-  const cliente_slug = nota.solicitante.replace(/\s+/g, '');
-  const fecha_slug = String(nota.fecha_evento).replace(/\s+/g, '');
-  const filename = `${nota.nv}_${cliente_slug}_${fecha_slug}.pdf`;
-
-  const form = new FormData();
-  const meta = { name: filename, parents: [folder], mimeType: 'application/pdf' };
-  form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
-  form.append('file', blob, filename);
-
-  await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${accessToken}` },
-    body: form
-  });
-}
-
-async function ensureSheet() {
-  if (sheetId) return sheetId;
-  const q = encodeURIComponent(`name='${SHEET_NAME}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`);
-  const res = await gfetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
-  if (res.files && res.files.length > 0) { sheetId = res.files[0].id; return sheetId; }
-  const created = await gfetch('https://www.googleapis.com/drive/v3/files', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: SHEET_NAME, mimeType: 'application/vnd.google-apps.spreadsheet' })
-  });
-  sheetId = created.id;
-  const hdrResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Hoja%201!A1:K1?valueInputOption=RAW`, {
-    method: 'PUT',
-    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ values: [['Nº Nota de Venta','Fecha Emisión','Empresa','RUT','Solicitante','Mail','Fecha Evento','Nº Personas','Subtotal','IVA','Total']] })
-  });
-  return sheetId;
-}
-
-async function actualizarSheet(nota) {
-  try {
-    const sid = await ensureSheet();
-    const row = [nota.nv, nota.fecha_emision, nota.empresa, nota.rut,
-      nota.solicitante, nota.mail, nota.fecha_evento, String(nota.personas),
-      nota.subtotal, nota.iva, nota.total];
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/Hoja%201!A:K:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`;
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ values: [row] })
-    });
-    const json = await resp.json();
-    if (json.error) {
-      alert('Nota generada correctamente. Error al guardar en historial: ' + json.error.message);
-    }
-  } catch(e) {
-    alert('Nota generada correctamente. Error de conexión con Sheets: ' + e.message);
-  }
-}
-
+// ─── GOOGLE SHEETS: HISTORIAL ─────────────────────────────────────────────────
 async function loadHistorial() {
   try {
-    const sid = await ensureSheet();
-    const res = await gfetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/Hoja%201!A2:K`);
+    const res = await gsGet(`${TAB.NOTAS_VENTA}!A2:R`);
     if (res.values) {
       historial = res.values.map(r => ({
-        nv: r[0], fecha_emision: r[1], empresa: r[2], rut: r[3],
-        solicitante: r[4], mail: r[5], fecha_evento: r[6],
-        personas: r[7], subtotal: r[8], iva: r[9], total: r[10]
+        nv: r[0], nCot: r[1], fecha_emision: r[2],
+        solicitante: r[3], empresa: r[4], telefono: r[5], mail_contacto: r[6],
+        razon_social: r[7], rut: r[8], giro: r[9], direccion: r[10], mail: r[11],
+        evento: r[12], fecha_evento: r[13], personas: r[14],
+        subtotal: r[15], iva: r[16], total: r[17]
       }));
       localStorage.setItem('rr_historial', JSON.stringify(historial));
     }
-  } catch(e) {}
+  } catch(e) { console.warn('Error cargando historial:', e); }
   renderHistoricoLocal();
-}
-
-async function gfetch(url, opts = {}) {
-  if (!opts.headers) opts.headers = {};
-  opts.headers['Authorization'] = `Bearer ${accessToken}`;
-  const r = await fetch(url, opts);
-  return r.json();
 }
 
 // ─── RENDER HISTORICO ──────────────────────────────────────────────────────────
@@ -1863,14 +1427,14 @@ function renderTablaHistorico(data) {
     <tr>
       <td class="nv">${n.nv || ''}</td>
       <td>${formatFecha(n.fecha_emision) || ''}</td>
-      <td>${n.empresa || ''}</td>
+      <td>${n.razon_social || n.empresa || ''}</td>
       <td>${n.solicitante || ''}</td>
       <td>${n.fecha_evento || ''}</td>
       <td class="monto">${fmtCLP(Number(n.total) || 0)}</td>
     </tr>`).join('');
   return `<table class="historico">
     <thead><tr>
-      <th>Nº NV</th><th>Emisión</th><th>Empresa</th><th>Solicitante</th><th>Fecha Evento</th><th>Total</th>
+      <th>Nº NV</th><th>Emisión</th><th>Razón Social</th><th>Contacto</th><th>Fecha Evento</th><th>Total</th>
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
@@ -1956,7 +1520,7 @@ function validarEmail(mail) {
 }
 
 function validarMailField(mostrarError) {
-  const input = document.getElementById('f-mail');
+  const input = document.getElementById('f-mail-factura');
   const err = document.getElementById('err-mail');
   const valor = input.value.trim();
   const ok = validarEmail(valor);

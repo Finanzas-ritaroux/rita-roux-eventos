@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rita Roux · Cotizador de Eventos</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<script src="gsheets.js"></script>
 <style>
 :root {
   --rojo: #CC1F1F; --rojo-oscuro: #A01818; --rojo-claro: #FFF5F5; --rojo-borde: #F0C0C0;
@@ -181,11 +181,11 @@ header { background: var(--negro); display: flex; align-items: stretch; position
   </div>
   <div class="hdr-actions">
     <button class="btn btn-secondary" onclick="nuevaCotizacion()">↺ Nueva</button>
-    <button class="btn btn-secondary" id="btn-carpeta-cot" onclick="seleccionarCarpetaCotizaciones()" title="Seleccionar carpeta Presupuestos donde guardar cotizaciones">📁 Carpeta</button>
-    <button class="btn btn-secondary" onclick="window.open('historico-presupuestos.html','_blank')">🧾 Histórico Presupuestos</button>
+    <button class="btn btn-secondary" id="btn-google-cot" onclick="gsAuth()" title="Conectar Google para guardar">☁ Google</button>
+    <button class="btn btn-secondary" onclick="window.open('historico-presupuestos.html','_blank')">🧾 Histórico</button>
     <button class="btn btn-secondary" onclick="copiarExcel()">⎘ Copiar</button>
     <button class="btn btn-secondary" onclick="descargarPDF()">⬇ PDF</button>
-    <button class="btn btn-primary" onclick="emitirNotaVenta()" style="background:#1565C0;border-color:#1565C0;">📋 Emitir Nota de Venta</button>
+    <button class="btn btn-secondary" id="btn-guardar-cot" onclick="guardarPresupuesto()" style="border-color:rgba(46,125,50,.5);color:#4caf50">☁ Guardar Presupuesto</button>
   </div>
 </header>
 
@@ -748,63 +748,6 @@ function copiarExcel() {
 // ═══════════════════════════════════════════════════════
 // EXPORT — DOWNLOAD PDF
 // ═══════════════════════════════════════════════════════
-let cotizacionesDirHandle = null;
-
-async function seleccionarCarpetaCotizaciones() {
-  if (!window.showDirectoryPicker) {
-    showToast('⚠ Este visor no soporta conectar carpetas. Abre el archivo en Chrome o Edge (no en la vista previa interna).');
-    return;
-  }
-  try {
-    cotizacionesDirHandle = await window.showDirectoryPicker({ mode: 'readwrite', startIn: 'documents' });
-    await persistirCarpetaCot(cotizacionesDirHandle);
-    document.getElementById('btn-carpeta-cot').textContent = '📁 ' + cotizacionesDirHandle.name;
-    showToast('Carpeta: ' + cotizacionesDirHandle.name);
-  } catch(e) {
-    if (e.name !== 'AbortError') showToast('⚠ No se pudo conectar la carpeta: ' + e.message);
-  }
-}
-
-// Misma carpeta "Presupuestos" que usan Notas de Venta, Seguimiento, Dashboard
-// e Histórico de Presupuestos (mismo IndexedDB store/clave) para que, al
-// conectarla una vez en cualquiera de las apps, todas la reconozcan sola.
-async function persistirCarpetaCot(handle) {
-  return new Promise(resolve => {
-    const req = indexedDB.open('rr_nv_config', 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore('cfg');
-    req.onsuccess = e => {
-      const tx = e.target.result.transaction('cfg', 'readwrite');
-      tx.objectStore('cfg').put(handle, 'presupuestosDir');
-      tx.oncomplete = resolve; tx.onerror = resolve;
-    };
-    req.onerror = resolve;
-  });
-}
-
-async function restaurarCarpetaCot() {
-  return new Promise(resolve => {
-    const req = indexedDB.open('rr_nv_config', 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore('cfg');
-    req.onsuccess = e => {
-      try {
-        const tx = e.target.result.transaction('cfg', 'readonly');
-        const r = tx.objectStore('cfg').get('presupuestosDir');
-        r.onsuccess = async () => {
-          if (r.result) {
-            const perm = await r.result.queryPermission({ mode: 'readwrite' }).catch(() => 'denied');
-            if (perm === 'granted') {
-              cotizacionesDirHandle = r.result;
-              document.getElementById('btn-carpeta-cot').textContent = '📁 ' + cotizacionesDirHandle.name;
-            }
-          }
-          resolve();
-        };
-        r.onerror = resolve;
-      } catch(e) { resolve(); }
-    };
-    req.onerror = resolve;
-  });
-}
 
 async function descargarPDF() {
   if (typeof window.jspdf === 'undefined') {
@@ -816,23 +759,6 @@ async function descargarPDF() {
   const slug = (meta.cliente || 'Cotizacion').replace(/\s+/g, '_').slice(0, 20);
   const fecha = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   const filename = `Cotizacion_RitaRoux_${slug}_${fecha}.pdf`;
-
-  await registrarPresupuestoHistorico();
-
-  if (cotizacionesDirHandle) {
-    try {
-      let perm = await cotizacionesDirHandle.queryPermission({ mode: 'readwrite' });
-      if (perm !== 'granted') perm = await cotizacionesDirHandle.requestPermission({ mode: 'readwrite' });
-      if (perm === 'granted') {
-        const fh = await cotizacionesDirHandle.getFileHandle(filename, { create: true });
-        const wr = await fh.createWritable();
-        await wr.write(blob);
-        await wr.close();
-        showToast('✓ Guardado en ' + cotizacionesDirHandle.name);
-        return;
-      }
-    } catch(e) { console.warn(e); }
-  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = filename; a.click();
@@ -840,29 +766,40 @@ async function descargarPDF() {
   showToast('Descargando PDF…');
 }
 
+async function guardarPresupuesto() {
+  if (!gsConnected()) {
+    showToast('Conecta Google primero (botón ☁ Google)');
+    return;
+  }
+  const btn = document.getElementById('btn-guardar-cot');
+  if (btn) { btn.textContent = 'Guardando…'; btn.disabled = true; }
+  try {
+    await registrarPresupuestoHistorico();
+    showToast('✓ Presupuesto guardado en Google Sheets');
+    if (btn) { btn.textContent = '✓ Guardado'; btn.style.color = '#2e7d32'; }
+    setTimeout(() => {
+      if (btn) { btn.textContent = '☁ Guardar Presupuesto'; btn.style.color = '#4caf50'; btn.disabled = false; }
+    }, 3000);
+  } catch(e) {
+    showToast('Error al guardar: ' + e.message);
+    if (btn) { btn.textContent = '☁ Guardar Presupuesto'; btn.disabled = false; }
+  }
+}
+
 // ═══════════════════════════════════════════════════════
 // HISTÓRICO DE PRESUPUESTOS (Excel en carpeta Presupuestos)
 // ═══════════════════════════════════════════════════════
 async function numeroCotizacion() {
   const year = new Date().getFullYear();
-  let n = 0;
-  if (cotizacionesDirHandle) {
+  if (gsConnected()) {
     try {
-      const fh = await cotizacionesDirHandle.getFileHandle('historial_presupuestos.xlsx').catch(() => null);
-      if (fh) {
-        const file = await fh.getFile();
-        const buf = await file.arrayBuffer();
-        const wb = XLSX.read(buf, { type: 'array' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-        n = Math.max(0, rows.length - 1);
-      }
-    } catch(e) { /* ignore */ }
-  } else {
-    const local = JSON.parse(localStorage.getItem('rr_historial_presupuestos') || '[]');
-    n = local.length;
+      const res = await gsGet(`${TAB.PRESUPUESTOS}!A:A`);
+      const n = Math.max(0, (res.values || []).length - 1);
+      return `COT-${year}-${String(n + 1).padStart(3, '0')}`;
+    } catch(e) { /* fall through to local */ }
   }
-  return `COT-${year}-${String(n + 1).padStart(3, '0')}`;
+  const local = JSON.parse(localStorage.getItem('rr_historial_presupuestos') || '[]');
+  return `COT-${year}-${String(local.length + 1).padStart(3, '0')}`;
 }
 
 async function registrarPresupuestoHistorico() {
@@ -879,41 +816,18 @@ async function registrarPresupuestoHistorico() {
     subtotal: sub, iva, total
   };
 
-  // Cache local siempre (funciona aunque no haya carpeta seleccionada)
+  // Cache local siempre (fallback offline)
   const local = JSON.parse(localStorage.getItem('rr_historial_presupuestos') || '[]');
   local.push(registro);
   localStorage.setItem('rr_historial_presupuestos', JSON.stringify(local));
 
-  if (!cotizacionesDirHandle) return;
+  if (!gsConnected()) return;
   try {
-    let perm = await cotizacionesDirHandle.queryPermission({ mode: 'readwrite' });
-    if (perm !== 'granted') perm = await cotizacionesDirHandle.requestPermission({ mode: 'readwrite' });
-    if (perm !== 'granted') return;
-
-    const HEADERS = ['Nº Cotización','Fecha','Cliente','Evento','Fecha Evento','Nº Personas','Subtotal','IVA','Total'];
-    let rows = [HEADERS];
-    const fh0 = await cotizacionesDirHandle.getFileHandle('historial_presupuestos.xlsx').catch(() => null);
-    if (fh0) {
-      const file = await fh0.getFile();
-      const buf = await file.arrayBuffer();
-      const wb0 = XLSX.read(buf, { type: 'array' });
-      const ws0 = wb0.Sheets[wb0.SheetNames[0]];
-      const existing = XLSX.utils.sheet_to_json(ws0, { header: 1, defval: '' });
-      if (existing.length > 0) rows = existing;
-    }
-    rows.push([registro.cotizacion, registro.fecha, registro.cliente, registro.evento,
-               registro.fechaEvento, registro.personas, registro.subtotal, registro.iva, registro.total]);
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [{wch:14},{wch:12},{wch:26},{wch:24},{wch:14},{wch:10},{wch:13},{wch:11},{wch:13}];
-    XLSX.utils.book_append_sheet(wb, ws, 'Historial');
-    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const fh = await cotizacionesDirHandle.getFileHandle('historial_presupuestos.xlsx', { create: true });
-    const wr = await fh.createWritable();
-    await wr.write(new Blob([out]));
-    await wr.close();
-  } catch(e) { console.warn('Error guardando histórico de presupuestos:', e); }
+    await gsAppend(`${TAB.PRESUPUESTOS}!A:J`, [[
+      registro.cotizacion, registro.fecha, registro.cliente, registro.evento,
+      registro.fechaEvento, registro.personas, registro.subtotal, registro.iva, registro.total, 'pendiente'
+    ]]);
+  } catch(e) { console.warn('Error guardando presupuesto en Google Sheets:', e); }
 }
 
 function generarPDFCotizacion() {
@@ -1169,13 +1083,14 @@ function showToast(msg) {
 // INIT
 // ═══════════════════════════════════════════════════════
 window.onload = () => {
-  // Cada vez que se abre el Cotizador debe partir con una planilla limpia,
-  // nunca con la última cotización que se haya hecho.
   localStorage.removeItem('rr_cotizador');
   localStorage.removeItem('rr_cotizador_meta');
   renderCatalog();
   renderQuote();
-  restaurarCarpetaCot();
+  gsInit(() => {
+    const btn = document.getElementById('btn-google-cot');
+    if (btn) btn.textContent = '✓ Google';
+  });
 };
 </script>
 </body>

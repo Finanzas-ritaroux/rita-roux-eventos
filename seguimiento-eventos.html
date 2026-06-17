@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rita Roux · Seguimiento de Eventos</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="gsheets.js"></script>
 <style>
 :root{
   --rojo:#CC1F1F;--rojo-osc:#A01818;--rojo-cl:#FFF5F5;
@@ -209,10 +209,10 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
   </div>
 </header>
 
-<!-- FOLDER STATUS -->
+<!-- GOOGLE AUTH BAR -->
 <div class="folder-bar" id="folderBar">
-  <span>📁 Conecta la carpeta <b>Presupuestos</b> para sincronizar con el Excel (la misma que usas en Cotizador / Notas de Venta).</span>
-  <button class="btn btn-gh" style="font-size:9px;padding:5px 10px" onclick="elegirCarpeta()">Conectar carpeta</button>
+  <span id="gs-status">⚪ No conectado a Google Sheets — los cambios se guardan solo localmente.</span>
+  <button class="btn btn-gh" style="font-size:9px;padding:5px 10px" onclick="gsAuth()">Conectar Google</button>
 </div>
 
 <!-- APP -->
@@ -222,8 +222,8 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
     <div class="main-inner">
 
       <div class="tab-nav">
-        <button class="tbtn act" onclick="setTab('ev',this)">Eventos <span class="tbadge" id="b-ev">0</span></button>
-        <button class="tbtn" onclick="setTab('sa',this)">Uso de Salas <span class="tbadge" id="b-sa">0</span></button>
+        <button class="tbtn act" onclick="setTab('ac',this)">Activos <span class="tbadge" id="b-ac">0</span></button>
+        <button class="tbtn" onclick="setTab('fi',this)">Finalizados <span class="tbadge" id="b-fi">0</span></button>
         <button class="tbtn" onclick="setTab('ca',this)">Cancelados <span class="tbadge" id="b-ca">0</span></button>
       </div>
 
@@ -247,11 +247,11 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
           <option value="11">Nov</option><option value="12">Dic</option>
         </select>
         <button class="btn btn-gh" style="font-size:9px;padding:6px 10px" onclick="clearF()">✕</button>
-        <button class="btn btn-ok" style="font-size:9px;padding:6px 12px" id="btnAdd" onclick="openNew()">+ Evento</button>
+        <button class="btn btn-ok" style="font-size:9px;padding:6px 12px" id="btnAdd" onclick="openNew()">+ Nuevo</button>
       </div>
 
-      <div id="pev"></div>
-      <div id="psa" style="display:none"></div>
+      <div id="pac"></div>
+      <div id="pfi" style="display:none"></div>
       <div id="pca" style="display:none"></div>
     </div>
   </div>
@@ -264,8 +264,7 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
 // CONSTANTS
 // ═══════════════════════════════════════════════════════
 
-const KEY = 'rr_ev2026_v4';
-const EXCEL_NAME = 'seguimiento_eventos.xlsx';
+const KEY = 'rr_seg2026_v5';
 
 const PASOS = [
   { key:'f50',  label:'Factura 50%',         sub:'Gerardo emite la factura de abono al cliente',    persona:'Gerardo' },
@@ -285,173 +284,69 @@ const TIPOS = { corp:'Corporativo', matr:'Matrimonio', foto:'Fotografía', otro:
 
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).substr(2,5) }
 
-let db = { eventos: [], salas: [], cancelados: [] };
-let currentTab='ev', selId=null, dirHandle=null;
+// db: array unificado — { id, estado, tipo, notaVenta, nombre, cliente, fecha,
+//                          oc, f50, p50, f100, p100, fRec, fPag, total, pagado, dif, comentarios }
+let db = [];
+let currentTab='ac', selId=null;
 
-try{ const cached=JSON.parse(localStorage.getItem(KEY)||'null'); if(cached&&cached.eventos) db=cached; }catch(e){}
+try{ const cached=JSON.parse(localStorage.getItem(KEY)||'null'); if(Array.isArray(cached)) db=cached; }catch(e){}
 
-function saveCache(){ localStorage.setItem(KEY, JSON.stringify(db)) }
+function saveCache(){ localStorage.setItem(KEY, JSON.stringify(db)); }
 
-// ─── CARPETA PRESUPUESTOS (misma que Notas de Venta) ──────
-async function persistirHandle(handle){
-  return new Promise(resolve=>{
-    const req = indexedDB.open('rr_nv_config', 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore('cfg');
-    req.onsuccess = e => {
-      const tx = e.target.result.transaction('cfg','readwrite');
-      tx.objectStore('cfg').put(handle,'presupuestosDir');
-      tx.oncomplete = resolve; tx.onerror = resolve;
-    };
-    req.onerror = resolve;
-  });
-}
-async function restaurarHandle(){
-  return new Promise(resolve=>{
-    const req = indexedDB.open('rr_nv_config', 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore('cfg');
-    req.onsuccess = e => {
-      try{
-        const tx = e.target.result.transaction('cfg','readonly');
-        const r = tx.objectStore('cfg').get('presupuestosDir');
-        r.onsuccess = async () => {
-          if(r.result){
-            const perm = await r.result.queryPermission({mode:'readwrite'}).catch(()=>'denied');
-            if(perm==='granted') dirHandle = r.result;
-          }
-          resolve();
-        };
-        r.onerror = resolve;
-      }catch(e){ resolve(); }
-    };
-    req.onerror = resolve;
-  });
-}
-
-function mostrarErrorCarpeta(msg){
+function actualizarGSBar(){
   const bar = document.getElementById('folderBar');
-  bar.classList.remove('ok');
-  bar.innerHTML = `<span>⚠ ${msg}</span><button class="btn btn-gh" style="font-size:9px;padding:5px 10px" onclick="elegirCarpeta()">Reintentar</button>`;
+  bar.classList.add('ok');
+  bar.innerHTML = `<span id="gs-status">🟢 Conectado a <b>Google Sheets</b> · datos sincronizados</span><button class="btn btn-gh" style="font-size:9px;padding:5px 10px" onclick="gsAuth()">Reconectar</button>`;
 }
 
-async function elegirCarpeta(){
-  if(!window.showDirectoryPicker){
-    mostrarErrorCarpeta('Este visor no soporta conectar carpetas (función no disponible en navegadores embebidos / vista previa interna de VS Code). Abre este archivo en una ventana real de <b>Chrome</b> o <b>Edge</b> — clic derecho sobre el archivo → "Abrir con" → Chrome/Edge.');
-    return;
-  }
+// ─── LEER DESDE GOOGLE SHEETS ──────────────────────────────
+async function cargarDesdeGS(){
+  if(!gsConnected()) return false;
   try{
-    dirHandle = await window.showDirectoryPicker({ mode:'readwrite', startIn:'documents' });
-    await persistirHandle(dirHandle);
-    await cargarDesdeExcel();
-    actualizarFolderBar();
-    renderMain();
-  }catch(e){
-    if(e.name!=='AbortError') mostrarErrorCarpeta('No se pudo conectar la carpeta: ' + e.message);
-  }
-}
-
-function actualizarFolderBar(){
-  const bar = document.getElementById('folderBar');
-  if(dirHandle){
-    bar.classList.add('ok');
-    bar.innerHTML = `<span>📁 Sincronizado con <b>${dirHandle.name}</b> · ${EXCEL_NAME}</span><button class="btn btn-gh" style="font-size:9px;padding:5px 10px" onclick="elegirCarpeta()">Cambiar</button>`;
-  }
-}
-
-// ─── LEER / ESCRIBIR EXCEL ─────────────────────────────────
-async function cargarDesdeExcel(){
-  if(!dirHandle) return false;
-  try{
-    let perm = await dirHandle.queryPermission({mode:'readwrite'});
-    if(perm!=='granted') perm = await dirHandle.requestPermission({mode:'readwrite'});
-    if(perm!=='granted') return false;
-
-    const fh = await dirHandle.getFileHandle(EXCEL_NAME).catch(()=>null);
-    if(!fh){ return false; }
-    const file = await fh.getFile();
-    const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf,{type:'array'});
-
-    const wsEv = wb.Sheets['Eventos'];
-    const eventos = wsEv ? XLSX.utils.sheet_to_json(wsEv,{defval:''}).map(r=>({
-      id: uid(), tipo:'evento',
-      notaVenta: r['Nº Nota Venta']||'', nombre: r['Nombre Evento']||'', cliente: r['Cliente']||'',
-      fecha: normFecha(r['Fecha Evento']), tev: r['Tipo']||'corp',
-      oc: r['OC']||'', f50: r['Factura 50%']||'', p50: r['Pago 50%']||'',
-      f100: r['Factura 100%']||'', p100: r['Pago 100%']||'',
-      fRec: r['Fact. Prov. Recibidas']||'', fPag: r['Fact. Prov. Pagadas']||'',
-      total: +r['Total']||0, pagado: +r['Pagado']||0, dif: +r['Diferencia']||0,
-      comentarios: r['Comentarios']||''
-    })) : [];
-
-    const wsSa = wb.Sheets['Salas'];
-    const salas = wsSa ? XLSX.utils.sheet_to_json(wsSa,{defval:''}).map(r=>({
-      id: uid(), tipo:'sala',
-      nombre: r['Nombre']||'', cliente: r['Cliente']||'', fecha: normFecha(r['Fecha']),
-      factura: r['Factura']||'', p50: r['Pago 50%']||'', p100: r['Pago 100%']||'',
-      total: +r['Total']||0, pagado: +r['Pagado']||0, dif: +r['Diferencia']||0,
-      comentarios: r['Comentarios']||''
-    })) : [];
-
-    const wsCa = wb.Sheets['Cancelados'];
-    const cancelados = wsCa ? XLSX.utils.sheet_to_json(wsCa,{defval:''}).map(r=>({
-      id: uid(), tipo:'cancelado',
-      nombre: r['Nombre']||'', cliente: r['Cliente']||'', fecha: normFecha(r['Fecha']),
-      oc: r['OC']||'', f50: r['Factura 50%']||'', f100: r['Factura 100%']||'',
-      total: +r['Total']||0, comentarios: r['Comentarios']||''
-    })) : [];
-
-    db = { eventos, salas, cancelados };
+    const res = await gsGet(`${TAB.SEG}!A2:Q`);
+    db = (res.values||[]).map(r=>({
+      id: uid(),
+      estado:     r[0]||'activo',
+      tipo:       r[1]||'evento',
+      notaVenta:  r[2]||'',
+      nombre:     r[3]||'',
+      cliente:    r[4]||'',
+      fecha:      r[5]||'',
+      oc:         r[6]||'',
+      f50:        r[7]||'',
+      p50:        r[8]||'',
+      f100:       r[9]||'',
+      p100:       r[10]||'',
+      fRec:       r[11]||'',
+      fPag:       r[12]||'',
+      total:      +r[13]||0,
+      pagado:     +r[14]||0,
+      dif:        +r[15]||0,
+      comentarios:r[16]||''
+    }));
     saveCache();
     return true;
-  }catch(e){ console.warn('Error leyendo Excel:', e); return false; }
-}
-
-function normFecha(v){
-  if(!v) return '';
-  if(typeof v === 'string') return v;
-  try{ const d = XLSX.SSF.parse_date_code(v); return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`; }catch(e){ return ''; }
+  }catch(e){ console.warn('Error leyendo Google Sheets:', e); return false; }
 }
 
 let saveTimer=null;
 function scheduleSave(){
   saveCache();
   clearTimeout(saveTimer);
-  saveTimer=setTimeout(guardarEnExcel, 350);
+  saveTimer=setTimeout(guardarEnGS, 1500);
 }
 
-async function guardarEnExcel(){
-  if(!dirHandle) return;
+async function guardarEnGS(){
+  if(!gsConnected()) return;
   try{
-    let perm = await dirHandle.queryPermission({mode:'readwrite'});
-    if(perm!=='granted') perm = await dirHandle.requestPermission({mode:'readwrite'});
-    if(perm!=='granted') return;
-
-    const wb = XLSX.utils.book_new();
-
-    const hEv = ['Nº Nota Venta','Nombre Evento','Cliente','Fecha Evento','Tipo','OC','Factura 50%','Pago 50%','Factura 100%','Pago 100%','Fact. Prov. Recibidas','Fact. Prov. Pagadas','Total','Pagado','Diferencia','Comentarios'];
-    const rowsEv = [hEv, ...db.eventos.map(e=>[e.notaVenta,e.nombre,e.cliente,e.fecha,e.tev,e.oc,e.f50,e.p50,e.f100,e.p100,e.fRec,e.fPag,e.total,e.pagado,e.dif,e.comentarios])];
-    const wsEv = XLSX.utils.aoa_to_sheet(rowsEv);
-    wsEv['!cols']=[{wch:14},{wch:28},{wch:24},{wch:13},{wch:9},{wch:6},{wch:11},{wch:9},{wch:12},{wch:9},{wch:18},{wch:16},{wch:13},{wch:13},{wch:13},{wch:30}];
-    XLSX.utils.book_append_sheet(wb, wsEv, 'Eventos');
-
-    const hSa = ['Nombre','Cliente','Fecha','Factura','Pago 50%','Pago 100%','Total','Pagado','Diferencia','Comentarios'];
-    const rowsSa = [hSa, ...db.salas.map(e=>[e.nombre,e.cliente,e.fecha,e.factura,e.p50,e.p100,e.total,e.pagado,e.dif,e.comentarios])];
-    const wsSa = XLSX.utils.aoa_to_sheet(rowsSa);
-    wsSa['!cols']=[{wch:24},{wch:22},{wch:13},{wch:9},{wch:9},{wch:9},{wch:13},{wch:13},{wch:13},{wch:30}];
-    XLSX.utils.book_append_sheet(wb, wsSa, 'Salas');
-
-    const hCa = ['Nombre','Cliente','Fecha','OC','Factura 50%','Factura 100%','Total','Comentarios'];
-    const rowsCa = [hCa, ...db.cancelados.map(e=>[e.nombre,e.cliente,e.fecha,e.oc,e.f50,e.f100,e.total,e.comentarios])];
-    const wsCa = XLSX.utils.aoa_to_sheet(rowsCa);
-    wsCa['!cols']=[{wch:24},{wch:22},{wch:13},{wch:6},{wch:11},{wch:12},{wch:13},{wch:30}];
-    XLSX.utils.book_append_sheet(wb, wsCa, 'Cancelados');
-
-    const out = XLSX.write(wb,{bookType:'xlsx',type:'array'});
-    const fh = await dirHandle.getFileHandle(EXCEL_NAME,{create:true});
-    const wr = await fh.createWritable();
-    await wr.write(new Blob([out]));
-    await wr.close();
-  }catch(e){ console.warn('Error guardando Excel:', e); }
+    const rows = db.map(e=>[
+      e.estado, e.tipo, e.notaVenta, e.nombre, e.cliente, e.fecha,
+      e.oc, e.f50, e.p50, e.f100, e.p100, e.fRec, e.fPag,
+      e.total, e.pagado, e.dif, e.comentarios
+    ]);
+    await gsClear(`${TAB.SEG}!A2:Q`);
+    if(rows.length) await gsAppend(`${TAB.SEG}!A2:Q`, rows);
+  }catch(e){ console.warn('Error guardando en Google Sheets:', e); }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -459,10 +354,12 @@ async function guardarEnExcel(){
 // ═══════════════════════════════════════════════════════
 
 function calcE(ev){
-  if(ev.tipo==='sala'){ const n=[ev.factura,ev.p50,ev.p100].filter(x=>x==='si').length; return{n,max:3} }
-  if(ev.tipo==='cancelado') return{n:-1,max:0}
+  if(ev.tipo==='sala'){
+    const n=[ev.oc,ev.p50,ev.p100].filter(x=>x==='si').length;
+    return{n,max:3};
+  }
   const n=[ev.f50,ev.p50,ev.f100,ev.p100,ev.fRec,ev.fPag].filter(x=>x==='si').length;
-  return{n,max:6}
+  return{n,max:6};
 }
 function semCls(n,max){
   if(n<0) return 's-can';
@@ -530,7 +427,6 @@ function matchF(e){
   if(fm&&e.fecha&&(new Date(e.fecha+'T00:00:00').getMonth()+1)!==+fm) return false;
   if(fe){
     const{n,max}=calcE(e), txt=semTxt(n,max);
-    if(fe==='fin'&&txt!=='Finalizado') return false;
     if(fe==='casi'&&txt!=='Casi listo') return false;
     if(fe==='proc'&&txt!=='En proceso') return false;
     if(fe==='ini'&&txt!=='Iniciando') return false;
@@ -543,139 +439,77 @@ function matchF(e){
 // RENDER TABLES
 // ═══════════════════════════════════════════════════════
 
-function renderEv(){
-  const el=document.getElementById('pev');
-  // Sólo eventos con Nota de Venta asociada
-  const conNV = db.eventos.filter(e=>e.notaVenta);
-  const all=conNV.filter(matchF);
-  const activos=all.filter(e=>{const s=calcE(e);return!(s.n===s.max&&s.max>0)});
-  const finalizados=all.filter(e=>{const s=calcE(e);return s.n===s.max&&s.max>0});
-
-  activos.sort((a,b)=>{
+function renderTblActivos(){
+  const el=document.getElementById('pac');
+  const lista=db.filter(e=>e.estado==='activo').filter(matchF);
+  lista.sort((a,b)=>{
     const da=new Date(a.fecha+'T00:00:00'), db_=new Date(b.fecha+'T00:00:00');
     const today=new Date(); today.setHours(0,0,0,0);
     const fa=da>=today, fb=db_>=today;
-    if(fa&&!fb) return -1;
-    if(!fa&&fb) return 1;
-    if(fa&&fb) return da-db_;
-    return db_-da;
+    if(fa&&!fb) return -1; if(!fa&&fb) return 1;
+    if(fa&&fb) return da-db_; return db_-da;
   });
-  finalizados.sort((a,b)=>new Date(b.fecha+'T00:00:00')-new Date(a.fecha+'T00:00:00'));
-
-  let html='';
-
-  if(!conNV.length){
-    html=`<div class="empty">
-      <div class="empty-ico">🧾</div>
-      <p>Aún no hay eventos con Nota de Venta generada.</p>
-      <p style="font-size:11px;margin-top:4px">Los eventos aparecen aquí automáticamente al emitir una Nota de Venta.</p>
-      <button class="btn btn-pr" onclick="window.open('rita-roux-notas-venta.html','_blank')">+ Emitir Nota de Venta</button>
-    </div>`;
-  } else if(!activos.length&&!finalizados.length){
-    html=`<div class="empty"><div class="empty-ico">📋</div><p>Sin resultados para estos filtros</p></div>`;
-  } else {
-    if(activos.length){
-      html+=`<div class="tbl"><table>
-        <thead><tr><th>Evento / Cliente</th><th>N° NV</th><th>Fecha</th><th>Estado</th><th>Progreso</th><th>$ Pendiente</th></tr></thead>
-        <tbody>`;
-      activos.forEach(e=>{
-        const{n,max}=calcE(e);
-        const pend=(e.dif||0)>0;
-        const isSel=selId===e.id;
-        html+=`<tr class="${isSel?'sel':''}" onclick="selEv('${e.id}')">
-          <td><span style="font-weight:600">${e.nombre}</span>${tipoBadge(e.tev||'corp')}<br><span style="font-size:10px;color:var(--gris-t)">${e.cliente}</span></td>
-          <td><span class="nv-tag">${e.notaVenta}</span></td>
-          <td>${fmtFecha(e.fecha)}</td>
-          <td>${semH(n,max)}</td>
-          <td><div class="pips" title="${PASOS.map((p,i)=>i+1+'. '+p.label).join(' · ')}">${pipH(e)}</div></td>
-          <td class="amt ${pend?'amt-pend':'amt-ok'}">${pend?fmtM(e.dif):'✓'}</td>
-        </tr>`;
-      });
-      html+=`</tbody></table></div>`;
-    } else {
-      html+=`<div class="empty" style="padding:20px"><p style="font-size:11px">No hay eventos activos</p></div>`;
-    }
-
-    if(finalizados.length){
-      const finOpen=localStorage.getItem('rr_fin_open')==='1';
-      html+=`<div class="fin-section">
-        <button class="fin-toggle ${finOpen?'open':''}" onclick="toggleFin(this)">
-          <span class="fin-arrow">▶</span><span>Finalizados</span>
-          <span class="tbadge" style="background:var(--verde-bg);color:var(--verde)">${finalizados.length}</span>
-          <span style="flex:1"></span>
-          <span style="font-size:10px;color:var(--verde);font-weight:400">${fmtM(finalizados.reduce((a,e)=>a+(e.total||0),0))}</span>
-        </button>
-        <div class="fin-body ${finOpen?'open':''}">
-          <div class="tbl"><table>
-            <thead><tr><th>Evento / Cliente</th><th>N° NV</th><th>Fecha</th><th>Tipo</th><th>Total cobrado</th></tr></thead>
-            <tbody>
-              ${finalizados.map(e=>`<tr class="fin-row ${selId===e.id?'sel':''}" onclick="selEv('${e.id}')">
-                <td><span style="font-weight:600">${e.nombre}</span><br><span style="font-size:10px;color:var(--gris-t)">${e.cliente}</span></td>
-                <td><span class="nv-tag">${e.notaVenta}</span></td>
-                <td>${fmtFecha(e.fecha)}</td>
-                <td>${tipoBadge(e.tev||'corp')}</td>
-                <td class="amt amt-ok">${fmtM(e.total)}</td>
-              </tr>`).join('')}
-            </tbody>
-          </table></div>
-        </div>
-      </div>`;
-    }
+  if(!lista.length){
+    el.innerHTML=`<div class="empty"><div class="empty-ico">🧾</div><p>No hay eventos activos.</p>
+      <button class="btn btn-pr" style="margin-top:14px" onclick="window.open('rita-roux-notas-venta.html','_blank')">+ Emitir Nota de Venta</button>
+    </div>`; return;
   }
-  el.innerHTML=html;
-}
-
-function toggleFin(btn){
-  btn.classList.toggle('open');
-  const body=btn.nextElementSibling;
-  body.classList.toggle('open');
-  localStorage.setItem('rr_fin_open', body.classList.contains('open')?'1':'0');
-}
-
-function renderSa(){
-  const el=document.getElementById('psa');
-  const lista=db.salas.filter(matchF).sort((a,b)=>new Date(a.fecha+'T00:00:00')-new Date(b.fecha+'T00:00:00'));
-  if(!lista.length){el.innerHTML=`<div class="empty"><div class="empty-ico">🏠</div><p>Sin registros de salas</p></div>`;return}
   el.innerHTML=`<div class="tbl"><table>
-    <thead><tr><th>Sala / Cliente</th><th>Fecha</th><th>Estado</th><th>Progreso</th><th>$ Pendiente</th></tr></thead>
+    <thead><tr><th>Nombre / Cliente</th><th>Tipo</th><th>N° NV</th><th>Fecha</th><th>Estado</th><th>Progreso</th><th>$ Pendiente</th></tr></thead>
     <tbody>${lista.map(e=>{
-      const{n,max}=calcE(e);
-      const pips=[e.factura,e.p50,e.p100].map((v,i)=>`<span class="pip ${v==='si'?'pip-ok':'pip-no'}" title="${['Factura','Pago 50%','Pago 100%'][i]}"></span>`).join('');
+      const{n,max}=calcE(e); const pend=(e.dif||0)>0;
+      const tipoBdg=e.tipo==='sala'
+        ?`<span class="tipo-badge" style="background:#E8F0FD;color:#1565C0">Sala</span>`
+        :`<span class="tipo-badge" style="background:#F3E5F5;color:#6A1B9A">Evento</span>`;
       return`<tr class="${selId===e.id?'sel':''}" onclick="selEv('${e.id}')">
         <td><span style="font-weight:600">${e.nombre}</span><br><span style="font-size:10px;color:var(--gris-t)">${e.cliente}</span></td>
+        <td>${tipoBdg}</td>
+        <td><span class="nv-tag">${e.notaVenta||'—'}</span></td>
         <td>${fmtFecha(e.fecha)}</td>
         <td>${semH(n,max)}</td>
-        <td><div class="pips">${pips}</div></td>
-        <td class="amt ${(e.dif||0)>0?'amt-pend':'amt-ok'}">${(e.dif||0)>0?fmtM(e.dif):'✓'}</td>
-      </tr>`;}).join('')}
-    </tbody></table></div>`;
+        <td><div class="pips">${pipH(e)}</div></td>
+        <td class="amt ${pend?'amt-pend':'amt-ok'}">${pend?fmtM(e.dif):'✓'}</td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
 }
 
-function renderCa(){
-  const el=document.getElementById('pca');
-  const lista=db.cancelados.filter(matchF).sort((a,b)=>new Date(a.fecha+'T00:00:00')-new Date(b.fecha+'T00:00:00'));
-  if(!lista.length){el.innerHTML=`<div class="empty"><div class="empty-ico">🚫</div><p>Sin cancelados</p></div>`;return}
+function renderTblFinalizados(){
+  const el=document.getElementById('pfi');
+  const lista=db.filter(e=>e.estado==='finalizado').filter(matchF)
+    .sort((a,b)=>new Date(b.fecha+'T00:00:00')-new Date(a.fecha+'T00:00:00'));
+  if(!lista.length){el.innerHTML=`<div class="empty"><div class="empty-ico">✓</div><p>Sin eventos finalizados aún.</p></div>`;return;}
   el.innerHTML=`<div class="tbl"><table>
-    <thead><tr><th>Evento / Cliente</th><th>Fecha</th><th>OC</th><th>F50%</th><th>F100%</th><th>Total</th><th>Nota</th></tr></thead>
+    <thead><tr><th>Nombre / Cliente</th><th>N° NV</th><th>Fecha</th><th>Total cobrado</th></tr></thead>
+    <tbody>${lista.map(e=>`<tr class="fin-row ${selId===e.id?'sel':''}" onclick="selEv('${e.id}')">
+      <td><span style="font-weight:600">${e.nombre}</span><br><span style="font-size:10px;color:var(--gris-t)">${e.cliente}</span></td>
+      <td><span class="nv-tag">${e.notaVenta||'—'}</span></td>
+      <td>${fmtFecha(e.fecha)}</td>
+      <td class="amt amt-ok">${fmtM(e.total)}</td>
+    </tr>`).join('')}</tbody></table></div>`;
+}
+
+function renderTblCancelados(){
+  const el=document.getElementById('pca');
+  const lista=db.filter(e=>e.estado==='cancelado').filter(matchF)
+    .sort((a,b)=>new Date(b.fecha+'T00:00:00')-new Date(a.fecha+'T00:00:00'));
+  if(!lista.length){el.innerHTML=`<div class="empty"><div class="empty-ico">🚫</div><p>Sin cancelados.</p></div>`;return;}
+  el.innerHTML=`<div class="tbl"><table>
+    <thead><tr><th>Nombre / Cliente</th><th>Fecha</th><th>Total</th><th>Nota</th></tr></thead>
     <tbody>${lista.map(e=>`<tr class="${selId===e.id?'sel':''}" onclick="selEv('${e.id}')">
       <td><span style="font-weight:600">${e.nombre}</span><br><span style="font-size:10px;color:var(--gris-t)">${e.cliente}</span></td>
       <td>${fmtFecha(e.fecha)}</td>
-      <td style="font-size:12px">${e.oc==='si'?'<span style="color:var(--verde)">✓</span>':'<span style="color:var(--gris-t)">—</span>'}</td>
-      <td style="font-size:12px">${e.f50==='si'?'<span style="color:var(--verde)">✓</span>':'<span style="color:var(--gris-t)">—</span>'}</td>
-      <td style="font-size:12px">${e.f100==='si'?'<span style="color:var(--verde)">✓</span>':'<span style="color:var(--gris-t)">—</span>'}</td>
       <td class="amt">${fmtM(e.total)}</td>
       <td style="font-size:10px;color:var(--gris-t)">${e.comentarios||''}</td>
-    </tr>`).join('')}
-    </tbody></table></div>`;
+    </tr>`).join('')}</tbody></table></div>`;
 }
 
 function renderMain(){
-  if(currentTab==='ev') renderEv();
-  else if(currentTab==='sa') renderSa();
-  else renderCa();
-  document.getElementById('b-ev').textContent=db.eventos.filter(e=>e.notaVenta).length;
-  document.getElementById('b-sa').textContent=db.salas.length;
-  document.getElementById('b-ca').textContent=db.cancelados.length;
+  if(currentTab==='ac') renderTblActivos();
+  else if(currentTab==='fi') renderTblFinalizados();
+  else renderTblCancelados();
+  document.getElementById('b-ac').textContent=db.filter(e=>e.estado==='activo').length;
+  document.getElementById('b-fi').textContent=db.filter(e=>e.estado==='finalizado').length;
+  document.getElementById('b-ca').textContent=db.filter(e=>e.estado==='cancelado').length;
   if(selId) renderDetail(selId);
   else renderAlertas();
 }
@@ -688,8 +522,7 @@ function setTab(t,btn){
   currentTab=t; selId=null;
   document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('act'));
   btn.classList.add('act');
-  ['ev','sa','ca'].forEach(x=>document.getElementById('p'+x).style.display=x===t?'':'none');
-  document.getElementById('btnAdd').style.display = t==='ev' ? 'none' : 'inline-block';
+  ['ac','fi','ca'].forEach(x=>document.getElementById('p'+x).style.display=x===t?'':'none');
   renderMain();
 }
 function clearF(){
@@ -706,12 +539,12 @@ function clearF(){
 function renderAlertas(){
   const rp=document.getElementById('rp');
   const today=new Date(); today.setHours(0,0,0,0);
-  const eventosNV = db.eventos.filter(e=>e.notaVenta);
+  const activos = db.filter(e=>e.estado==='activo');
 
-  const proximos=eventosNV.filter(e=>{const d=dias(e.fecha);return d!==null&&d>=0&&d<=14&&calcE(e).n<calcE(e).max}).sort((a,b)=>dias(a.fecha)-dias(b.fecha));
-  const cobros=eventosNV.filter(e=>e.dif>0&&e.fecha&&new Date(e.fecha+'T00:00:00')<today).sort((a,b)=>(b.dif||0)-(a.dif||0));
-  const sinIniciar=eventosNV.filter(e=>{const s=calcE(e);return s.n===0}).sort((a,b)=>new Date(a.fecha+'T00:00:00')-new Date(b.fecha+'T00:00:00'));
-  const enProceso=eventosNV.filter(e=>{const s=calcE(e);return s.n>0&&s.n<s.max}).sort((a,b)=>new Date(a.fecha+'T00:00:00')-new Date(b.fecha+'T00:00:00'));
+  const proximos=activos.filter(e=>{const d=dias(e.fecha);return d!==null&&d>=0&&d<=14&&calcE(e).n<calcE(e).max}).sort((a,b)=>dias(a.fecha)-dias(b.fecha));
+  const cobros=activos.filter(e=>e.dif>0&&e.fecha&&new Date(e.fecha+'T00:00:00')<today).sort((a,b)=>(b.dif||0)-(a.dif||0));
+  const sinIniciar=activos.filter(e=>{const s=calcE(e);return s.n===0}).sort((a,b)=>new Date(a.fecha+'T00:00:00')-new Date(b.fecha+'T00:00:00'));
+  const enProceso=activos.filter(e=>{const s=calcE(e);return s.n>0&&s.n<s.max}).sort((a,b)=>new Date(a.fecha+'T00:00:00')-new Date(b.fecha+'T00:00:00'));
 
   let html=`<div class="rp-header"><span class="rp-title">Alertas y Pendientes</span></div><div class="rp-body">`;
 
@@ -776,8 +609,7 @@ function renderAlertas(){
 function selEv(id){ selId=id; renderMain(); }
 
 function renderDetail(id){
-  const all=[...db.eventos,...db.salas,...db.cancelados];
-  const e=all.find(x=>x.id===id);
+  const e=db.find(x=>x.id===id);
   if(!e){ renderAlertas(); return; }
 
   const{n,max}=calcE(e);
@@ -824,12 +656,7 @@ function renderDetail(id){
 
   if(e.tipo==='evento'){
     html+=`<div class="det-field"><label>Nº Nota de Venta</label><input type="text" id="d-nv" value="${e.notaVenta||''}" placeholder="NV-2026-001"></div>
-    <div class="row2">
-      <div class="det-field"><label>Tipo de evento</label>
-        <select id="d-tev">${Object.entries(TIPOS).map(([k,v])=>`<option value="${k}" ${(e.tev||'corp')===k?'selected':''}>${v}</option>`).join('')}</select>
-      </div>
-      <div class="det-field"><label>Monto total</label><input type="number" id="d-total" value="${e.total||''}"></div>
-    </div>`;
+    <div class="det-field"><label>Monto total</label><input type="number" id="d-total" value="${e.total||''}"></div>`;
   } else if(e.tipo==='sala'){
     html+=`<div class="det-field"><label>Monto total</label><input type="number" id="d-total" value="${e.total||''}"></div>`;
   } else {
@@ -857,19 +684,14 @@ function renderDetail(id){
         <div class="det-field"><label>Diferencia</label><input type="number" id="d-dif" value="${e.dif||0}" readonly style="background:var(--gris);color:var(--gris-t)"></div>
       </div>
     </div>`;
-  } else if(e.tipo==='sala'){
-    html+=`<div class="det-section"><div class="det-sec-title">Estado facturación</div>
-      ${[{key:'factura',label:'Factura emitida'},{key:'p50',label:'Pago 50%'},{key:'p100',label:'Pago 100%'}].map(p=>`
+  } else {
+    html+=`<div class="det-section"><div class="det-sec-title">Estado de cobro</div>
+      ${[{key:'oc',label:'Acuerdo / contrato firmado'},{key:'p50',label:'Pago 50% recibido'},{key:'p100',label:'Pago 100% recibido'}].map(p=>`
         <label class="oc-toggle" style="margin-bottom:6px"><input type="checkbox" id="d-${p.key}" ${e[p.key]==='si'?'checked':''}><span>${p.label}</span></label>`).join('')}
       <div class="row2" style="margin-top:8px">
         <div class="det-field"><label>Cobrado</label><input type="number" id="d-pag" value="${e.pagado||0}" oninput="autoDif()"></div>
         <div class="det-field"><label>Diferencia</label><input type="number" id="d-dif" value="${e.dif||0}" readonly style="background:var(--gris)"></div>
       </div>
-    </div>`;
-  } else {
-    html+=`<div class="det-section"><div class="det-sec-title">Estado cancelación</div>
-      ${[{key:'oc',label:'OC recibida'},{key:'f50',label:'Factura 50% emitida'},{key:'f100',label:'Factura 100% emitida'}].map(p=>`
-        <label class="oc-toggle" style="margin-bottom:6px"><input type="checkbox" id="d-${p.key}" ${e[p.key]==='si'?'checked':''}><span>${p.label}</span></label>`).join('')}
     </div>`;
   }
 
@@ -877,10 +699,18 @@ function renderDetail(id){
     <div class="det-field"><textarea id="d-com" rows="3">${e.comentarios||''}</textarea></div>
   </div></div>`;
 
+  let estadoBtns = '';
+  if(e.estado==='activo'){
+    estadoBtns=`<button class="btn btn-ok" style="font-size:9px" onclick="cambiarEstado('${e.id}','finalizado')">✓ Finalizar</button>
+                <button class="btn" style="font-size:9px;background:#E65100;color:#fff" onclick="cambiarEstado('${e.id}','cancelado')">Cancelar evento</button>`;
+  } else {
+    estadoBtns=`<button class="btn btn-gh" style="font-size:9px" onclick="cambiarEstado('${e.id}','activo')">↩ Reactivar</button>`;
+  }
   html+=`<div class="det-footer">
-    <button class="btn btn-del" onclick="delEv('${e.id}','${e.tipo}')">Eliminar</button>
+    <button class="btn btn-del" onclick="delEv('${e.id}')">Eliminar</button>
+    ${estadoBtns}
     <button class="btn btn-gh" onclick="closeDetail()">Cancelar</button>
-    <button class="btn btn-pr" onclick="saveDetail('${e.id}','${e.tipo}')">Guardar</button>
+    <button class="btn btn-pr" onclick="saveDetail('${e.id}')">Guardar</button>
   </div>`;
 
   rp.innerHTML=html;
@@ -896,64 +726,67 @@ function autoDif(){
 }
 
 function togglePaso(key){
-  const all=[...db.eventos,...db.salas,...db.cancelados];
-  const e=all.find(x=>x.id===selId);
+  const e=db.find(x=>x.id===selId);
   if(!e) return;
   e[key]=e[key]==='si'?'':'si';
   scheduleSave(); renderMain();
 }
 
-function saveDetail(id, tipo){
-  const lista=tipo==='sala'?db.salas:tipo==='cancelado'?db.cancelados:db.eventos;
-  const e=lista.find(x=>x.id===id);
+function saveDetail(id){
+  const e=db.find(x=>x.id===id);
   if(!e) return;
-
   e.nombre=document.getElementById('d-nombre')?.value||e.nombre;
   e.cliente=document.getElementById('d-cliente')?.value||e.cliente;
   e.fecha=document.getElementById('d-fecha')?.value||e.fecha;
   e.total=parseFloat(document.getElementById('d-total')?.value)||e.total;
   e.comentarios=document.getElementById('d-com')?.value||'';
-
-  if(tipo==='evento'){
+  if(e.tipo==='evento'){
     e.notaVenta=document.getElementById('d-nv')?.value||'';
-    e.tev=document.getElementById('d-tev')?.value||e.tev;
     e.oc=document.getElementById('d-oc')?.checked?'si':'';
-    e.pagado=parseFloat(document.getElementById('d-pag')?.value)||0;
-    e.dif=parseFloat(document.getElementById('d-dif')?.value)||0;
-  } else if(tipo==='sala'){
-    e.factura=document.getElementById('d-factura')?.checked?'si':'';
-    e.p50=document.getElementById('d-p50')?.checked?'si':'';
-    e.p100=document.getElementById('d-p100')?.checked?'si':'';
     e.pagado=parseFloat(document.getElementById('d-pag')?.value)||0;
     e.dif=parseFloat(document.getElementById('d-dif')?.value)||0;
   } else {
     e.oc=document.getElementById('d-oc')?.checked?'si':'';
-    e.f50=document.getElementById('d-f50')?.checked?'si':'';
-    e.f100=document.getElementById('d-f100')?.checked?'si':'';
+    e.p50=document.getElementById('d-p50')?.checked?'si':'';
+    e.p100=document.getElementById('d-p100')?.checked?'si':'';
+    e.pagado=parseFloat(document.getElementById('d-pag')?.value)||0;
+    e.dif=parseFloat(document.getElementById('d-dif')?.value)||0;
   }
-
   scheduleSave(); renderMain();
+}
+
+function cambiarEstado(id, nuevoEstado){
+  const e=db.find(x=>x.id===id);
+  if(!e) return;
+  e.estado=nuevoEstado;
+  selId=null; scheduleSave(); renderMain();
 }
 
 function closeDetail(){ selId=null; renderMain(); }
 
-function delEv(id, tipo){
-  if(!confirm('¿Eliminar este evento? Esta acción no se puede deshacer.')) return;
-  const lista=tipo==='sala'?db.salas:tipo==='cancelado'?db.cancelados:db.eventos;
-  const i=lista.findIndex(x=>x.id===id);
-  if(i>=0) lista.splice(i,1);
+function delEv(id){
+  if(!confirm('¿Eliminar este registro? Esta acción no se puede deshacer.')) return;
+  const i=db.findIndex(x=>x.id===id);
+  if(i>=0) db.splice(i,1);
   selId=null; scheduleSave(); renderMain();
 }
 
 // ═══════════════════════════════════════════════════════
-// NEW (sólo Salas / Cancelados — los Eventos nacen de una NV)
+// NEW
 // ═══════════════════════════════════════════════════════
 
 function openNew(){
-  const tipo=currentTab==='sa'?'sala':'cancelado';
-  const nuevo={ id:uid(), tipo, nombre:'', cliente:'', fecha:'', factura:'', p50:'', p100:'', oc:'', f50:'', f100:'', pagado:0, total:0, dif:0, comentarios:'' };
-  if(tipo==='sala') db.salas.unshift(nuevo); else db.cancelados.unshift(nuevo);
-  scheduleSave(); selId=nuevo.id; renderMain();
+  const tipo='evento';
+  const nuevo={
+    id:uid(), estado:'activo', tipo,
+    notaVenta:'', nombre:'', cliente:'', fecha:'',
+    oc:'', f50:'', p50:'', f100:'', p100:'', fRec:'', fPag:'',
+    pagado:0, total:0, dif:0, comentarios:''
+  };
+  db.unshift(nuevo);
+  scheduleSave(); selId=nuevo.id;
+  if(currentTab!=='ac') setTab('ac', document.querySelector('.tbtn'));
+  else renderMain();
   setTimeout(()=>document.getElementById('d-nombre')?.focus(), 100);
 }
 
@@ -962,13 +795,12 @@ function openNew(){
 // ═══════════════════════════════════════════════════════
 
 (async function init(){
-  setTab('ev', document.querySelector('.tbtn'));
-  await restaurarHandle();
-  if(dirHandle){
-    const ok = await cargarDesdeExcel();
-    actualizarFolderBar();
+  setTab('ac', document.querySelector('.tbtn'));
+  gsInit(async () => {
+    actualizarGSBar();
+    const ok = await cargarDesdeGS();
     if(ok) renderMain();
-  }
+  });
   renderMain();
 })();
 </script>

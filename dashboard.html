@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rita Roux · Dashboard de Eventos</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="gsheets.js"></script>
 <style>
 :root{
   --rojo:#CC1F1F;--rojo-osc:#A01818;--rojo-cl:#FFF5F5;
@@ -83,15 +83,15 @@ header{background:var(--negro);display:flex;align-items:stretch;position:sticky;
     <p>Visión general · Facturación · Cobros</p>
   </div>
   <div class="hdr-act">
-    <button class="btn btn-sec" id="btn-carpeta" onclick="elegirCarpeta()">📁 Carpeta</button>
+    <button class="btn btn-sec" id="btn-google-dash" onclick="gsAuth()">☁ Google</button>
     <button class="btn btn-pr" onclick="window.open('seguimiento-eventos.html','_blank')">📋 Ir a Seguimiento</button>
   </div>
 </header>
 
 <div class="main">
   <div class="banner" id="banner">
-    <div class="banner-text">Conecta la carpeta <b>Presupuestos</b> (la misma del Cotizador / Notas de Venta / Seguimiento) para ver los datos reales desde el Excel.</div>
-    <button class="btn btn-sec" style="background:var(--negro)" onclick="elegirCarpeta()">📁 Conectar carpeta</button>
+    <div class="banner-text">Conecta con Google para ver los datos reales desde Google Sheets.</div>
+    <button class="btn btn-sec" style="background:var(--negro)" onclick="gsAuth()">☁ Conectar Google</button>
   </div>
 
   <div class="cards" id="cards"></div>
@@ -109,113 +109,45 @@ header{background:var(--negro);display:flex;align-items:stretch;position:sticky;
 
   <div class="grid2">
     <div class="panel">
-      <div class="panel-title">Cobros pendientes (top 8)</div>
-      <div id="pendList"></div>
-    </div>
-    <div class="panel">
       <div class="panel-title">Eventos por tipo</div>
       <div id="byTipo"></div>
-      <div class="panel-title" style="margin-top:18px">Salas y Cancelados</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Finalizados vs Cancelados</div>
       <div id="otrosStats"></div>
     </div>
   </div>
 </div>
 
 <script>
-let dirHandle=null;
-let eventos=[], salas=[], cancelados=[];
-
-async function persistirHandle(handle){
-  return new Promise(resolve=>{
-    const req=indexedDB.open('rr_nv_config',1);
-    req.onupgradeneeded=e=>e.target.result.createObjectStore('cfg');
-    req.onsuccess=e=>{
-      const tx=e.target.result.transaction('cfg','readwrite');
-      tx.objectStore('cfg').put(handle,'presupuestosDir');
-      tx.oncomplete=resolve; tx.onerror=resolve;
-    };
-    req.onerror=resolve;
-  });
-}
-async function restaurarHandle(){
-  return new Promise(resolve=>{
-    const req=indexedDB.open('rr_nv_config',1);
-    req.onupgradeneeded=e=>e.target.result.createObjectStore('cfg');
-    req.onsuccess=e=>{
-      try{
-        const tx=e.target.result.transaction('cfg','readonly');
-        const r=tx.objectStore('cfg').get('presupuestosDir');
-        r.onsuccess=async()=>{
-          if(r.result){
-            const perm=await r.result.queryPermission({mode:'readwrite'}).catch(()=>'denied');
-            if(perm==='granted') dirHandle=r.result;
-          }
-          resolve();
-        };
-        r.onerror=resolve;
-      }catch(e){ resolve(); }
-    };
-    req.onerror=resolve;
-  });
-}
-function mostrarErrorCarpeta(msg){
-  const b = document.getElementById('banner');
-  b.classList.remove('ok');
-  b.querySelector('.banner-text').innerHTML = `⚠ ${msg}`;
-}
-
-async function elegirCarpeta(){
-  if(!window.showDirectoryPicker){
-    mostrarErrorCarpeta('Este visor no soporta conectar carpetas (función no disponible en navegadores embebidos / vista previa interna de VS Code). Abre este archivo en una ventana real de <b>Chrome</b> o <b>Edge</b> — clic derecho sobre el archivo → "Abrir con" → Chrome/Edge.');
-    return;
-  }
-  try{
-    dirHandle=await window.showDirectoryPicker({mode:'readwrite',startIn:'documents'});
-    await persistirHandle(dirHandle);
-    await cargarDatos();
-  }catch(e){
-    if(e.name!=='AbortError') mostrarErrorCarpeta('No se pudo conectar la carpeta: ' + e.message);
-  }
-}
+let allItems=[];
 
 async function cargarDatos(){
-  if(dirHandle){
+  if(gsConnected()){
     try{
-      let perm=await dirHandle.queryPermission({mode:'readwrite'});
-      if(perm!=='granted') perm=await dirHandle.requestPermission({mode:'readwrite'});
-      if(perm==='granted'){
-        const fh=await dirHandle.getFileHandle('seguimiento_eventos.xlsx').catch(()=>null);
-        if(fh){
-          const file=await fh.getFile();
-          const buf=await file.arrayBuffer();
-          const wb=XLSX.read(buf,{type:'array'});
-          const wsEv=wb.Sheets['Eventos'];
-          eventos = wsEv ? XLSX.utils.sheet_to_json(wsEv,{defval:''}).filter(r=>r['Nº Nota Venta']).map(r=>({
-            notaVenta:r['Nº Nota Venta'], nombre:r['Nombre Evento'], cliente:r['Cliente'], fecha:r['Fecha Evento'],
-            tev:r['Tipo']||'corp', f50:r['Factura 50%'],p50:r['Pago 50%'],f100:r['Factura 100%'],p100:r['Pago 100%'],
-            fRec:r['Fact. Prov. Recibidas'],fPag:r['Fact. Prov. Pagadas'],
-            total:+r['Total']||0, pagado:+r['Pagado']||0, dif:+r['Diferencia']||0
-          })) : [];
-          const wsSa=wb.Sheets['Salas'];
-          salas = wsSa ? XLSX.utils.sheet_to_json(wsSa,{defval:''}) : [];
-          const wsCa=wb.Sheets['Cancelados'];
-          cancelados = wsCa ? XLSX.utils.sheet_to_json(wsCa,{defval:''}) : [];
-
-          document.getElementById('btn-carpeta').textContent='📁 '+dirHandle.name;
-          document.getElementById('banner').classList.add('ok');
-          document.getElementById('banner').querySelector('.banner-text').innerHTML=`Conectado a <b>${dirHandle.name}</b> · ${eventos.length} eventos con Nota de Venta`;
-          render(); return;
-        }
-      }
+      const res = await gsGet(`${TAB.SEG}!A2:Q`);
+      allItems = (res.values||[]).filter(r=>r[2]||r[3]).map(r=>({
+        estado:  r[0]||'activo',
+        tipo:    r[1]||'evento',
+        notaVenta:r[2]||'',
+        nombre:  r[3]||'',
+        cliente: r[4]||'',
+        fecha:   r[5]||'',
+        tev:     r[6]||'corp',
+        f50:r[7], p50:r[8], f100:r[9], p100:r[10], fRec:r[11], fPag:r[12],
+        total:+r[13]||0, pagado:+r[14]||0, dif:+r[15]||0
+      }));
+      document.getElementById('btn-google-dash').textContent='✓ Google';
+      const b=document.getElementById('banner');
+      b.classList.add('ok');
+      b.querySelector('.banner-text').innerHTML=`Conectado a Google Sheets · ${allItems.filter(e=>e.estado==='activo').length} eventos activos`;
+      render(); return;
     }catch(e){ console.warn(e); }
   }
-  // Fallback: caché del navegador (mismo origen que Seguimiento)
+  // Fallback: caché del navegador
   try{
-    const cached=JSON.parse(localStorage.getItem('rr_ev2026_v4')||'null');
-    if(cached){
-      eventos=(cached.eventos||[]).filter(e=>e.notaVenta);
-      salas=cached.salas||[]; cancelados=cached.cancelados||[];
-    }
+    const cached=JSON.parse(localStorage.getItem('rr_seg2026_v5')||'null');
+    if(Array.isArray(cached)) allItems=cached;
   }catch(e){}
   render();
 }
@@ -232,22 +164,25 @@ function semInfo(n,max){
 }
 
 function render(){
-  const totalFact = eventos.reduce((a,e)=>a+(e.total||0),0);
-  const totalCob = eventos.reduce((a,e)=>a+(e.pagado||0),0);
-  const totalPend = eventos.reduce((a,e)=>a+(e.dif||0),0);
-  const finalizados = eventos.filter(e=>{const s=calcE(e);return s.n===s.max}).length;
+  const activos     = allItems.filter(e=>e.estado==='activo');
+  const finalizados = allItems.filter(e=>e.estado==='finalizado');
+  const cancelados  = allItems.filter(e=>e.estado==='cancelado');
+
+  const totalFact = allItems.reduce((a,e)=>a+(e.total||0),0);
+  const totalCob  = allItems.reduce((a,e)=>a+(e.pagado||0),0);
+  const totalPend = allItems.reduce((a,e)=>a+(e.dif||0),0);
   const pct = totalFact ? Math.round(totalCob/totalFact*100) : 0;
 
   document.getElementById('cards').innerHTML = `
-    <div class="card"><div class="card-lbl">Eventos con NV</div><div class="card-val">${eventos.length}</div><div class="card-sub">${finalizados} finalizados</div></div>
+    <div class="card"><div class="card-lbl">Eventos activos</div><div class="card-val">${activos.length}</div><div class="card-sub">${finalizados.length} finalizados</div></div>
     <div class="card"><div class="card-lbl">Total facturado</div><div class="card-val">${fmtM(totalFact)}</div><div class="card-sub">Valor total contratado</div></div>
     <div class="card"><div class="card-lbl">Cobrado</div><div class="card-val c-verde">${fmtM(totalCob)}</div><div class="card-sub">${pct}% del total</div></div>
-    <div class="card"><div class="card-lbl">Por cobrar</div><div class="card-val ${totalPend>0?'c-rojo':''}">${fmtM(totalPend)}</div><div class="card-sub">${eventos.filter(e=>e.dif>0).length} eventos con saldo</div></div>
+    <div class="card"><div class="card-lbl">Por cobrar</div><div class="card-val ${totalPend>0?'c-rojo':''}">${fmtM(totalPend)}</div><div class="card-sub">${allItems.filter(e=>e.dif>0).length} eventos con saldo</div></div>
   `;
 
-  // By month
+  // By month (activos)
   const meses = {};
-  eventos.forEach(e=>{
+  activos.forEach(e=>{
     if(!e.fecha) return;
     const d = new Date(e.fecha+'T00:00:00');
     if(isNaN(d)) return;
@@ -263,48 +198,40 @@ function render(){
       <div class="bar-val">${fmtM(v)}</div>
     </div>`).join('') : `<div class="empty">Sin datos de fecha</div>`;
 
-  // By semaphore
+  // By semaphore (activos)
   const semGroups = {};
-  eventos.forEach(e=>{
+  activos.forEach(e=>{
     const s=calcE(e); const info=semInfo(s.n,s.max);
     semGroups[info.label] = semGroups[info.label] || {count:0,color:info.color};
     semGroups[info.label].count++;
   });
   const order=['Finalizado','Casi listo','En proceso','Iniciando','Sin iniciar'];
-  document.getElementById('bySem').innerHTML = eventos.length ? order.filter(o=>semGroups[o]).map(o=>`
+  document.getElementById('bySem').innerHTML = activos.length ? order.filter(o=>semGroups[o]).map(o=>`
     <div class="sem-row">
       <span class="sem-dot-big" style="background:${semGroups[o].color}"></span>
       <span class="sem-name">${o}</span>
       <span class="sem-count" style="color:${semGroups[o].color}">${semGroups[o].count}</span>
-    </div>`).join('') : `<div class="empty">Sin eventos registrados</div>`;
+    </div>`).join('') : `<div class="empty">Sin eventos activos</div>`;
 
-  // Pending list
-  const pend = eventos.filter(e=>e.dif>0).sort((a,b)=>b.dif-a.dif).slice(0,8);
-  document.getElementById('pendList').innerHTML = pend.length ? pend.map(e=>`
-    <div class="pend-row">
-      <div><div class="pend-name">${e.nombre}</div><div class="pend-client">${e.cliente}</div></div>
-      <div class="pend-amt">${fmtM(e.dif)}</div>
-    </div>`).join('') : `<div class="empty">Sin cobros pendientes ✓</div>`;
-
-  // By tipo
+  // By tipo (activos)
   const TIPOS={corp:'Corporativo',matr:'Matrimonio',foto:'Fotografía',otro:'Otro'};
   const tipoCount={};
-  eventos.forEach(e=>{ const t=e.tev||'corp'; tipoCount[t]=(tipoCount[t]||0)+1; });
-  document.getElementById('byTipo').innerHTML = eventos.length ? Object.entries(tipoCount).map(([k,v])=>`
+  activos.forEach(e=>{ const t=e.tev||'corp'; tipoCount[t]=(tipoCount[t]||0)+1; });
+  document.getElementById('byTipo').innerHTML = activos.length ? Object.entries(tipoCount).map(([k,v])=>`
     <span class="tipo-pill"><b>${v}</b> ${TIPOS[k]||k}</span>`).join('') : `<div class="empty">Sin datos</div>`;
 
-  // Salas / cancelados
-  const totalSalas = salas.reduce((a,r)=>a+(+r['Total']||0),0);
-  const totalCancelados = cancelados.reduce((a,r)=>a+(+r['Total']||0),0);
+  // Finalizados vs Cancelados
+  const totalFin = finalizados.reduce((a,e)=>a+(e.total||0),0);
+  const totalCan = cancelados.reduce((a,e)=>a+(e.total||0),0);
   document.getElementById('otrosStats').innerHTML = `
-    <div class="pend-row"><div class="pend-name">Uso de salas</div><div class="pend-amt" style="color:var(--verde)">${salas.length} · ${fmtM(totalSalas)}</div></div>
-    <div class="pend-row"><div class="pend-name">Eventos cancelados</div><div class="pend-amt" style="color:var(--gris-t)">${cancelados.length} · ${fmtM(totalCancelados)}</div></div>
+    <div class="pend-row"><div class="pend-name">Eventos finalizados</div><div class="pend-amt" style="color:var(--verde)">${finalizados.length} · ${fmtM(totalFin)}</div></div>
+    <div class="pend-row"><div class="pend-name">Eventos cancelados</div><div class="pend-amt" style="color:var(--gris-t)">${cancelados.length} · ${fmtM(totalCan)}</div></div>
   `;
 }
 
-(async function init(){
-  await restaurarHandle();
-  await cargarDatos();
+(function init(){
+  gsInit(cargarDatos);
+  cargarDatos();
 })();
 </script>
 </body>

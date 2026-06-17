@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rita Roux · Histórico de Presupuestos</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="gsheets.js"></script>
 <style>
 :root{
   --rojo:#CC1F1F;--rojo-osc:#A01818;--rojo-cl:#FFF5F5;
@@ -67,15 +67,15 @@ header{background:var(--negro);display:flex;align-items:stretch;position:sticky;
   </div>
   <div class="hdr-act">
     <button class="btn btn-sec" onclick="volver()">← Volver</button>
-    <button class="btn btn-sec" id="btn-carpeta" onclick="elegirCarpeta()">📁 Carpeta</button>
+    <button class="btn btn-sec" id="btn-google-hist" onclick="gsAuth()">☁ Google</button>
     <button class="btn btn-pr" onclick="window.open('cotizador-rita-roux.html','_blank')">+ Nueva Cotización</button>
   </div>
 </header>
 
 <div class="main">
   <div class="banner" id="banner">
-    <div class="banner-text">Conecta la carpeta <b>Presupuestos</b> (la misma que usas en el Cotizador) para ver el histórico completo guardado en Excel. Mientras tanto se muestra el respaldo local de este navegador.</div>
-    <button class="btn btn-sec" style="background:var(--negro)" onclick="elegirCarpeta()">📁 Conectar carpeta</button>
+    <div class="banner-text">Conecta con Google para ver el histórico completo guardado en Google Sheets. Mientras tanto se muestra el respaldo local de este navegador.</div>
+    <button class="btn btn-sec" style="background:var(--negro)" onclick="gsAuth()">☁ Conectar Google</button>
   </div>
 
   <div class="sum-row" id="sumRow"></div>
@@ -88,7 +88,6 @@ header{background:var(--negro);display:flex;align-items:stretch;position:sticky;
 </div>
 
 <script>
-let dirHandle = null;
 let registros = [];
 
 function volver(){
@@ -97,96 +96,50 @@ function volver(){
   window.location.href = 'seguimiento-eventos.html';
 }
 
-async function persistirHandle(handle){
-  return new Promise(resolve=>{
-    const req = indexedDB.open('rr_nv_config', 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore('cfg');
-    req.onsuccess = e => {
-      const tx = e.target.result.transaction('cfg','readwrite');
-      tx.objectStore('cfg').put(handle,'presupuestosDir');
-      tx.oncomplete = resolve; tx.onerror = resolve;
-    };
-    req.onerror = resolve;
-  });
-}
-async function restaurarHandle(){
-  return new Promise(resolve=>{
-    const req = indexedDB.open('rr_nv_config', 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore('cfg');
-    req.onsuccess = e => {
-      try{
-        const tx = e.target.result.transaction('cfg','readonly');
-        const r = tx.objectStore('cfg').get('presupuestosDir');
-        r.onsuccess = async () => {
-          if(r.result){
-            const perm = await r.result.queryPermission({mode:'readwrite'}).catch(()=>'denied');
-            if(perm==='granted') dirHandle = r.result;
-          }
-          resolve();
-        };
-        r.onerror = resolve;
-      }catch(e){ resolve(); }
-    };
-    req.onerror = resolve;
-  });
-}
-
-function mostrarErrorCarpeta(msg){
-  const b = document.getElementById('banner');
-  b.classList.remove('ok');
-  b.querySelector('.banner-text').innerHTML = `⚠ ${msg}`;
-}
-
-async function elegirCarpeta(){
-  if(!window.showDirectoryPicker){
-    mostrarErrorCarpeta('Este visor no soporta conectar carpetas (función no disponible en navegadores embebidos / vista previa interna de VS Code). Abre este archivo en una ventana real de <b>Chrome</b> o <b>Edge</b> — clic derecho sobre el archivo → "Abrir con" → Chrome/Edge.');
-    return;
-  }
-  try{
-    dirHandle = await window.showDirectoryPicker({ mode:'readwrite', startIn:'documents' });
-    await persistirHandle(dirHandle);
-    await cargarDatos();
-  }catch(e){
-    if(e.name!=='AbortError') mostrarErrorCarpeta('No se pudo conectar la carpeta: ' + e.message);
-  }
-}
-
 async function cargarDatos(){
-  if(dirHandle){
-    try{
-      let perm = await dirHandle.queryPermission({mode:'readwrite'});
-      if(perm!=='granted') perm = await dirHandle.requestPermission({mode:'readwrite'});
-      if(perm==='granted'){
-        const fh = await dirHandle.getFileHandle('historial_presupuestos.xlsx').catch(()=>null);
-        if(fh){
-          const file = await fh.getFile();
-          const buf = await file.arrayBuffer();
-          const wb = XLSX.read(buf,{type:'array'});
-          const ws = wb.Sheets[wb.SheetNames[0]];
-          const rows = XLSX.utils.sheet_to_json(ws,{defval:''});
-          registros = rows.map(r=>({
-            cotizacion: r['Nº Cotización']||'',
-            fecha: r['Fecha']||'',
-            cliente: r['Cliente']||'',
-            evento: r['Evento']||'',
-            fechaEvento: r['Fecha Evento']||'',
-            personas: r['Nº Personas']||'',
-            subtotal: +r['Subtotal']||0,
-            iva: +r['IVA']||0,
-            total: +r['Total']||0,
-          }));
-          document.getElementById('btn-carpeta').textContent = '📁 ' + dirHandle.name;
-          document.getElementById('banner').classList.add('ok');
-          document.getElementById('banner').querySelector('.banner-text').innerHTML = `Conectado a la carpeta <b>${dirHandle.name}</b> · ${registros.length} presupuestos en historial_presupuestos.xlsx`;
-          render(); return;
-        }
-      }
-    }catch(e){ console.warn(e); }
+  if (gsConnected()) {
+    try {
+      const res = await gsGet(`${TAB.PRESUPUESTOS}!A2:J`);
+      const rows = res.values || [];
+      registros = rows.map(r => ({
+        cotizacion:  r[0]||'',
+        fecha:       r[1]||'',
+        cliente:     r[2]||'',
+        evento:      r[3]||'',
+        fechaEvento: r[4]||'',
+        personas:    r[5]||'',
+        subtotal:    +r[6]||0,
+        iva:         +r[7]||0,
+        total:       +r[8]||0,
+        estado:      r[9]||'pendiente',
+      }));
+      document.getElementById('btn-google-hist').textContent = '✓ Google';
+      const b = document.getElementById('banner');
+      b.classList.add('ok');
+      b.querySelector('.banner-text').innerHTML = `Conectado a Google Sheets · ${registros.length} presupuestos`;
+      render(); return;
+    } catch(e) { console.warn(e); }
   }
-  // Fallback: localStorage cache (mismo origen que el cotizador)
   const local = JSON.parse(localStorage.getItem('rr_historial_presupuestos')||'[]');
   registros = local;
   render();
+}
+
+function emitirNV(idx) {
+  const r = registros[idx];
+  if (!r) return;
+  localStorage.setItem('rr_cotizacion_para_nv', JSON.stringify({
+    cotizacion:  r.cotizacion,
+    fecha:       r.fecha,
+    cliente:     r.cliente,
+    evento:      r.evento,
+    fechaEvento: r.fechaEvento,
+    personas:    r.personas,
+    subtotal:    r.subtotal,
+    iva:         r.iva,
+    total:       r.total,
+  }));
+  window.open('rita-roux-notas-venta.html', '_blank');
 }
 
 function fmtM(n){ if(!n&&n!==0) return '—'; return '$'+Math.round(n).toLocaleString('es-CL'); }
@@ -210,25 +163,35 @@ function render(){
     wrap.innerHTML = `<div class="empty"><div class="ico">🧾</div><p>Sin presupuestos registrados todavía.</p></div>`;
     return;
   }
+  const idxMap = lista.map(r => registros.indexOf(r));
   wrap.innerHTML = `<div class="tbl"><table>
-    <thead><tr><th>Nº Cotización</th><th>Fecha generada</th><th>Cliente</th><th>Evento</th><th>Fecha evento</th><th>Personas</th><th>Subtotal</th><th>IVA</th><th>Total</th></tr></thead>
-    <tbody>${lista.map(r=>`<tr>
-      <td><span class="cot-tag">${r.cotizacion}</span></td>
-      <td>${fmtF(r.fecha)}</td>
-      <td style="font-weight:600">${r.cliente}</td>
-      <td>${r.evento||'—'}</td>
-      <td>${fmtF(r.fechaEvento)}</td>
-      <td>${r.personas||'—'}</td>
-      <td class="amt">${fmtM(r.subtotal)}</td>
-      <td class="amt">${fmtM(r.iva)}</td>
-      <td class="amt" style="font-weight:600">${fmtM(r.total)}</td>
-    </tr>`).join('')}</tbody>
+    <thead><tr><th>Nº Cotización</th><th>Fecha</th><th>Cliente</th><th>Evento</th><th>Fecha Evento</th><th>Personas</th><th>Total</th><th>Estado</th><th></th></tr></thead>
+    <tbody>${lista.map((r,i)=>{
+      const est = r.estado||'pendiente';
+      const estBadge = est==='convertido'
+        ? `<span style="background:#E8F5E9;color:#2E7D32;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:.5px">Convertido</span>`
+        : `<span style="background:#FFF3E0;color:#E65100;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:.5px">Pendiente</span>`;
+      const nvBtn = est!=='convertido'
+        ? `<button onclick="emitirNV(${idxMap[i]})" style="padding:4px 10px;font-size:9px;font-weight:700;letter-spacing:.5px;background:#1565C0;color:#fff;border:none;border-radius:2px;cursor:pointer;white-space:nowrap">Emitir NV →</button>`
+        : `<span style="font-size:10px;color:var(--gris-t)">—</span>`;
+      return `<tr>
+        <td><span class="cot-tag">${r.cotizacion}</span></td>
+        <td>${fmtF(r.fecha)}</td>
+        <td style="font-weight:600">${r.cliente}</td>
+        <td>${r.evento||'—'}</td>
+        <td>${fmtF(r.fechaEvento)}</td>
+        <td>${r.personas||'—'}</td>
+        <td class="amt" style="font-weight:600">${fmtM(r.total)}</td>
+        <td>${estBadge}</td>
+        <td>${nvBtn}</td>
+      </tr>`;
+    }).join('')}</tbody>
   </table></div>`;
 }
 
-(async function init(){
-  await restaurarHandle();
-  await cargarDatos();
+(function init(){
+  gsInit(cargarDatos);
+  cargarDatos();
 })();
 </script>
 </body>

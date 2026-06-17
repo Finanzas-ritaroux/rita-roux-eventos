@@ -84,7 +84,7 @@ header{background:var(--negro);display:flex;align-items:stretch;position:sticky;
   </div>
   <div class="hdr-act">
     <button class="btn btn-sec" id="btn-google-dash" onclick="gsAuth()">☁ Google</button>
-    <button class="btn btn-sec" onclick="location.href='historico-presupuestos.html'">Histórico Presupuestos</button>
+    <button class="btn btn-sec" onclick="location.href='historico-presupuestos.html'">Histórico Cotizaciones</button>
     <button class="btn btn-pr" onclick="location.href='seguimiento-eventos.html'">Inicio</button>
   </div>
 </header>
@@ -231,7 +231,7 @@ function render(){
 }
 
 (function init(){
-  gsInit(cargarDatos);
+  gsInit(cargarDatos, { requireAuth: true });
   cargarDatos();
 })();
 </script>

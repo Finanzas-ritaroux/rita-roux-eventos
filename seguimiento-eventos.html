@@ -203,7 +203,7 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
     <p>Facturación · Cobros · Proveedores · Alertas</p>
   </div>
   <div class="hdr-act">
-    <button class="btn btn-sec" onclick="location.href='historico-presupuestos.html'">Histórico Presupuestos</button>
+    <button class="btn btn-sec" onclick="location.href='historico-presupuestos.html'">Histórico Cotizaciones</button>
     <button class="btn btn-sec" onclick="location.href='dashboard.html'">📊 Dashboard</button>
     <button class="btn btn-pr" onclick="location.href='cotizador-rita-roux.html'">+ Nueva Cotización</button>
   </div>
@@ -800,7 +800,7 @@ function openNew(){
     actualizarGSBar();
     const ok = await cargarDesdeGS();
     if(ok) renderMain();
-  });
+  }, { requireAuth: true });
   renderMain();
 })();
 </script>

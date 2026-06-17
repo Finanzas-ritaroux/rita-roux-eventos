@@ -508,7 +508,7 @@
   </button>
   <button class="btn-auth" onclick="location.href='historico-presupuestos.html'">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-    Histórico Presupuestos
+    Histórico Cotizaciones
   </button>
 </div>
 
@@ -535,9 +535,6 @@
       <div class="card-title">Seleccionar Presupuesto Aprobado</div>
       <div id="presupuestos-list">
         <div class="empty-state">Conecta Google para ver los presupuestos disponibles.</div>
-      </div>
-      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--gris-medio);display:flex;justify-content:flex-end">
-        <button class="btn btn-secondary" onclick="crearSinPresupuesto()">Crear sin presupuesto →</button>
       </div>
     </div>
 
@@ -838,9 +835,9 @@ window.onload = () => {
     await loadHistorial();
     await gsInitSheet();
     await loadPresupuestosStep1();
-  });
+    await checkCotizacionPendiente();
+  }, { requireAuth: true });
   renderHistoricoLocal();
-  checkCotizacionPendiente();
 };
 
 // ─── RECEPCIÓN DE COTIZACIÓN DESDE HISTÓRICO ──────────────────────────────────
@@ -868,24 +865,27 @@ async function checkCotizacionPendiente() {
 }
 
 // ─── STEP 1: LISTA DE PRESUPUESTOS ────────────────────────────────────────────
+let _presupuestosRows = [];
+
 async function loadPresupuestosStep1() {
   const el = document.getElementById('presupuestos-list');
   if (!gsConnected()) {
-    el.innerHTML = '<div class="empty-state">Conecta Google para ver los presupuestos disponibles.</div>';
+    el.innerHTML = '<div class="empty-state">Conecta Google para ver las cotizaciones disponibles.</div>';
     return;
   }
   try {
-    const res = await gsGet(`${TAB.PRESUPUESTOS}!A2:J`);
+    const res = await gsGet(`${TAB.PRESUPUESTOS}!A2:K`);
     const rows = (res.values || []).filter(r => r[0]);
     if (!rows.length) {
-      el.innerHTML = '<div class="empty-state">No hay presupuestos guardados aún. Crea uno desde el Cotizador.</div>';
+      el.innerHTML = '<div class="empty-state">No hay cotizaciones guardadas aún. Crea una desde el Cotizador.</div>';
       return;
     }
     const pendientes = rows.filter(r => (r[9] || 'pendiente') !== 'convertido');
     if (!pendientes.length) {
-      el.innerHTML = '<div class="empty-state">Todos los presupuestos ya han sido convertidos a Nota de Venta.</div>';
+      el.innerHTML = '<div class="empty-state">Todas las cotizaciones ya han sido convertidas a Nota de Venta.</div>';
       return;
     }
+    _presupuestosRows = pendientes;
     el.innerHTML = `<table style="width:100%;border-collapse:collapse">
       <thead><tr style="background:var(--negro)">
         <th style="color:#fff;padding:8px 12px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;text-align:left">Nº</th>
@@ -895,12 +895,8 @@ async function loadPresupuestosStep1() {
         <th style="color:#fff;padding:8px 12px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;text-align:right">Total</th>
         <th style="color:#fff;padding:8px 12px"></th>
       </tr></thead>
-      <tbody>${pendientes.map(r => {
+      <tbody>${pendientes.map((r, i) => {
         const total = (+r[8]||0).toLocaleString('es-CL');
-        const data = encodeURIComponent(JSON.stringify({
-          cotizacion:r[0],fecha:r[1],cliente:r[2],evento:r[3],
-          fechaEvento:r[4],personas:r[5],subtotal:+r[6]||0,iva:+r[7]||0,total:+r[8]||0
-        }));
         return `<tr style="border-bottom:1px solid var(--gris-medio)">
           <td style="padding:10px 12px;font-family:monospace;font-size:11px;color:var(--gris-texto)">${r[0]}</td>
           <td style="padding:10px 12px;font-size:12px">${r[1]||'—'}</td>
@@ -908,38 +904,44 @@ async function loadPresupuestosStep1() {
           <td style="padding:10px 12px;font-size:12px">${r[3]||'—'}</td>
           <td style="padding:10px 12px;font-size:12px;text-align:right;font-weight:600">$${total}</td>
           <td style="padding:10px 12px;text-align:right">
-            <button onclick="seleccionarPresupuesto('${data}')" style="padding:5px 14px;font-size:10px;font-weight:700;letter-spacing:.5px;background:var(--rojo);color:#fff;border:none;border-radius:2px;cursor:pointer">Seleccionar →</button>
+            <button onclick="seleccionarPresupuesto(${i})" style="padding:5px 14px;font-size:10px;font-weight:700;letter-spacing:.5px;background:var(--rojo);color:#fff;border:none;border-radius:2px;cursor:pointer">Seleccionar →</button>
           </td>
         </tr>`;
       }).join('')}</tbody>
     </table>`;
-  } catch(e) { el.innerHTML = '<div class="empty-state">Error cargando presupuestos.</div>'; }
+  } catch(e) { el.innerHTML = '<div class="empty-state">Error cargando cotizaciones.</div>'; }
 }
 
-async function seleccionarPresupuesto(encodedData) {
-  const data = JSON.parse(decodeURIComponent(encodedData));
+async function seleccionarPresupuesto(idx) {
+  const r = _presupuestosRows[idx];
+  if (!r) return;
+  let secciones = [];
+  if (r[10]) {
+    try {
+      const qs = JSON.parse(r[10]);
+      secciones = qs.map(sec => ({
+        nombre: sec.name || sec.nombre || '',
+        items: (sec.items||[]).filter(i => i.desc || i.unitPrice > 0).map(i => ({
+          desc:  i.desc || '',
+          horas: i.qty  || i.horas || 0,
+          vUnit: i.unitPrice || i.vUnit || 0,
+          vNeto: i.vNeto != null ? i.vNeto : (i.qty||0)*(i.unitPrice||0),
+        }))
+      })).filter(s => s.items.length > 0);
+    } catch(e) { secciones = []; }
+  }
   parsedData = {
-    rut_cliente: '', fecha: data.fecha || '',
-    evento: data.evento || '', cliente: data.cliente || '',
-    empresa: data.cliente || '', empresa_contacto: data.cliente || '',
-    solicitante: '', mail: '', glosa: data.evento || '',
-    fecha_produccion: data.fechaEvento || '', hora: '',
-    personas: data.personas || '',
-    nCot: data.cotizacion || '',
+    rut_cliente: '', fecha: r[1] || '',
+    evento: r[3] || '', cliente: r[2] || '',
+    empresa: r[2] || '', empresa_contacto: r[2] || '',
+    solicitante: '', mail: '', glosa: r[3] || '',
+    fecha_produccion: r[4] || '', hora: '',
+    personas: r[5] || '',
+    nCot: r[0] || '',
     tipo_evento: 'corp',
-    secciones: []
+    secciones
   };
   await populateForm(parsedData);
-  goStep(2);
-}
-
-function crearSinPresupuesto() {
-  parsedData = {
-    rut_cliente:'',fecha:'',evento:'',cliente:'',empresa:'',empresa_contacto:'',
-    solicitante:'',mail:'',glosa:'',fecha_produccion:'',hora:'',personas:'',
-    nCot:'',tipo_evento:'corp',secciones:[]
-  };
-  populateForm(parsedData);
   goStep(2);
 }
 

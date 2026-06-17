@@ -181,7 +181,7 @@ header { background: var(--negro); display: flex; align-items: stretch; position
   </div>
   <div class="hdr-actions">
     <button class="btn btn-secondary" onclick="location.href='seguimiento-eventos.html'">Inicio</button>
-    <button class="btn btn-secondary" onclick="location.href='historico-presupuestos.html'">Histórico Presupuestos</button>
+    <button class="btn btn-secondary" onclick="location.href='historico-presupuestos.html'">Histórico Cotizaciones</button>
     <button class="btn btn-secondary" onclick="nuevaCotizacion()">↺ Nueva</button>
     <button class="btn btn-secondary" id="btn-google-cot" onclick="gsAuth()">☁ Google</button>
     <button class="btn btn-secondary" onclick="copiarExcel()">⎘ Copiar</button>
@@ -837,7 +837,7 @@ async function registrarPresupuestoHistorico() {
 
   // Cache local siempre (fallback offline)
   const local = JSON.parse(localStorage.getItem('rr_historial_presupuestos') || '[]');
-  local.push(registro);
+  local.push({ ...registro, secciones: quoteState });
   localStorage.setItem('rr_historial_presupuestos', JSON.stringify(local));
 
   if (!gsConnected()) return;
@@ -1115,7 +1115,7 @@ window.onload = () => {
   gsInit(() => {
     const btn = document.getElementById('btn-google-cot');
     if (btn) btn.textContent = '✓ Google';
-  });
+  }, { requireAuth: true });
 };
 </script>
 </body>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rita Roux · Histórico de Presupuestos</title>
+<title>Rita Roux · Histórico de Cotizaciones</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script src="gsheets.js"></script>
@@ -64,7 +64,7 @@ header{background:var(--negro);display:flex;align-items:stretch;position:sticky;
 <header>
   <div class="hdr-logo"><span class="lt">Rita</span><span class="lt">Roux</span><span class="ls">Café</span></div>
   <div class="hdr-info">
-    <h1>Histórico de Presupuestos</h1>
+    <h1>Histórico de Cotizaciones</h1>
     <p>Todas las cotizaciones generadas</p>
   </div>
   <div class="hdr-act">
@@ -119,7 +119,7 @@ async function cargarDatos(){
       document.getElementById('btn-google-hist').textContent = '✓ Google';
       const b = document.getElementById('banner');
       b.classList.add('ok');
-      b.querySelector('.banner-text').innerHTML = `Conectado a Google Sheets · ${registros.length} presupuestos`;
+      b.querySelector('.banner-text').innerHTML = `Conectado a Google Sheets · ${registros.length} cotizaciones`;
       render(); return;
     } catch(e) { console.warn(e); }
   }
@@ -213,9 +213,11 @@ function generarPDFHistorico(reg) {
   y+=40;
 
   const secciones = reg.secciones||[];
+  let hayDesglose = false;
   secciones.forEach(sec => {
-    const items=(sec.items||[]).filter(i=>i.desc||i.unitPrice>0||i.vNeto>0);
+    const items=(sec.items||[]).filter(i=>i.desc||(i.unitPrice>0)||(i.vNeto>0));
     if(!items.length) return;
+    hayDesglose = true;
     if(y>220){doc.addPage();y=20;}
     doc.setFillColor(26,26,26); doc.rect(M,y,W-M*2,7,'F');
     doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont('helvetica','bold');
@@ -223,7 +225,7 @@ function generarPDFHistorico(reg) {
     y+=7;
     const rows=items.map(i=>[
       i.desc||'',
-      i.qty>0?String(i.qty):(i.horas?String(i.horas):''),
+      (i.qty||0)>0?String(i.qty):((i.horas||0)>0?String(i.horas):'1'),
       (i.unitPrice||i.vUnit)>0?('$'+Math.round(i.unitPrice||i.vUnit||0).toLocaleString('es-CL')):'',
       '$'+Math.round(i.vNeto!=null?i.vNeto:((i.qty||0)*(i.unitPrice||0))).toLocaleString('es-CL')
     ]);
@@ -234,6 +236,11 @@ function generarPDFHistorico(reg) {
       theme:'plain',alternateRowStyles:{fillColor:[250,250,250]}});
     y=doc.lastAutoTable.finalY+6;
   });
+  if(!hayDesglose){
+    doc.setFontSize(9); doc.setFont('helvetica','italic'); doc.setTextColor(150,150,150);
+    doc.text('Desglose de servicios no disponible para esta cotización.',M,y+6);
+    y+=14;
+  }
 
   if(y>200){doc.addPage();y=20;}
   const tY=y+4;
@@ -267,14 +274,14 @@ function render(){
 
   const totalCotizado = registros.reduce((a,r)=>a+(r.total||0),0);
   document.getElementById('sumRow').innerHTML = `
-    <div class="sum-c"><div class="sum-l">Presupuestos generados</div><div class="sum-v">${registros.length}</div></div>
+    <div class="sum-c"><div class="sum-l">Cotizaciones generadas</div><div class="sum-v">${registros.length}</div></div>
     <div class="sum-c"><div class="sum-l">Monto total cotizado</div><div class="sum-v">${fmtM(totalCotizado)}</div></div>
     <div class="sum-c"><div class="sum-l">Promedio por cotización</div><div class="sum-v">${fmtM(registros.length?totalCotizado/registros.length:0)}</div></div>
   `;
 
   const wrap = document.getElementById('tblWrap');
   if(!lista.length){
-    wrap.innerHTML = `<div class="empty"><div class="ico">🧾</div><p>Sin presupuestos registrados todavía.</p></div>`;
+    wrap.innerHTML = `<div class="empty"><div class="ico">🧾</div><p>Sin cotizaciones registradas todavía.</p></div>`;
     return;
   }
   const idxMap = lista.map(r => registros.indexOf(r));
@@ -299,7 +306,7 @@ function render(){
 }
 
 (function init(){
-  gsInit(cargarDatos);
+  gsInit(cargarDatos, { requireAuth: true });
   cargarDatos();
 })();
 </script>

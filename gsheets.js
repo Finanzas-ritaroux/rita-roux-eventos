@@ -18,8 +18,10 @@ let gs_client = null;
 let _gs_cb    = null;
 
 // Inicializa Google Identity Services y llama onAuth() cuando el usuario se conecta
-function gsInit(onAuth) {
+function gsInit(onAuth, options) {
   _gs_cb = onAuth;
+  const opts = options || {};
+  if (opts.requireAuth) _gsShowAuthOverlay();
   const s = document.createElement('script');
   s.src = 'https://accounts.google.com/gsi/client';
   s.onload = () => {
@@ -30,6 +32,8 @@ function gsInit(onAuth) {
         if (r.error) return;
         gs_token = r.access_token;
         sessionStorage.setItem('gs_was_connected', '1');
+        const ov = document.getElementById('_gs_overlay');
+        if (ov) ov.remove();
         if (_gs_cb) _gs_cb();
       }
     });
@@ -38,6 +42,20 @@ function gsInit(onAuth) {
     }
   };
   document.head.appendChild(s);
+}
+
+function _gsShowAuthOverlay() {
+  if (document.getElementById('_gs_overlay')) return;
+  const el = document.createElement('div');
+  el.id = '_gs_overlay';
+  el.style.cssText = 'position:fixed;inset:0;background:#1A1A1A;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:Helvetica Neue,Helvetica,Arial,sans-serif';
+  el.innerHTML = `<div style="text-align:center;padding:40px">
+    <div style="color:#CC1F1F;font-size:30px;font-weight:900;letter-spacing:4px;font-style:italic;line-height:1.1;margin-bottom:6px">RITA<br>ROUX</div>
+    <div style="color:#444;font-size:8px;letter-spacing:3px;text-transform:uppercase;margin-bottom:44px">Eventos · Finanzas</div>
+    <div style="color:#aaa;font-size:13px;font-weight:300;letter-spacing:1px;margin-bottom:28px">Inicia sesión para acceder</div>
+    <button onclick="gsAuth()" style="padding:13px 44px;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;background:#CC1F1F;color:#fff;border:none;cursor:pointer;font-family:inherit">Conectar con Google →</button>
+  </div>`;
+  document.body.appendChild(el);
 }
 
 function gsAuth()       { if (gs_client) gs_client.requestAccessToken(); }

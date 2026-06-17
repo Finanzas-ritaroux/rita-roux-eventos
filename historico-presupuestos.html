@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rita Roux · Histórico de Presupuestos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script src="gsheets.js"></script>
 <style>
 :root{
@@ -66,9 +68,9 @@ header{background:var(--negro);display:flex;align-items:stretch;position:sticky;
     <p>Todas las cotizaciones generadas</p>
   </div>
   <div class="hdr-act">
-    <button class="btn btn-sec" onclick="volver()">← Volver</button>
+    <button class="btn btn-sec" onclick="location.href='seguimiento-eventos.html'">Inicio</button>
     <button class="btn btn-sec" id="btn-google-hist" onclick="gsAuth()">☁ Google</button>
-    <button class="btn btn-pr" onclick="window.open('cotizador-rita-roux.html','_blank')">+ Nueva Cotización</button>
+    <button class="btn btn-pr" onclick="location.href='cotizador-rita-roux.html'">+ Nueva Cotización</button>
   </div>
 </header>
 
@@ -99,7 +101,7 @@ function volver(){
 async function cargarDatos(){
   if (gsConnected()) {
     try {
-      const res = await gsGet(`${TAB.PRESUPUESTOS}!A2:J`);
+      const res = await gsGet(`${TAB.PRESUPUESTOS}!A2:K`);
       const rows = res.values || [];
       registros = rows.map(r => ({
         cotizacion:  r[0]||'',
@@ -112,6 +114,7 @@ async function cargarDatos(){
         iva:         +r[7]||0,
         total:       +r[8]||0,
         estado:      r[9]||'pendiente',
+        secciones:   (() => { try { return r[10] ? JSON.parse(r[10]) : []; } catch { return []; } })(),
       }));
       document.getElementById('btn-google-hist').textContent = '✓ Google';
       const b = document.getElementById('banner');
@@ -128,6 +131,15 @@ async function cargarDatos(){
 function emitirNV(idx) {
   const r = registros[idx];
   if (!r) return;
+  const seccionesNV = (r.secciones || []).map(sec => ({
+    nombre: sec.name || sec.nombre || '',
+    items: (sec.items || []).filter(i => i.desc || i.unitPrice > 0 || i.vNeto > 0).map(i => ({
+      desc:  i.desc  || '',
+      horas: i.qty   || i.horas || '',
+      vUnit: i.unitPrice || i.vUnit || 0,
+      vNeto: i.vNeto != null ? i.vNeto : (i.qty||0)*(i.unitPrice||0),
+    }))
+  })).filter(s => s.items.length > 0);
   localStorage.setItem('rr_cotizacion_para_nv', JSON.stringify({
     cotizacion:  r.cotizacion,
     fecha:       r.fecha,
@@ -138,8 +150,110 @@ function emitirNV(idx) {
     subtotal:    r.subtotal,
     iva:         r.iva,
     total:       r.total,
+    secciones:   seccionesNV,
   }));
-  window.open('rita-roux-notas-venta.html', '_blank');
+  location.href = 'rita-roux-notas-venta.html';
+}
+
+function descargarPresupuesto(idx) {
+  const r = registros[idx];
+  if (!r) return;
+  if (typeof window.jspdf === 'undefined') { alert('Librería PDF aún cargando, intenta de nuevo.'); return; }
+  const blob = generarPDFHistorico(r);
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Cotizacion_${r.cotizacion}_${(r.cliente||'').replace(/\s+/g,'_').slice(0,20)}.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function generarPDFHistorico(reg) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  const W=215.9, M=18; let y=0;
+
+  doc.setFillColor(204,31,31); doc.rect(0,0,W,38,'F');
+  doc.setTextColor(26,26,26); doc.setFontSize(22); doc.setFont('helvetica','bolditalic');
+  doc.text('RITA ROUX',M,16);
+  doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(40,10,10);
+  doc.text('CLASES CULTURALES Y EVENTOS',M,22);
+  const rX=W-M;
+  doc.setTextColor(26,26,26); doc.setFontSize(7.5);
+  doc.text('RUT 76.208.211-K',rX,10,{align:'right'});
+  doc.text('Mac Iver 484, Oficina 105',rX,15,{align:'right'});
+  doc.text('finanzas@ritaroux.cl',rX,20,{align:'right'});
+  doc.setTextColor(255,255,255); doc.setFontSize(13); doc.setFont('helvetica','bold');
+  doc.text('COTIZACIÓN',rX,30,{align:'right'});
+  doc.setFontSize(9); doc.setTextColor(255,220,220);
+  doc.text(reg.cotizacion||'',rX,36,{align:'right'});
+  y=48;
+
+  const boxW=(W-M*2-6)/2;
+  doc.setFillColor(26,26,26); doc.rect(M,y,boxW,34,'F');
+  doc.setTextColor(150,150,150); doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.text('EMPRESA EMISORA',M+4,y+6);
+  doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont('helvetica','bold');
+  doc.text('Inv. Verónica Méndez Risopátrón E.I.R.L.',M+4,y+13);
+  doc.setFontSize(7.5); doc.setFont('helvetica','normal'); doc.setTextColor(200,200,200);
+  doc.text('RUT 76.208.211-K',M+4,y+19);
+  doc.text('Mac Iver 484, Oficina 105',M+4,y+25);
+  doc.text('finanzas@ritaroux.cl',M+4,y+31);
+
+  const cX=M+boxW+6;
+  doc.setFillColor(245,245,245); doc.rect(cX,y,boxW,34,'F');
+  doc.setTextColor(204,31,31); doc.setFontSize(7); doc.setFont('helvetica','bold');
+  doc.text('CLIENTE / EVENTO',cX+4,y+6);
+  doc.setTextColor(26,26,26); doc.setFontSize(8.5); doc.setFont('helvetica','bold');
+  doc.text((reg.cliente||'Sin especificar').slice(0,42),cX+4,y+13);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(60,60,60);
+  if(reg.evento)      doc.text('Evento: '+reg.evento,cX+4,y+20);
+  if(reg.fechaEvento) doc.text('Fecha:  '+fmtF(reg.fechaEvento),cX+4,y+26);
+  if(reg.personas)    doc.text('Nº personas: '+reg.personas,cX+4,y+32);
+  y+=40;
+
+  const secciones = reg.secciones||[];
+  secciones.forEach(sec => {
+    const items=(sec.items||[]).filter(i=>i.desc||i.unitPrice>0||i.vNeto>0);
+    if(!items.length) return;
+    if(y>220){doc.addPage();y=20;}
+    doc.setFillColor(26,26,26); doc.rect(M,y,W-M*2,7,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont('helvetica','bold');
+    doc.text((sec.name||sec.nombre||'').toUpperCase(),M+3,y+5);
+    y+=7;
+    const rows=items.map(i=>[
+      i.desc||'',
+      i.qty>0?String(i.qty):(i.horas?String(i.horas):''),
+      (i.unitPrice||i.vUnit)>0?('$'+Math.round(i.unitPrice||i.vUnit||0).toLocaleString('es-CL')):'',
+      '$'+Math.round(i.vNeto!=null?i.vNeto:((i.qty||0)*(i.unitPrice||0))).toLocaleString('es-CL')
+    ]);
+    doc.autoTable({startY:y,head:[['Descripción','Cantidad','Valor Unit.','Valor Neto']],body:rows,
+      margin:{left:M,right:M},styles:{fontSize:8.5,cellPadding:3,textColor:[26,26,26]},
+      headStyles:{fillColor:[240,240,240],textColor:[26,26,26],fontStyle:'bold',fontSize:8},
+      columnStyles:{0:{cellWidth:85},1:{halign:'right',cellWidth:20},2:{halign:'right',cellWidth:38},3:{halign:'right',cellWidth:38}},
+      theme:'plain',alternateRowStyles:{fillColor:[250,250,250]}});
+    y=doc.lastAutoTable.finalY+6;
+  });
+
+  if(y>200){doc.addPage();y=20;}
+  const tY=y+4;
+  doc.setDrawColor(220,220,220); doc.line(M,tY,W-M,tY);
+  const tX=W-M;
+  doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(100,100,100);
+  doc.text('Subtotal (Neto)',tX-50,tY+8); doc.setTextColor(26,26,26);
+  doc.text('$'+Math.round(reg.subtotal||0).toLocaleString('es-CL'),tX,tY+8,{align:'right'});
+  doc.setTextColor(100,100,100); doc.text('IVA (19%)',tX-50,tY+15); doc.setTextColor(26,26,26);
+  doc.text('$'+Math.round(reg.iva||0).toLocaleString('es-CL'),tX,tY+15,{align:'right'});
+  doc.setDrawColor(204,31,31); doc.line(tX-62,tY+18,tX,tY+18);
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(204,31,31);
+  doc.text('TOTAL',tX-50,tY+26);
+  doc.text('$'+Math.round(reg.total||0).toLocaleString('es-CL'),tX,tY+26,{align:'right'});
+
+  const pH=doc.internal.pageSize.height;
+  doc.setFillColor(26,26,26); doc.rect(0,pH-12,W,12,'F');
+  doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(200,200,200);
+  doc.text('Inversiones Verónica Méndez Risopátrón E.I.R.L.  ·  Mac Iver 484, Oficina 105  ·  finanzas@ritaroux.cl  ·  RUT 76.208.211-K',W/2,pH-4.5,{align:'center'});
+  return doc.output('blob');
 }
 
 function fmtM(n){ if(!n&&n!==0) return '—'; return '$'+Math.round(n).toLocaleString('es-CL'); }
@@ -165,15 +279,8 @@ function render(){
   }
   const idxMap = lista.map(r => registros.indexOf(r));
   wrap.innerHTML = `<div class="tbl"><table>
-    <thead><tr><th>Nº Cotización</th><th>Fecha</th><th>Cliente</th><th>Evento</th><th>Fecha Evento</th><th>Personas</th><th>Total</th><th>Estado</th><th></th></tr></thead>
+    <thead><tr><th>Nº Cotización</th><th>Fecha</th><th>Cliente</th><th>Evento</th><th>Fecha Evento</th><th>Personas</th><th>Total</th><th></th></tr></thead>
     <tbody>${lista.map((r,i)=>{
-      const est = r.estado||'pendiente';
-      const estBadge = est==='convertido'
-        ? `<span style="background:#E8F5E9;color:#2E7D32;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:.5px">Convertido</span>`
-        : `<span style="background:#FFF3E0;color:#E65100;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:.5px">Pendiente</span>`;
-      const nvBtn = est!=='convertido'
-        ? `<button onclick="emitirNV(${idxMap[i]})" style="padding:4px 10px;font-size:9px;font-weight:700;letter-spacing:.5px;background:#1565C0;color:#fff;border:none;border-radius:2px;cursor:pointer;white-space:nowrap">Emitir NV →</button>`
-        : `<span style="font-size:10px;color:var(--gris-t)">—</span>`;
       return `<tr>
         <td><span class="cot-tag">${r.cotizacion}</span></td>
         <td>${fmtF(r.fecha)}</td>
@@ -182,8 +289,10 @@ function render(){
         <td>${fmtF(r.fechaEvento)}</td>
         <td>${r.personas||'—'}</td>
         <td class="amt" style="font-weight:600">${fmtM(r.total)}</td>
-        <td>${estBadge}</td>
-        <td>${nvBtn}</td>
+        <td style="display:flex;gap:6px;align-items:center">
+          <button onclick="descargarPresupuesto(${idxMap[i]})" title="Descargar PDF" style="padding:4px 8px;font-size:12px;background:var(--gris);color:var(--negro);border:1px solid var(--gris-m);border-radius:2px;cursor:pointer">⬇</button>
+          <button onclick="emitirNV(${idxMap[i]})" style="padding:4px 10px;font-size:9px;font-weight:700;letter-spacing:.5px;background:#1565C0;color:#fff;border:none;border-radius:2px;cursor:pointer;white-space:nowrap">Emitir NV →</button>
+        </td>
       </tr>`;
     }).join('')}</tbody>
   </table></div>`;

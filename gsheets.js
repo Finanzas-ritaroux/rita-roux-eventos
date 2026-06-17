@@ -29,9 +29,13 @@ function gsInit(onAuth) {
       callback  : r => {
         if (r.error) return;
         gs_token = r.access_token;
+        sessionStorage.setItem('gs_was_connected', '1');
         if (_gs_cb) _gs_cb();
       }
     });
+    if (sessionStorage.getItem('gs_was_connected')) {
+      gs_client.requestAccessToken({ prompt: 'none' });
+    }
   };
   document.head.appendChild(s);
 }
@@ -102,7 +106,7 @@ async function gsDriveUpload(blob, filename, folderName) {
 async function gsInitSheet() {
   if (!gsConnected()) return;
   const tabs = [
-    { name: TAB.PRESUPUESTOS, hdr: ['Nº Cotización','Fecha','Cliente','Evento','Fecha Evento','Nº Personas','Subtotal','IVA','Total','Estado'] },
+    { name: TAB.PRESUPUESTOS, hdr: ['Nº Cotización','Fecha','Cliente','Evento','Fecha Evento','Nº Personas','Subtotal','IVA','Total','Estado','Servicios'] },
     { name: TAB.NOTAS_VENTA,  hdr: ['Nº NV','Nº Cotización','Fecha Emisión','Nombre Contacto','Empresa','Teléfono','Mail Contacto','Razón Social','RUT','Giro','Dirección','Mail Facturación','Nombre Evento','Fecha Evento','Nº Personas','Subtotal','IVA','Total'] },
     { name: TAB.SEG,          hdr: ['Estado','Tipo','Nº NV','Nombre','Cliente','Fecha','OC','Factura 50%','Pago 50%','Factura 100%','Pago 100%','Fact. Prov. Recibidas','Fact. Prov. Pagadas','Total','Pagado','Diferencia','Comentarios'] },
   ];

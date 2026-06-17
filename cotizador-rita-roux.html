@@ -185,7 +185,6 @@ header { background: var(--negro); display: flex; align-items: stretch; position
     <button class="btn btn-secondary" onclick="nuevaCotizacion()">↺ Nueva</button>
     <button class="btn btn-secondary" id="btn-google-cot" onclick="gsAuth()">☁ Google</button>
     <button class="btn btn-secondary" onclick="copiarExcel()">⎘ Copiar</button>
-    <button class="btn btn-primary" onclick="mostrarVistaPrevia()">👁 Vista Previa y Guardar</button>
   </div>
 </header>
 
@@ -242,6 +241,10 @@ header { background: var(--negro); display: flex; align-items: stretch; position
         <div class="totals-row"><span class="tl">IVA (19%)</span><span class="tv" id="t-iva">$0</span></div>
         <div class="totals-row"><span class="tl">TOTAL</span><span class="tv" id="t-total">$0</span></div>
       </div>
+    </div>
+
+    <div style="padding:18px 20px 24px;display:flex;justify-content:flex-end">
+      <button class="btn btn-primary" onclick="mostrarVistaPrevia()" style="padding:12px 32px;font-size:12px;letter-spacing:1.5px">👁 Vista Previa y Guardar</button>
     </div>
 
   </main>
@@ -796,11 +799,10 @@ async function confirmarPresupuesto() {
     a.href = _pdfUrl;
     a.download = `Cotizacion_RitaRoux_${slug}_${fecha}.pdf`;
     a.click();
-    showToast('✓ Presupuesto guardado y descargado');
-    cerrarPreview();
+    // Redirige al histórico de cotizaciones
+    location.href = 'historico-presupuestos.html';
   } catch(e) {
     showToast('Error: ' + e.message);
-  } finally {
     btn.textContent = '✓ Confirmar y Descargar'; btn.disabled = false;
   }
 }

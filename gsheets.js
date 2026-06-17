@@ -21,7 +21,6 @@ let _gs_cb    = null;
 function gsInit(onAuth, options) {
   _gs_cb = onAuth;
   const opts = options || {};
-  if (opts.requireAuth) _gsShowAuthOverlay();
   const s = document.createElement('script');
   s.src = 'https://accounts.google.com/gsi/client';
   s.onload = () => {
@@ -29,17 +28,19 @@ function gsInit(onAuth, options) {
       client_id : GS_CLIENT_ID,
       scope     : GS_SCOPES,
       callback  : r => {
-        if (r.error) return;
+        if (r.error) {
+          if (opts.requireAuth) _gsShowAuthOverlay();
+          return;
+        }
         gs_token = r.access_token;
-        sessionStorage.setItem('gs_was_connected', '1');
+        localStorage.setItem('gs_was_connected', '1');
         const ov = document.getElementById('_gs_overlay');
         if (ov) ov.remove();
         if (_gs_cb) _gs_cb();
       }
     });
-    if (sessionStorage.getItem('gs_was_connected')) {
-      gs_client.requestAccessToken({ prompt: 'none' });
-    }
+    // Siempre intenta reconexión silenciosa primero (no abre popup)
+    gs_client.requestAccessToken({ prompt: 'none' });
   };
   document.head.appendChild(s);
 }

@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rita Roux · Seguimiento de Eventos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --rojo:#CC1F1F;--rojo-osc:#A01818;--rojo-cl:#FFF5F5;
+  --negro:#1A1A1A;--gris:#F4F4F4;--gris-m:#E0E0E0;--gris-t:#777;
+  --blanco:#FFFFFF;
+  --verde:#2E7D32;--verde-bg:#E8F5E9;
+  --s6:#2E7D32;--s45:#43A047;--s23:#F9A825;--s1:#E65100;--s0:#CC1F1F;
+  --hdr:52px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:var(--gris);color:var(--negro)}
+
+/* ── HEADER ─────────────────────────────────────────── */
+header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretch;position:relative;z-index:100;flex-shrink:0}
+.hdr-logo{background:var(--rojo);padding:0 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:110px}
+.hdr-logo .lt{color:var(--negro);font-size:17px;font-weight:900;letter-spacing:3px;font-style:italic;text-transform:uppercase;line-height:1}
+.hdr-logo .ls{color:var(--negro);font-size:7px;letter-spacing:3px;text-transform:uppercase;margin-top:2px;opacity:.6}
+.hdr-info{padding:0 22px;display:flex;flex-direction:column;justify-content:center;flex:1}
+.hdr-info h1{color:var(--blanco);font-size:14px;font-weight:300;letter-spacing:2px;text-transform:uppercase}
+.hdr-info p{color:var(--rojo);font-size:9px;letter-spacing:1px;margin-top:1px}
+.hdr-act{display:flex;align-items:center;gap:8px;padding:0 22px}
+
+/* ── BUTTONS ─────────────────────────────────────────── */
+.btn{padding:7px 16px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:none;font-family:inherit;transition:all .15s;border-radius:2px}
+.btn-pr{background:var(--rojo);color:var(--blanco)}.btn-pr:hover{background:var(--rojo-osc)}
+.btn-sec{background:transparent;color:var(--blanco);border:1.5px solid rgba(255,255,255,.3)}.btn-sec:hover{border-color:var(--blanco)}
+.btn-gh{background:transparent;color:var(--gris-t);border:1.5px solid var(--gris-m)}.btn-gh:hover{border-color:var(--negro);color:var(--negro)}
+.btn-del{background:#7f0000;color:var(--blanco)}.btn-del:hover{background:#4a0000}
+.btn-ok{background:var(--verde);color:var(--blanco)}
+
+/* ── FOLDER BANNER ───────────────────────────────────── */
+.folder-bar{background:var(--blanco);border-bottom:1px solid var(--gris-m);padding:7px 20px;display:flex;align-items:center;gap:10px;font-size:11px;color:var(--gris-t);flex-shrink:0}
+.folder-bar.ok{background:var(--verde-bg);color:var(--verde)}
+.folder-bar b{color:var(--negro)}
+.folder-bar.ok b{color:var(--verde)}
+.folder-bar button{margin-left:auto}
+
+/* ── APP LAYOUT ─────────────────────────────────────── */
+.app{display:flex;height:calc(100vh - var(--hdr) - 34px);overflow:hidden}
+
+/* ── MAIN PANEL ─────────────────────────────────────── */
+.main{flex:1;min-width:0;overflow-y:auto;display:flex;flex-direction:column}
+.main-inner{padding:18px 20px;flex:1}
+
+/* ── TABS ────────────────────────────────────────────── */
+.tab-nav{display:flex;border-bottom:2px solid var(--gris-m);margin-bottom:14px}
+.tbtn{padding:9px 20px;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;background:none;border:none;color:var(--gris-t);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;font-family:inherit}
+.tbtn:hover{color:var(--negro)}.tbtn.act{color:var(--rojo);border-bottom-color:var(--rojo)}
+.tbadge{display:inline-block;background:var(--gris-m);color:var(--gris-t);font-size:9px;padding:1px 5px;border-radius:10px;margin-left:5px;font-weight:700}
+.tbtn.act .tbadge{background:var(--rojo-cl);color:var(--rojo)}
+
+/* ── TOOLBAR ─────────────────────────────────────────── */
+.toolbar{display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap}
+.srch{flex:1;min-width:150px;position:relative}
+.srch input{width:100%;padding:7px 10px 7px 28px;border:1px solid var(--gris-m);font-family:inherit;font-size:11px;border-radius:2px;outline:none;background:var(--blanco)}
+.srch input:focus{border-color:var(--rojo)}
+.srch::before{content:"⌕";position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--gris-t);font-size:14px;pointer-events:none}
+.fsel{padding:7px 8px;border:1px solid var(--gris-m);font-family:inherit;font-size:11px;border-radius:2px;outline:none;background:var(--blanco);color:var(--negro);cursor:pointer}
+.fsel:focus{border-color:var(--rojo)}
+
+/* ── EVENTS TABLE ────────────────────────────────────── */
+.tbl{background:var(--blanco);border:1px solid var(--gris-m);border-radius:3px;overflow:hidden}
+.tbl table{width:100%;border-collapse:collapse}
+.tbl th{background:var(--negro);color:var(--blanco);padding:9px 12px;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;text-align:left;font-weight:600;white-space:nowrap}
+.tbl td{padding:9px 12px;font-size:12px;border-bottom:1px solid var(--gris-m);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr{cursor:pointer;transition:background .1s}
+.tbl tbody tr:hover td{background:#f7f7f7}
+.tbl tbody tr.sel td{background:var(--rojo-cl)!important}
+.tbl tbody tr.fin-row td{background:#fafff9}
+.tbl tbody tr.fin-row:hover td{background:#f0f7f0}
+
+.mrow td{background:var(--gris)!important;font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gris-t);padding:5px 12px!important;cursor:default!important;border-bottom:1px solid var(--gris-m)!important}
+.mrow:hover td{background:var(--gris)!important}
+
+/* ── SEMAPHORE ───────────────────────────────────────── */
+.sem{display:inline-flex;align-items:center;gap:5px}
+.sem-d{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sem-l{font-size:11px;font-weight:600}
+.s6>.sem-d{background:var(--s6)}.s6>.sem-l{color:var(--s6)}
+.s45>.sem-d{background:var(--s45)}.s45>.sem-l{color:var(--s45)}
+.s23>.sem-d{background:var(--s23)}.s23>.sem-l{color:var(--s23)}
+.s1>.sem-d{background:var(--s1)}.s1>.sem-l{color:var(--s1)}
+.s0>.sem-d{background:var(--s0)}.s0>.sem-l{color:var(--s0)}
+
+.pips{display:inline-flex;gap:3px;align-items:center}
+.pip{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.pip-ok{background:var(--verde)}.pip-no{background:var(--gris-m)}.pip-next{background:var(--s23);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.fecha-cell{display:flex;flex-direction:column}
+.fecha-str{font-size:11px;color:var(--negro)}
+.fecha-cnt{font-size:10px;font-weight:600;margin-top:1px}
+.cnt-fut{color:var(--s1)}.cnt-hoy{color:var(--rojo)}.cnt-pas{color:var(--gris-t)}.cnt-ok{color:var(--gris-t)}
+
+.amt{font-variant-numeric:tabular-nums;font-size:12px;white-space:nowrap}
+.amt-pend{color:var(--rojo);font-weight:600}.amt-ok{color:var(--verde)}
+
+.nv-tag{font-family:monospace;font-size:10px;background:var(--gris);padding:1px 5px;border-radius:2px;color:var(--gris-t);font-weight:600}
+
+/* ── FINALIZADOS ─────────────────────────────────────── */
+.fin-section{margin-top:14px}
+.fin-toggle{width:100%;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--blanco);border:1px solid var(--gris-m);border-radius:3px;cursor:pointer;font-family:inherit;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gris-t);transition:all .15s}
+.fin-toggle:hover{border-color:var(--verde);color:var(--verde)}
+.fin-arrow{transition:transform .2s;font-size:10px}
+.fin-toggle.open .fin-arrow{transform:rotate(90deg)}
+.fin-body{display:none;margin-top:6px}.fin-body.open{display:block}
+
+/* ── RIGHT PANEL ─────────────────────────────────────── */
+.rp{width:340px;flex-shrink:0;background:var(--blanco);border-left:1px solid var(--gris-m);overflow-y:auto;display:flex;flex-direction:column}
+.rp-header{padding:14px 16px;border-bottom:1px solid var(--gris-m);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--blanco);position:sticky;top:0;z-index:1}
+.rp-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gris-t)}
+.rp-close{background:none;border:none;cursor:pointer;color:var(--gris-t);font-size:18px;line-height:1;padding:0}.rp-close:hover{color:var(--negro)}
+.rp-body{flex:1;overflow-y:auto}
+
+.alert-section{padding:12px 16px;border-bottom:1px solid var(--gris-m)}
+.alert-section-title{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gris-t);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.alert-card{padding:10px 12px;border-radius:3px;margin-bottom:6px;cursor:pointer;border-left:3px solid transparent;background:var(--gris);transition:all .1s}
+.alert-card:last-child{margin-bottom:0}
+.alert-card:hover{background:#efefef}
+.alert-card.urg{border-left-color:var(--rojo);background:var(--rojo-cl)}.alert-card.urg:hover{background:#ffe0e0}
+.alert-card.warn{border-left-color:var(--s23);background:#fffde7}.alert-card.warn:hover{background:#fff9c4}
+.alert-card.info{border-left-color:#1565C0;background:#E8F0FD}.alert-card.info:hover{background:#d0e4fc}
+.alert-name{font-size:12px;font-weight:600;margin-bottom:2px}
+.alert-sub{font-size:10px;color:var(--gris-t)}
+.alert-sub b{color:var(--negro)}
+
+.det-header{padding:14px 16px;border-bottom:1px solid var(--gris-m);background:var(--negro)}
+.det-name{color:var(--blanco);font-size:14px;font-weight:600;margin-bottom:2px}
+.det-client{color:rgba(255,255,255,.55);font-size:11px}
+.det-body{padding:14px 16px}
+.det-section{margin-bottom:16px}
+.det-sec-title{font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gris-t);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--gris-m)}
+
+.status-bar{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--gris);border-radius:3px;margin-bottom:0}
+.status-pct{font-size:24px;font-weight:300}
+.status-info{flex:1}
+.status-prog{height:4px;background:var(--gris-m);border-radius:2px;margin-top:5px;overflow:hidden}
+.status-fill{height:100%;border-radius:2px;transition:width .3s}
+
+.wf-step{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--gris-m);cursor:pointer;transition:background .1s}
+.wf-step:last-child{border-bottom:none}
+.wf-step:hover{background:#f9f9f9;margin:0 -16px;padding:8px 16px}
+.wf-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+.wf-done .wf-num{background:var(--verde);color:var(--blanco)}
+.wf-next .wf-num{background:var(--s23);color:var(--blanco)}
+.wf-wait .wf-num{background:var(--gris-m);color:var(--gris-t)}
+.wf-info{flex:1}
+.wf-label{font-size:12px;font-weight:600;margin-bottom:2px}
+.wf-done .wf-label{color:var(--verde)}
+.wf-next .wf-label{color:var(--s23)}
+.wf-wait .wf-label{color:var(--gris-t)}
+.wf-sub{font-size:10px;color:var(--gris-t)}
+.wf-next .wf-sub{color:#a66000}
+.wf-icon{font-size:14px;flex-shrink:0;margin-top:3px}
+
+.next-action{padding:10px 12px;background:#fff3e0;border-left:3px solid var(--s1);border-radius:0 3px 3px 0;margin-bottom:14px}
+.na-label{font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--s1);margin-bottom:4px}
+.na-text{font-size:12px;font-weight:600;color:var(--negro)}
+.na-who{font-size:10px;color:var(--gris-t);margin-top:2px}
+
+.det-field{margin-bottom:10px}
+.det-field label{display:block;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--gris-t);margin-bottom:4px}
+.det-field input,.det-field select,.det-field textarea{width:100%;padding:7px 9px;border:1px solid var(--gris-m);font-family:inherit;font-size:12px;color:var(--negro);background:var(--blanco);border-radius:2px;outline:none}
+.det-field input:focus,.det-field select:focus,.det-field textarea:focus{border-color:var(--rojo)}
+.det-field textarea{resize:vertical;min-height:52px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+.oc-toggle{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--gris);border-radius:3px;cursor:pointer}
+.oc-toggle input{width:15px;height:15px;accent-color:var(--rojo);cursor:pointer}
+.oc-toggle span{font-size:12px}
+
+.det-footer{padding:12px 16px;border-top:1px solid var(--gris-m);display:flex;gap:8px;background:var(--gris);flex-shrink:0}
+.det-footer .btn{flex:1;padding:8px;font-size:10px}
+
+.empty{padding:40px 20px;text-align:center;color:var(--gris-t)}
+.empty-ico{font-size:32px;margin-bottom:8px}
+.empty p{font-size:12px}
+.empty .btn{margin-top:14px}
+
+.tipo-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:2px 6px;border-radius:2px;margin-left:4px}
+.tipo-corp{background:#E8F0FD;color:#1565C0}
+.tipo-matr{background:#FCE4EC;color:#c62828}
+.tipo-foto{background:#E8F5E9;color:#2E7D32}
+.tipo-otro{background:var(--gris-m);color:var(--gris-t)}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="hdr-logo"><span class="lt">Rita</span><span class="lt">Roux</span><span class="ls">Café</span></div>
+  <div class="hdr-info">
+    <h1>Seguimiento de Eventos</h1>
+    <p>Facturación · Cobros · Proveedores · Alertas</p>
+  </div>
+  <div class="hdr-act">
+    <button class="btn btn-sec" onclick="window.open('historico-presupuestos.html','_blank')">🧾 Histórico Presupuestos</button>
+    <button class="btn btn-sec" onclick="window.open('dashboard.html','_blank')">📊 Dashboard</button>
+    <button class="btn btn-pr" onclick="window.open('cotizador-rita-roux.html','_blank')">+ Nueva Cotización</button>
+  </div>
+</header>
+
+<!-- FOLDER STATUS -->
+<div class="folder-bar" id="folderBar">
+  <span>📁 Conecta la carpeta <b>Presupuestos</b> para sincronizar con el Excel (la misma que usas en Cotizador / Notas de Venta).</span>
+  <button class="btn btn-gh" style="font-size:9px;padding:5px 10px" onclick="elegirCarpeta()">Conectar carpeta</button>
+</div>
+
+<!-- APP -->
+<div class="app">
+
+  <div class="main">
+    <div class="main-inner">
+
+      <div class="tab-nav">
+        <button class="tbtn act" onclick="setTab('ev',this)">Eventos <span class="tbadge" id="b-ev">0</span></button>
+        <button class="tbtn" onclick="setTab('sa',this)">Uso de Salas <span class="tbadge" id="b-sa">0</span></button>
+        <button class="tbtn" onclick="setTab('ca',this)">Cancelados <span class="tbadge" id="b-ca">0</span></button>
+      </div>
+
+      <div class="toolbar">
+        <div class="srch"><input type="text" id="srch" placeholder="Buscar evento o cliente…" oninput="renderMain()"></div>
+        <select class="fsel" id="fEs" onchange="renderMain()">
+          <option value="">Todos los estados</option>
+          <option value="fin">Finalizado</option>
+          <option value="casi">Casi listo</option>
+          <option value="proc">En proceso</option>
+          <option value="ini">Iniciando</option>
+          <option value="no">Sin iniciar</option>
+        </select>
+        <select class="fsel" id="fMe" onchange="renderMain()">
+          <option value="">Todos los meses</option>
+          <option value="1">Enero</option><option value="2">Febrero</option>
+          <option value="3">Marzo</option><option value="4">Abril</option>
+          <option value="5">Mayo</option><option value="6">Junio</option>
+          <option value="7">Julio</option><option value="8">Agosto</option>
+          <option value="9">Sep</option><option value="10">Oct</option>
+          <option value="11">Nov</option><option value="12">Dic</option>
+        </select>
+        <button class="btn btn-gh" style="font-size:9px;padding:6px 10px" onclick="clearF()">✕</button>
+        <button class="btn btn-ok" style="font-size:9px;padding:6px 12px" id="btnAdd" onclick="openNew()">+ Evento</button>
+      </div>
+
+      <div id="pev"></div>
+      <div id="psa" style="display:none"></div>
+      <div id="pca" style="display:none"></div>
+    </div>
+  </div>
+
+  <div class="rp" id="rp"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════
+
+const KEY = 'rr_ev2026_v4';
+const EXCEL_NAME = 'seguimiento_eventos.xlsx';
+
+const PASOS = [
+  { key:'f50',  label:'Factura 50%',         sub:'Gerardo emite la factura de abono al cliente',    persona:'Gerardo' },
+  { key:'p50',  label:'Pago 50%',             sub:'Confirmar recepción del pago inicial (abono)',    persona:'Gerardo' },
+  { key:'f100', label:'Factura saldo final',  sub:'Gerardo emite la factura por el saldo restante',  persona:'Gerardo' },
+  { key:'p100', label:'Pago saldo final',     sub:'Confirmar recepción del pago total del evento',   persona:'Gerardo' },
+  { key:'fRec', label:'Fact. proveedores recibidas', sub:'Teresa recopila todas las facturas de proveedores', persona:'Teresa' },
+  { key:'fPag', label:'Proveedores pagados',  sub:'Gerardo procesa los pagos a proveedores',         persona:'Gerardo' },
+];
+
+const TIPOS = { corp:'Corporativo', matr:'Matrimonio', foto:'Fotografía', otro:'Otro' };
+
+// ═══════════════════════════════════════════════════════
+// DATA — fuente de verdad: Excel (seguimiento_eventos.xlsx)
+// localStorage sólo se usa como caché de lectura rápida.
+// ═══════════════════════════════════════════════════════
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).substr(2,5) }
+
+let db = { eventos: [], salas: [], cancelados: [] };
+let currentTab='ev', selId=null, dirHandle=null;
+
+try{ const cached=JSON.parse(localStorage.getItem(KEY)||'null'); if(cached&&cached.eventos) db=cached; }catch(e){}
+
+function saveCache(){ localStorage.setItem(KEY, JSON.stringify(db)) }
+
+// ─── CARPETA PRESUPUESTOS (misma que Notas de Venta) ──────
+async function persistirHandle(handle){
+  return new Promise(resolve=>{
+    const req = indexedDB.open('rr_nv_config', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('cfg');
+    req.onsuccess = e => {
+      const tx = e.target.result.transaction('cfg','readwrite');
+      tx.objectStore('cfg').put(handle,'presupuestosDir');
+      tx.oncomplete = resolve; tx.onerror = resolve;
+    };
+    req.onerror = resolve;
+  });
+}
+async function restaurarHandle(){
+  return new Promise(resolve=>{
+    const req = indexedDB.open('rr_nv_config', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('cfg');
+    req.onsuccess = e => {
+      try{
+        const tx = e.target.result.transaction('cfg','readonly');
+        const r = tx.objectStore('cfg').get('presupuestosDir');
+        r.onsuccess = async () => {
+          if(r.result){
+            const perm = await r.result.queryPermission({mode:'readwrite'}).catch(()=>'denied');
+            if(perm==='granted') dirHandle = r.result;
+          }
+          resolve();
+        };
+        r.onerror = resolve;
+      }catch(e){ resolve(); }
+    };
+    req.onerror = resolve;
+  });
+}
+
+function mostrarErrorCarpeta(msg){
+  const bar = document.getElementById('folderBar');
+  bar.classList.remove('ok');
+  bar.innerHTML = `<span>⚠ ${msg}</span><button class="btn btn-gh" style="font-size:9px;padding:5px 10px" onclick="elegirCarpeta()">Reintentar</button>`;
+}
+
+async function elegirCarpeta(){
+  if(!window.showDirectoryPicker){
+    mostrarErrorCarpeta('Este visor no soporta conectar carpetas (función no disponible en navegadores embebidos / vista previa interna de VS Code). Abre este archivo en una ventana real de <b>Chrome</b> o <b>Edge</b> — clic derecho sobre el archivo → "Abrir con" → Chrome/Edge.');
+    return;
+  }
+  try{
+    dirHandle = await window.showDirectoryPicker({ mode:'readwrite', startIn:'documents' });
+    await persistirHandle(dirHandle);
+    await cargarDesdeExcel();
+    actualizarFolderBar();
+    renderMain();
+  }catch(e){
+    if(e.name!=='AbortError') mostrarErrorCarpeta('No se pudo conectar la carpeta: ' + e.message);
+  }
+}
+
+function actualizarFolderBar(){
+  const bar = document.getElementById('folderBar');
+  if(dirHandle){
+    bar.classList.add('ok');
+    bar.innerHTML = `<span>📁 Sincronizado con <b>${dirHandle.name}</b> · ${EXCEL_NAME}</span><button class="btn btn-gh" style="font-size:9px;padding:5px 10px" onclick="elegirCarpeta()">Cambiar</button>`;
+  }
+}
+
+// ─── LEER / ESCRIBIR EXCEL ─────────────────────────────────
+async function cargarDesdeExcel(){
+  if(!dirHandle) return false;
+  try{
+    let perm = await dirHandle.queryPermission({mode:'readwrite'});
+    if(perm!=='granted') perm = await dirHandle.requestPermission({mode:'readwrite'});
+    if(perm!=='granted') return false;
+
+    const fh = await dirHandle.getFileHandle(EXCEL_NAME).catch(()=>null);
+    if(!fh){ return false; }
+    const file = await fh.getFile();
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf,{type:'array'});
+
+    const wsEv = wb.Sheets['Eventos'];
+    const eventos = wsEv ? XLSX.utils.sheet_to_json(wsEv,{defval:''}).map(r=>({
+      id: uid(), tipo:'evento',
+      notaVenta: r['Nº Nota Venta']||'', nombre: r['Nombre Evento']||'', cliente: r['Cliente']||'',
+      fecha: normFecha(r['Fecha Evento']), tev: r['Tipo']||'corp',
+      oc: r['OC']||'', f50: r['Factura 50%']||'', p50: r['Pago 50%']||'',
+      f100: r['Factura 100%']||'', p100: r['Pago 100%']||'',
+      fRec: r['Fact. Prov. Recibidas']||'', fPag: r['Fact. Prov. Pagadas']||'',
+      total: +r['Total']||0, pagado: +r['Pagado']||0, dif: +r['Diferencia']||0,
+      comentarios: r['Comentarios']||''
+    })) : [];
+
+    const wsSa = wb.Sheets['Salas'];
+    const salas = wsSa ? XLSX.utils.sheet_to_json(wsSa,{defval:''}).map(r=>({
+      id: uid(), tipo:'sala',
+      nombre: r['Nombre']||'', cliente: r['Cliente']||'', fecha: normFecha(r['Fecha']),
+      factura: r['Factura']||'', p50: r['Pago 50%']||'', p100: r['Pago 100%']||'',
+      total: +r['Total']||0, pagado: +r['Pagado']||0, dif: +r['Diferencia']||0,
+      comentarios: r['Comentarios']||''
+    })) : [];
+
+    const wsCa = wb.Sheets['Cancelados'];
+    const cancelados = wsCa ? XLSX.utils.sheet_to_json(wsCa,{defval:''}).map(r=>({
+      id: uid(), tipo:'cancelado',
+      nombre: r['Nombre']||'', cliente: r['Cliente']||'', fecha: normFecha(r['Fecha']),
+      oc: r['OC']||'', f50: r['Factura 50%']||'', f100: r['Factura 100%']||'',
+      total: +r['Total']||0, comentarios: r['Comentarios']||''
+    })) : [];
+
+    db = { eventos, salas, cancelados };
+    saveCache();
+    return true;
+  }catch(e){ console.warn('Error leyendo Excel:', e); return false; }
+}
+
+function normFecha(v){
+  if(!v) return '';
+  if(typeof v === 'string') return v;
+  try{ const d = XLSX.SSF.parse_date_code(v); return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`; }catch(e){ return ''; }
+}
+
+let saveTimer=null;
+function scheduleSave(){
+  saveCache();
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(guardarEnExcel, 350);
+}
+
+async function guardarEnExcel(){
+  if(!dirHandle) return;
+  try{
+    let perm = await dirHandle.queryPermission({mode:'readwrite'});
+    if(perm!=='granted') perm = await dirHandle.requestPermission({mode:'readwrite'});
+    if(perm!=='granted') return;
+
+    const wb = XLSX.utils.book_new();
+
+    const hEv = ['Nº Nota Venta','Nombre Evento','Cliente','Fecha Evento','Tipo','OC','Factura 50%','Pago 50%','Factura 100%','Pago 100%','Fact. Prov. Recibidas','Fact. Prov. Pagadas','Total','Pagado','Diferencia','Comentarios'];
+    const rowsEv = [hEv, ...db.eventos.map(e=>[e.notaVenta,e.nombre,e.cliente,e.fecha,e.tev,e.oc,e.f50,e.p50,e.f100,e.p100,e.fRec,e.fPag,e.total,e.pagado,e.dif,e.comentarios])];
+    const wsEv = XLSX.utils.aoa_to_sheet(rowsEv);
+    wsEv['!cols']=[{wch:14},{wch:28},{wch:24},{wch:13},{wch:9},{wch:6},{wch:11},{wch:9},{wch:12},{wch:9},{wch:18},{wch:16},{wch:13},{wch:13},{wch:13},{wch:30}];
+    XLSX.utils.book_append_sheet(wb, wsEv, 'Eventos');
+
+    const hSa = ['Nombre','Cliente','Fecha','Factura','Pago 50%','Pago 100%','Total','Pagado','Diferencia','Comentarios'];
+    const rowsSa = [hSa, ...db.salas.map(e=>[e.nombre,e.cliente,e.fecha,e.factura,e.p50,e.p100,e.total,e.pagado,e.dif,e.comentarios])];
+    const wsSa = XLSX.utils.aoa_to_sheet(rowsSa);
+    wsSa['!cols']=[{wch:24},{wch:22},{wch:13},{wch:9},{wch:9},{wch:9},{wch:13},{wch:13},{wch:13},{wch:30}];
+    XLSX.utils.book_append_sheet(wb, wsSa, 'Salas');
+
+    const hCa = ['Nombre','Cliente','Fecha','OC','Factura 50%','Factura 100%','Total','Comentarios'];
+    const rowsCa = [hCa, ...db.cancelados.map(e=>[e.nombre,e.cliente,e.fecha,e.oc,e.f50,e.f100,e.total,e.comentarios])];
+    const wsCa = XLSX.utils.aoa_to_sheet(rowsCa);
+    wsCa['!cols']=[{wch:24},{wch:22},{wch:13},{wch:6},{wch:11},{wch:12},{wch:13},{wch:30}];
+    XLSX.utils.book_append_sheet(wb, wsCa, 'Cancelados');
+
+    const out = XLSX.write(wb,{bookType:'xlsx',type:'array'});
+    const fh = await dirHandle.getFileHandle(EXCEL_NAME,{create:true});
+    const wr = await fh.createWritable();
+    await wr.write(new Blob([out]));
+    await wr.close();
+  }catch(e){ console.warn('Error guardando Excel:', e); }
+}
+
+// ═══════════════════════════════════════════════════════
+// LOGIC
+// ═══════════════════════════════════════════════════════
+
+function calcE(ev){
+  if(ev.tipo==='sala'){ const n=[ev.factura,ev.p50,ev.p100].filter(x=>x==='si').length; return{n,max:3} }
+  if(ev.tipo==='cancelado') return{n:-1,max:0}
+  const n=[ev.f50,ev.p50,ev.f100,ev.p100,ev.fRec,ev.fPag].filter(x=>x==='si').length;
+  return{n,max:6}
+}
+function semCls(n,max){
+  if(n<0) return 's-can';
+  if(n===max&&max>0) return 's6';
+  const r=max?n/max:0;
+  if(r>=.66) return 's45';
+  if(r>=.33) return 's23';
+  if(n>=1) return 's1';
+  return 's0';
+}
+function semTxt(n,max){
+  if(n<0) return 'Cancelado';
+  if(n===max&&max>0) return 'Finalizado';
+  const r=max?n/max:0;
+  if(r>=.66) return 'Casi listo';
+  if(r>=.33) return 'En proceso';
+  if(n>=1) return 'Iniciando';
+  return 'Sin iniciar';
+}
+function semColor(n,max){
+  const c=semCls(n,max);
+  return c==='s6'?'#2E7D32':c==='s45'?'#43A047':c==='s23'?'#F9A825':c==='s1'?'#E65100':'#CC1F1F';
+}
+function semH(n,max){
+  const c=semCls(n,max), t=semTxt(n,max);
+  return `<span class="sem ${c}"><span class="sem-d"></span><span class="sem-l">${t}</span></span>`;
+}
+function nextPaso(e){ for(const p of PASOS){ if(e[p.key]!=='si') return p; } return null; }
+function dias(fecha){
+  if(!fecha) return null;
+  const d=new Date(fecha+'T00:00:00'), t=new Date(); t.setHours(0,0,0,0);
+  return Math.round((d-t)/86400000);
+}
+function fmtFecha(s){
+  if(!s) return '<span style="color:var(--gris-t)">—</span>';
+  const d=new Date(s+'T00:00:00');
+  const str=d.toLocaleDateString('es-CL',{day:'numeric',month:'short',year:'numeric'});
+  const diff=dias(s);
+  let cnt='', cls='cnt-ok';
+  if(diff===0){ cnt='HOY'; cls='cnt-hoy'; }
+  else if(diff>0&&diff<=30){ cnt=`en ${diff}d`; cls='cnt-fut'; }
+  else if(diff>0){ cnt=`${diff}d`; cls='cnt-ok'; }
+  else{ cnt=`hace ${Math.abs(diff)}d`; cls='cnt-pas'; }
+  return `<div class="fecha-cell"><span class="fecha-str">${str}</span>${cnt?`<span class="fecha-cnt ${cls}">${cnt}</span>`:''}</div>`;
+}
+function fmtM(n){ if(!n&&n!==0) return '—'; return '$'+Math.round(n).toLocaleString('es-CL') }
+function pipH(e){
+  return PASOS.map(p=>{
+    const done=e[p.key]==='si';
+    const isNext=!done&&nextPaso(e)&&nextPaso(e).key===p.key;
+    const cls=done?'pip-ok':isNext?'pip-next':'pip-no';
+    return `<span class="pip ${cls}" title="${p.label}"></span>`;
+  }).join('');
+}
+function tipoBadge(tev){
+  const map={corp:'tipo-corp',matr:'tipo-matr',foto:'tipo-foto',otro:'tipo-otro'};
+  const lbl={corp:'Corp.',matr:'Matr.',foto:'Foto',otro:'Otro'};
+  return `<span class="tipo-badge ${map[tev]||'tipo-otro'}">${lbl[tev]||tev}</span>`;
+}
+function matchF(e){
+  const q=document.getElementById('srch').value.toLowerCase();
+  const fe=document.getElementById('fEs').value;
+  const fm=document.getElementById('fMe').value;
+  if(q&&!e.nombre.toLowerCase().includes(q)&&!e.cliente.toLowerCase().includes(q)) return false;
+  if(fm&&e.fecha&&(new Date(e.fecha+'T00:00:00').getMonth()+1)!==+fm) return false;
+  if(fe){
+    const{n,max}=calcE(e), txt=semTxt(n,max);
+    if(fe==='fin'&&txt!=='Finalizado') return false;
+    if(fe==='casi'&&txt!=='Casi listo') return false;
+    if(fe==='proc'&&txt!=='En proceso') return false;
+    if(fe==='ini'&&txt!=='Iniciando') return false;
+    if(fe==='no'&&txt!=='Sin iniciar') return false;
+  }
+  return true;
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER TABLES
+// ═══════════════════════════════════════════════════════
+
+function renderEv(){
+  const el=document.getElementById('pev');
+  // Sólo eventos con Nota de Venta asociada
+  const conNV = db.eventos.filter(e=>e.notaVenta);
+  const all=conNV.filter(matchF);
+  const activos=all.filter(e=>{const s=calcE(e);return!(s.n===s.max&&s.max>0)});
+  const finalizados=all.filter(e=>{const s=calcE(e);return s.n===s.max&&s.max>0});
+
+  activos.sort((a,b)=>{
+    const da=new Date(a.fecha+'T00:00:00'), db_=new Date(b.fecha+'T00:00:00');
+    const today=new Date(); today.setHours(0,0,0,0);
+    const fa=da>=today, fb=db_>=today;
+    if(fa&&!fb) return -1;
+    if(!fa&&fb) return 1;
+    if(fa&&fb) return da-db_;
+    return db_-da;
+  });
+  finalizados.sort((a,b)=>new Date(b.fecha+'T00:00:00')-new Date(a.fecha+'T00:00:00'));
+
+  let html='';
+
+  if(!conNV.length){
+    html=`<div class="empty">
+      <div class="empty-ico">🧾</div>
+      <p>Aún no hay eventos con Nota de Venta generada.</p>
+      <p style="font-size:11px;margin-top:4px">Los eventos aparecen aquí automáticamente al emitir una Nota de Venta.</p>
+      <button class="btn btn-pr" onclick="window.open('rita-roux-notas-venta.html','_blank')">+ Emitir Nota de Venta</button>
+    </div>`;
+  } else if(!activos.length&&!finalizados.length){
+    html=`<div class="empty"><div class="empty-ico">📋</div><p>Sin resultados para estos filtros</p></div>`;
+  } else {
+    if(activos.length){
+      html+=`<div class="tbl"><table>
+        <thead><tr><th>Evento / Cliente</th><th>N° NV</th><th>Fecha</th><th>Estado</th><th>Progreso</th><th>$ Pendiente</th></tr></thead>
+        <tbody>`;
+      activos.forEach(e=>{
+        const{n,max}=calcE(e);
+        const pend=(e.dif||0)>0;
+        const isSel=selId===e.id;
+        html+=`<tr class="${isSel?'sel':''}" onclick="selEv('${e.id}')">
+          <td><span style="font-weight:600">${e.nombre}</span>${tipoBadge(e.tev||'corp')}<br><span style="font-size:10px;color:var(--gris-t)">${e.cliente}</span></td>
+          <td><span class="nv-tag">${e.notaVenta}</span></td>
+          <td>${fmtFecha(e.fecha)}</td>
+          <td>${semH(n,max)}</td>
+          <td><div class="pips" title="${PASOS.map((p,i)=>i+1+'. '+p.label).join(' · ')}">${pipH(e)}</div></td>
+          <td class="amt ${pend?'amt-pend':'amt-ok'}">${pend?fmtM(e.dif):'✓'}</td>
+        </tr>`;
+      });
+      html+=`</tbody></table></div>`;
+    } else {
+      html+=`<div class="empty" style="padding:20px"><p style="font-size:11px">No hay eventos activos</p></div>`;
+    }
+
+    if(finalizados.length){
+      const finOpen=localStorage.getItem('rr_fin_open')==='1';
+      html+=`<div class="fin-section">
+        <button class="fin-toggle ${finOpen?'open':''}" onclick="toggleFin(this)">
+          <span class="fin-arrow">▶</span><span>Finalizados</span>
+          <span class="tbadge" style="background:var(--verde-bg);color:var(--verde)">${finalizados.length}</span>
+          <span style="flex:1"></span>
+          <span style="font-size:10px;color:var(--verde);font-weight:400">${fmtM(finalizados.reduce((a,e)=>a+(e.total||0),0))}</span>
+        </button>
+        <div class="fin-body ${finOpen?'open':''}">
+          <div class="tbl"><table>
+            <thead><tr><th>Evento / Cliente</th><th>N° NV</th><th>Fecha</th><th>Tipo</th><th>Total cobrado</th></tr></thead>
+            <tbody>
+              ${finalizados.map(e=>`<tr class="fin-row ${selId===e.id?'sel':''}" onclick="selEv('${e.id}')">
+                <td><span style="font-weight:600">${e.nombre}</span><br><span style="font-size:10px;color:var(--gris-t)">${e.cliente}</span></td>
+                <td><span class="nv-tag">${e.notaVenta}</span></td>
+                <td>${fmtFecha(e.fecha)}</td>
+                <td>${tipoBadge(e.tev||'corp')}</td>
+                <td class="amt amt-ok">${fmtM(e.total)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table></div>
+        </div>
+      </div>`;
+    }
+  }
+  el.innerHTML=html;
+}
+
+function toggleFin(btn){
+  btn.classList.toggle('open');
+  const body=btn.nextElementSibling;
+  body.classList.toggle('open');
+  localStorage.setItem('rr_fin_open', body.classList.contains('open')?'1':'0');
+}
+
+function renderSa(){
+  const el=document.getElementById('psa');
+  const lista=db.salas.filter(matchF).sort((a,b)=>new Date(a.fecha+'T00:00:00')-new Date(b.fecha+'T00:00:00'));
+  if(!lista.length){el.innerHTML=`<div class="empty"><div class="empty-ico">🏠</div><p>Sin registros de salas</p></div>`;return}
+  el.innerHTML=`<div class="tbl"><table>
+    <thead><tr><th>Sala / Cliente</th><th>Fecha</th><th>Estado</th><th>Progreso</th><th>$ Pendiente</th></tr></thead>
+    <tbody>${lista.map(e=>{
+      const{n,max}=calcE(e);
+      const pips=[e.factura,e.p50,e.p100].map((v,i)=>`<span class="pip ${v==='si'?'pip-ok':'pip-no'}" title="${['Factura','Pago 50%','Pago 100%'][i]}"></span>`).join('');
+      return`<tr class="${selId===e.id?'sel':''}" onclick="selEv('${e.id}')">
+        <td><span style="font-weight:600">${e.nombre}</span><br><span style="font-size:10px;color:var(--gris-t)">${e.cliente}</span></td>
+        <td>${fmtFecha(e.fecha)}</td>
+        <td>${semH(n,max)}</td>
+        <td><div class="pips">${pips}</div></td>
+        <td class="amt ${(e.dif||0)>0?'amt-pend':'amt-ok'}">${(e.dif||0)>0?fmtM(e.dif):'✓'}</td>
+      </tr>`;}).join('')}
+    </tbody></table></div>`;
+}
+
+function renderCa(){
+  const el=document.getElementById('pca');
+  const lista=db.cancelados.filter(matchF).sort((a,b)=>new Date(a.fecha+'T00:00:00')-new Date(b.fecha+'T00:00:00'));
+  if(!lista.length){el.innerHTML=`<div class="empty"><div class="empty-ico">🚫</div><p>Sin cancelados</p></div>`;return}
+  el.innerHTML=`<div class="tbl"><table>
+    <thead><tr><th>Evento / Cliente</th><th>Fecha</th><th>OC</th><th>F50%</th><th>F100%</th><th>Total</th><th>Nota</th></tr></thead>
+    <tbody>${lista.map(e=>`<tr class="${selId===e.id?'sel':''}" onclick="selEv('${e.id}')">
+      <td><span style="font-weight:600">${e.nombre}</span><br><span style="font-size:10px;color:var(--gris-t)">${e.cliente}</span></td>
+      <td>${fmtFecha(e.fecha)}</td>
+      <td style="font-size:12px">${e.oc==='si'?'<span style="color:var(--verde)">✓</span>':'<span style="color:var(--gris-t)">—</span>'}</td>
+      <td style="font-size:12px">${e.f50==='si'?'<span style="color:var(--verde)">✓</span>':'<span style="color:var(--gris-t)">—</span>'}</td>
+      <td style="font-size:12px">${e.f100==='si'?'<span style="color:var(--verde)">✓</span>':'<span style="color:var(--gris-t)">—</span>'}</td>
+      <td class="amt">${fmtM(e.total)}</td>
+      <td style="font-size:10px;color:var(--gris-t)">${e.comentarios||''}</td>
+    </tr>`).join('')}
+    </tbody></table></div>`;
+}
+
+function renderMain(){
+  if(currentTab==='ev') renderEv();
+  else if(currentTab==='sa') renderSa();
+  else renderCa();
+  document.getElementById('b-ev').textContent=db.eventos.filter(e=>e.notaVenta).length;
+  document.getElementById('b-sa').textContent=db.salas.length;
+  document.getElementById('b-ca').textContent=db.cancelados.length;
+  if(selId) renderDetail(selId);
+  else renderAlertas();
+}
+
+// ═══════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════
+
+function setTab(t,btn){
+  currentTab=t; selId=null;
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('act'));
+  btn.classList.add('act');
+  ['ev','sa','ca'].forEach(x=>document.getElementById('p'+x).style.display=x===t?'':'none');
+  document.getElementById('btnAdd').style.display = t==='ev' ? 'none' : 'inline-block';
+  renderMain();
+}
+function clearF(){
+  document.getElementById('srch').value='';
+  document.getElementById('fEs').value='';
+  document.getElementById('fMe').value='';
+  renderMain();
+}
+
+// ═══════════════════════════════════════════════════════
+// RIGHT PANEL — ALERTS
+// ═══════════════════════════════════════════════════════
+
+function renderAlertas(){
+  const rp=document.getElementById('rp');
+  const today=new Date(); today.setHours(0,0,0,0);
+  const eventosNV = db.eventos.filter(e=>e.notaVenta);
+
+  const proximos=eventosNV.filter(e=>{const d=dias(e.fecha);return d!==null&&d>=0&&d<=14&&calcE(e).n<calcE(e).max}).sort((a,b)=>dias(a.fecha)-dias(b.fecha));
+  const cobros=eventosNV.filter(e=>e.dif>0&&e.fecha&&new Date(e.fecha+'T00:00:00')<today).sort((a,b)=>(b.dif||0)-(a.dif||0));
+  const sinIniciar=eventosNV.filter(e=>{const s=calcE(e);return s.n===0}).sort((a,b)=>new Date(a.fecha+'T00:00:00')-new Date(b.fecha+'T00:00:00'));
+  const enProceso=eventosNV.filter(e=>{const s=calcE(e);return s.n>0&&s.n<s.max}).sort((a,b)=>new Date(a.fecha+'T00:00:00')-new Date(b.fecha+'T00:00:00'));
+
+  let html=`<div class="rp-header"><span class="rp-title">Alertas y Pendientes</span></div><div class="rp-body">`;
+
+  if(!proximos.length&&!cobros.length&&!sinIniciar.length&&!enProceso.length){
+    html+=`<div style="padding:40px 20px;text-align:center;color:var(--gris-t)"><p style="font-size:24px;margin-bottom:8px">✓</p><p style="font-size:12px">Todo al día</p></div>`;
+  }
+
+  if(proximos.length){
+    html+=`<div class="alert-section"><div class="alert-section-title"><span>📅</span> Próximos eventos (14 días)</div>`;
+    proximos.forEach(e=>{
+      const d=dias(e.fecha);
+      const txt=d===0?'HOY':d===1?'Mañana':`en ${d} días`;
+      html+=`<div class="alert-card ${d<=3?'urg':'warn'}" onclick="selEv('${e.id}')">
+        <div class="alert-name">${e.nombre}</div>
+        <div class="alert-sub">${e.cliente} · <b>${txt}</b></div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+  if(cobros.length){
+    html+=`<div class="alert-section"><div class="alert-section-title"><span>💰</span> Cobros pendientes</div>`;
+    cobros.forEach(e=>{
+      html+=`<div class="alert-card urg" onclick="selEv('${e.id}')">
+        <div class="alert-name">${e.nombre}</div>
+        <div class="alert-sub">${e.cliente} · <b>${fmtM(e.dif)} por cobrar</b></div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+  if(enProceso.length){
+    html+=`<div class="alert-section"><div class="alert-section-title"><span>⚙️</span> Siguiente acción requerida</div>`;
+    enProceso.forEach(e=>{
+      const np=nextPaso(e); if(!np) return;
+      html+=`<div class="alert-card info" onclick="selEv('${e.id}')">
+        <div class="alert-name">${e.nombre}</div>
+        <div class="alert-sub">${np.label} · <b>${np.persona}</b></div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+  if(sinIniciar.length){
+    html+=`<div class="alert-section"><div class="alert-section-title"><span>🔴</span> Sin acción inicial</div>`;
+    sinIniciar.forEach(e=>{
+      const d=dias(e.fecha);
+      const txt=d!==null?(d>=0?`en ${d}d`:`hace ${Math.abs(d)}d`):'';
+      html+=`<div class="alert-card" onclick="selEv('${e.id}')">
+        <div class="alert-name">${e.nombre}</div>
+        <div class="alert-sub">${e.cliente}${txt?` · <b>${txt}</b>`:''}</div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
+  html+=`</div>`;
+  rp.innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════════════
+// RIGHT PANEL — DETAIL
+// ═══════════════════════════════════════════════════════
+
+function selEv(id){ selId=id; renderMain(); }
+
+function renderDetail(id){
+  const all=[...db.eventos,...db.salas,...db.cancelados];
+  const e=all.find(x=>x.id===id);
+  if(!e){ renderAlertas(); return; }
+
+  const{n,max}=calcE(e);
+  const pct=max?Math.round(n/max*100):0;
+  const color=semColor(n,max);
+  const np=nextPaso(e);
+  const isFin=n===max&&max>0;
+
+  const rp=document.getElementById('rp');
+  let html=`
+    <div class="det-header">
+      <div class="det-name">${e.nombre||'(sin nombre)'}</div>
+      <div class="det-client">${e.cliente||''} ${e.notaVenta?`· <span class="nv-tag" style="background:rgba(255,255,255,.15);color:#fff">${e.notaVenta}</span>`:''}</div>
+    </div>
+    <div style="position:sticky;top:0;background:var(--blanco);z-index:1;border-bottom:1px solid var(--gris-m);padding:10px 16px">
+      <div class="status-bar">
+        <div class="status-pct" style="color:${color}">${pct}%</div>
+        <div class="status-info">${semH(n,max)}<div class="status-prog"><div class="status-fill" style="width:${pct}%;background:${color}"></div></div></div>
+        <button class="rp-close" onclick="closeDetail()">×</button>
+      </div>
+    </div>
+    <div class="det-body">`;
+
+  if(np&&!isFin){
+    html+=`<div class="next-action">
+      <div class="na-label">→ Siguiente paso</div>
+      <div class="na-text">${np.label}</div>
+      <div class="na-who">${np.sub} · Responsable: <b>${np.persona}</b></div>
+    </div>`;
+  } else if(isFin){
+    html+=`<div class="next-action" style="background:#E8F5E9;border-left-color:var(--verde)">
+      <div class="na-label" style="color:var(--verde)">✓ Completado</div>
+      <div class="na-text" style="color:var(--verde)">Evento finalizado</div>
+      <div class="na-who">Todos los pasos completados</div>
+    </div>`;
+  }
+
+  html+=`<div class="det-section"><div class="det-sec-title">Datos del evento</div>
+    <div class="det-field"><label>Nombre</label><input type="text" id="d-nombre" value="${e.nombre||''}"></div>
+    <div class="row2">
+      <div class="det-field"><label>Cliente</label><input type="text" id="d-cliente" value="${e.cliente||''}"></div>
+      <div class="det-field"><label>Fecha</label><input type="date" id="d-fecha" value="${e.fecha||''}"></div>
+    </div>`;
+
+  if(e.tipo==='evento'){
+    html+=`<div class="det-field"><label>Nº Nota de Venta</label><input type="text" id="d-nv" value="${e.notaVenta||''}" placeholder="NV-2026-001"></div>
+    <div class="row2">
+      <div class="det-field"><label>Tipo de evento</label>
+        <select id="d-tev">${Object.entries(TIPOS).map(([k,v])=>`<option value="${k}" ${(e.tev||'corp')===k?'selected':''}>${v}</option>`).join('')}</select>
+      </div>
+      <div class="det-field"><label>Monto total</label><input type="number" id="d-total" value="${e.total||''}"></div>
+    </div>`;
+  } else if(e.tipo==='sala'){
+    html+=`<div class="det-field"><label>Monto total</label><input type="number" id="d-total" value="${e.total||''}"></div>`;
+  } else {
+    html+=`<div class="det-field"><label>Presupuesto</label><input type="number" id="d-total" value="${e.total||''}"></div>`;
+  }
+  html+=`</div>`;
+
+  if(e.tipo==='evento'){
+    html+=`<div class="det-section"><div class="det-sec-title">Facturación y cobros</div>
+      <label class="oc-toggle" style="margin-bottom:10px"><input type="checkbox" id="d-oc" ${e.oc==='si'?'checked':''}><span>OC recibida del cliente</span></label>`;
+    PASOS.forEach((p,i)=>{
+      const done=e[p.key]==='si';
+      const isNext=!done&&np&&np.key===p.key;
+      const cls=done?'wf-done':isNext?'wf-next':'wf-wait';
+      html+=`<div class="wf-step ${cls}" onclick="togglePaso('${p.key}')">
+        <div class="wf-num">${done?'✓':i+1}</div>
+        <div class="wf-info"><div class="wf-label">${p.label}</div><div class="wf-sub">${isNext?'← PENDIENTE · '+p.sub:done?'Completado':p.persona}</div></div>
+        <span class="wf-icon">${done?'✅':isNext?'⏳':'○'}</span>
+      </div>`;
+    });
+    html+=`</div>
+    <div class="det-section"><div class="det-sec-title">Montos (CLP)</div>
+      <div class="row2">
+        <div class="det-field"><label>Cobrado</label><input type="number" id="d-pag" value="${e.pagado||0}" oninput="autoDif()"></div>
+        <div class="det-field"><label>Diferencia</label><input type="number" id="d-dif" value="${e.dif||0}" readonly style="background:var(--gris);color:var(--gris-t)"></div>
+      </div>
+    </div>`;
+  } else if(e.tipo==='sala'){
+    html+=`<div class="det-section"><div class="det-sec-title">Estado facturación</div>
+      ${[{key:'factura',label:'Factura emitida'},{key:'p50',label:'Pago 50%'},{key:'p100',label:'Pago 100%'}].map(p=>`
+        <label class="oc-toggle" style="margin-bottom:6px"><input type="checkbox" id="d-${p.key}" ${e[p.key]==='si'?'checked':''}><span>${p.label}</span></label>`).join('')}
+      <div class="row2" style="margin-top:8px">
+        <div class="det-field"><label>Cobrado</label><input type="number" id="d-pag" value="${e.pagado||0}" oninput="autoDif()"></div>
+        <div class="det-field"><label>Diferencia</label><input type="number" id="d-dif" value="${e.dif||0}" readonly style="background:var(--gris)"></div>
+      </div>
+    </div>`;
+  } else {
+    html+=`<div class="det-section"><div class="det-sec-title">Estado cancelación</div>
+      ${[{key:'oc',label:'OC recibida'},{key:'f50',label:'Factura 50% emitida'},{key:'f100',label:'Factura 100% emitida'}].map(p=>`
+        <label class="oc-toggle" style="margin-bottom:6px"><input type="checkbox" id="d-${p.key}" ${e[p.key]==='si'?'checked':''}><span>${p.label}</span></label>`).join('')}
+    </div>`;
+  }
+
+  html+=`<div class="det-section"><div class="det-sec-title">Comentarios</div>
+    <div class="det-field"><textarea id="d-com" rows="3">${e.comentarios||''}</textarea></div>
+  </div></div>`;
+
+  html+=`<div class="det-footer">
+    <button class="btn btn-del" onclick="delEv('${e.id}','${e.tipo}')">Eliminar</button>
+    <button class="btn btn-gh" onclick="closeDetail()">Cancelar</button>
+    <button class="btn btn-pr" onclick="saveDetail('${e.id}','${e.tipo}')">Guardar</button>
+  </div>`;
+
+  rp.innerHTML=html;
+  const tot=document.getElementById('d-total');
+  if(tot) tot.addEventListener('input', autoDif);
+}
+
+function autoDif(){
+  const t=parseFloat(document.getElementById('d-total')?.value)||0;
+  const p=parseFloat(document.getElementById('d-pag')?.value)||0;
+  const d=document.getElementById('d-dif');
+  if(d) d.value=Math.max(0,t-p);
+}
+
+function togglePaso(key){
+  const all=[...db.eventos,...db.salas,...db.cancelados];
+  const e=all.find(x=>x.id===selId);
+  if(!e) return;
+  e[key]=e[key]==='si'?'':'si';
+  scheduleSave(); renderMain();
+}
+
+function saveDetail(id, tipo){
+  const lista=tipo==='sala'?db.salas:tipo==='cancelado'?db.cancelados:db.eventos;
+  const e=lista.find(x=>x.id===id);
+  if(!e) return;
+
+  e.nombre=document.getElementById('d-nombre')?.value||e.nombre;
+  e.cliente=document.getElementById('d-cliente')?.value||e.cliente;
+  e.fecha=document.getElementById('d-fecha')?.value||e.fecha;
+  e.total=parseFloat(document.getElementById('d-total')?.value)||e.total;
+  e.comentarios=document.getElementById('d-com')?.value||'';
+
+  if(tipo==='evento'){
+    e.notaVenta=document.getElementById('d-nv')?.value||'';
+    e.tev=document.getElementById('d-tev')?.value||e.tev;
+    e.oc=document.getElementById('d-oc')?.checked?'si':'';
+    e.pagado=parseFloat(document.getElementById('d-pag')?.value)||0;
+    e.dif=parseFloat(document.getElementById('d-dif')?.value)||0;
+  } else if(tipo==='sala'){
+    e.factura=document.getElementById('d-factura')?.checked?'si':'';
+    e.p50=document.getElementById('d-p50')?.checked?'si':'';
+    e.p100=document.getElementById('d-p100')?.checked?'si':'';
+    e.pagado=parseFloat(document.getElementById('d-pag')?.value)||0;
+    e.dif=parseFloat(document.getElementById('d-dif')?.value)||0;
+  } else {
+    e.oc=document.getElementById('d-oc')?.checked?'si':'';
+    e.f50=document.getElementById('d-f50')?.checked?'si':'';
+    e.f100=document.getElementById('d-f100')?.checked?'si':'';
+  }
+
+  scheduleSave(); renderMain();
+}
+
+function closeDetail(){ selId=null; renderMain(); }
+
+function delEv(id, tipo){
+  if(!confirm('¿Eliminar este evento? Esta acción no se puede deshacer.')) return;
+  const lista=tipo==='sala'?db.salas:tipo==='cancelado'?db.cancelados:db.eventos;
+  const i=lista.findIndex(x=>x.id===id);
+  if(i>=0) lista.splice(i,1);
+  selId=null; scheduleSave(); renderMain();
+}
+
+// ═══════════════════════════════════════════════════════
+// NEW (sólo Salas / Cancelados — los Eventos nacen de una NV)
+// ═══════════════════════════════════════════════════════
+
+function openNew(){
+  const tipo=currentTab==='sa'?'sala':'cancelado';
+  const nuevo={ id:uid(), tipo, nombre:'', cliente:'', fecha:'', factura:'', p50:'', p100:'', oc:'', f50:'', f100:'', pagado:0, total:0, dif:0, comentarios:'' };
+  if(tipo==='sala') db.salas.unshift(nuevo); else db.cancelados.unshift(nuevo);
+  scheduleSave(); selId=nuevo.id; renderMain();
+  setTimeout(()=>document.getElementById('d-nombre')?.focus(), 100);
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+
+(async function init(){
+  setTab('ev', document.querySelector('.tbtn'));
+  await restaurarHandle();
+  if(dirHandle){
+    const ok = await cargarDesdeExcel();
+    actualizarFolderBar();
+    if(ok) renderMain();
+  }
+  renderMain();
+})();
+</script>
+</body>
+</html>

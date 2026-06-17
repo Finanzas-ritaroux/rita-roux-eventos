@@ -1,0 +1,2024 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rita Roux Producciones · Notas de Venta</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root {
+    --rojo: #CC1F1F;
+    --rojo-oscuro: #A01818;
+    --negro: #1A1A1A;
+    --gris: #F5F5F5;
+    --gris-medio: #E0E0E0;
+    --gris-texto: #666;
+    --blanco: #FFFFFF;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background: var(--gris);
+    color: var(--negro);
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--negro);
+    padding: 0;
+    display: flex;
+    align-items: stretch;
+  }
+  .header-logo {
+    background: var(--rojo);
+    padding: 16px 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 140px;
+  }
+  .header-logo .logo-text {
+    color: var(--negro);
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    line-height: 1;
+    font-style: italic;
+    text-transform: uppercase;
+  }
+  .header-logo .logo-sub {
+    color: var(--negro);
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: 4px;
+    opacity: 0.7;
+  }
+  .header-title {
+    padding: 16px 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .header-title h1 {
+    color: var(--blanco);
+    font-size: 18px;
+    font-weight: 300;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .header-title p {
+    color: var(--rojo);
+    font-size: 11px;
+    letter-spacing: 1px;
+    margin-top: 3px;
+  }
+
+  /* GOOGLE AUTH */
+  #google-auth-bar {
+    background: var(--blanco);
+    border-bottom: 1px solid var(--gris-medio);
+    padding: 10px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .auth-status {
+    font-size: 12px;
+    color: var(--gris-texto);
+  }
+  .auth-status.connected { color: #2E7D32; font-weight: 600; }
+  .btn-auth {
+    background: var(--blanco);
+    border: 1.5px solid var(--gris-medio);
+    color: var(--negro);
+    padding: 7px 18px;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: border-color 0.2s;
+  }
+  .btn-auth:hover { border-color: var(--rojo); }
+  .btn-auth svg { width: 16px; height: 16px; }
+
+  /* MAIN */
+  main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  /* STEPS */
+  .steps {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 32px;
+  }
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--gris-texto);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .step.active { color: var(--negro); font-weight: 600; }
+  .step.done { color: var(--rojo); }
+  .step-num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--gris-medio);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+  }
+  .step.active .step-num { background: var(--negro); color: var(--blanco); }
+  .step.done .step-num { background: var(--rojo); color: var(--blanco); }
+  .step-sep { color: var(--gris-medio); font-size: 16px; }
+
+  /* CARDS */
+  .card {
+    background: var(--blanco);
+    border: 1px solid var(--gris-medio);
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--rojo);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--gris-medio);
+  }
+
+  /* UPLOAD ZONE */
+  .upload-zone {
+    border: 2px dashed var(--gris-medio);
+    padding: 48px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--rojo);
+    background: #FFF5F5;
+  }
+  .upload-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon {
+    font-size: 40px; margin-bottom: 12px; display: block;
+  }
+  .upload-zone h3 {
+    font-size: 15px; font-weight: 600; margin-bottom: 6px;
+  }
+  .upload-zone p {
+    font-size: 12px; color: var(--gris-texto);
+  }
+
+  /* SEPARADOR O */
+  .or-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0;
+    color: var(--gris-texto);
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .or-divider::before, .or-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--gris-medio);
+  }
+
+  /* PASTE ZONE */
+  .paste-zone {
+    border: 2px dashed var(--gris-medio);
+    padding: 20px 24px;
+    text-align: center;
+    cursor: text;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .paste-zone:focus-within, .paste-zone.active {
+    border-color: var(--rojo);
+    background: #FFF5F5;
+  }
+  .paste-zone p {
+    font-size: 12px;
+    color: var(--gris-texto);
+    margin-bottom: 10px;
+  }
+  .paste-zone strong {
+    color: var(--negro);
+  }
+  .paste-textarea {
+    width: 100%;
+    height: 70px;
+    border: 1px solid var(--gris-medio);
+    padding: 8px 10px;
+    font-size: 12px;
+    font-family: monospace;
+    color: var(--negro);
+    resize: none;
+    outline: none;
+    background: var(--blanco);
+    border-radius: 2px;
+  }
+  .paste-textarea:focus { border-color: var(--rojo); }
+  .paste-textarea::placeholder { color: #bbb; font-style: italic; }
+
+  /* FORM */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .form-group {
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .form-group.full { grid-column: 1 / -1; }
+  label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--gris-texto);
+  }
+  input, select {
+    border: 1px solid var(--gris-medio);
+    padding: 9px 12px;
+    font-size: 14px;
+    color: var(--negro);
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+    border-radius: 2px;
+  }
+  input:focus, select:focus { border-color: var(--rojo); }
+  input.invalid { border-color: var(--rojo); background: #fff5f5; }
+  .field-error { font-size: 10px; color: var(--rojo); margin-top: -1px; display: none; }
+  .field-error.show { display: block; }
+
+  /* ITEMS TABLE */
+  .items-section { margin-top: 8px; }
+  .section-header {
+    background: var(--negro);
+    color: var(--blanco);
+    padding: 7px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-top: 16px;
+  }
+  table.items {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  table.items thead th {
+    background: var(--gris);
+    padding: 8px 10px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--gris-texto);
+    border-bottom: 1px solid var(--gris-medio);
+  }
+  table.items thead th:not(:first-child) { text-align: right; }
+  table.items tbody td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--gris-medio);
+    vertical-align: middle;
+  }
+  table.items tbody td:not(:first-child) { text-align: right; }
+  table.items tbody td input {
+    border: none;
+    padding: 4px 6px;
+    font-size: 13px;
+    width: 100%;
+    text-align: inherit;
+    background: transparent;
+  }
+  table.items tbody td input:focus {
+    background: #FFF5F5;
+    border: 1px solid var(--rojo);
+  }
+  table.items tbody tr:hover { background: #FAFAFA; }
+  .btn-del {
+    background: none; border: none; cursor: pointer;
+    color: var(--gris-medio); font-size: 16px; padding: 0 4px;
+    transition: color 0.2s;
+  }
+  .btn-del:hover { color: var(--rojo); }
+
+  /* TOTALES */
+  .totales {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .totales-box {
+    min-width: 280px;
+  }
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--gris-medio);
+    font-size: 14px;
+  }
+  .total-row:last-child {
+    border-bottom: none;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--rojo);
+    padding-top: 12px;
+  }
+  .total-row .label { color: var(--gris-texto); }
+
+  /* BUTTONS */
+  .actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 28px;
+    justify-content: flex-end;
+  }
+  .btn {
+    padding: 11px 28px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+  .btn-primary {
+    background: var(--rojo);
+    color: var(--blanco);
+  }
+  .btn-primary:hover { background: var(--rojo-oscuro); }
+  .btn-secondary {
+    background: transparent;
+    color: var(--negro);
+    border: 1.5px solid var(--gris-medio);
+  }
+  .btn-secondary:hover { border-color: var(--negro); }
+
+  /* HISTORICO */
+  table.historico {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  table.historico thead th {
+    background: var(--negro);
+    color: var(--blanco);
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  table.historico tbody tr:nth-child(even) { background: var(--gris); }
+  table.historico tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--gris-medio);
+    color: var(--negro);
+  }
+  table.historico .monto { text-align: right; font-variant-numeric: tabular-nums; }
+  table.historico .nv { color: var(--rojo); font-weight: 700; }
+  .empty-state {
+    text-align: center;
+    padding: 48px;
+    color: var(--gris-texto);
+    font-size: 13px;
+  }
+
+  /* SUCCESS */
+  .success-banner {
+    background: #E8F5E9;
+    border: 1px solid #A5D6A7;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    color: #2E7D32;
+  }
+
+  /* EMISOR BOX */
+  .emisor-box {
+    background: var(--negro);
+    color: var(--blanco);
+    padding: 18px 22px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .emisor-brand { display: flex; align-items: center; gap: 14px; }
+  .emisor-logo-mark {
+    background: var(--rojo);
+    width: 42px; height: 42px;
+    display: flex; align-items: center; justify-content: center;
+    font-style: italic; font-weight: 900; font-size: 10px;
+    letter-spacing: 1px; color: var(--negro); text-align: center;
+    line-height: 1.2; flex-shrink: 0;
+  }
+  .emisor-name { font-size: 13px; font-weight: 700; letter-spacing: .5px; }
+  .emisor-legal { font-size: 10px; color: #aaa; margin-top: 2px; letter-spacing: .3px; }
+  .emisor-data { display: flex; gap: 24px; flex-wrap: wrap; }
+  .emisor-field { display: flex; flex-direction: column; gap: 2px; }
+  .emisor-field-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: #777; }
+  .emisor-field-value { font-size: 12px; color: #ddd; }
+  .emisor-lock { font-size: 10px; color: #555; margin-left: 8px; }
+
+  /* CLIENT BOX LABEL */
+  .client-box-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--gris-medio);
+  }
+  .client-box-title {
+    font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--rojo);
+  }
+  .client-box-sub { font-size: 10px; color: var(--gris-texto); }
+
+  /* HIDDEN */
+  .hidden { display: none !important; }
+
+  /* RESPONSIVE */
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .steps { flex-wrap: wrap; }
+    .step-sep { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-logo">
+    <div class="logo-text">Rita<br>Roux</div>
+    <div class="logo-sub">Producciones</div>
+  </div>
+  <div class="header-title">
+    <h1>Notas de Venta</h1>
+    <p>Sistema de emisión · RUT 76.208.211-K</p>
+  </div>
+</header>
+
+<!-- Google Auth Bar -->
+<div id="google-auth-bar">
+  <span id="auth-status" class="auth-status">⚪ No conectado a Google Drive</span>
+  <button class="btn-auth" onclick="handleAuthClick()">
+    <svg viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+    Conectar Google Drive
+  </button>
+  <span id="user-info" style="font-size:12px; color: #2E7D32;"></span>
+  <div style="width:1px; height:24px; background:var(--gris-medio); margin:0 4px;"></div>
+  <button class="btn-auth" onclick="seleccionarCarpetaLocal()" id="btn-carpeta">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
+    Seleccionar carpeta de destino
+  </button>
+  <span id="carpeta-status" style="font-size:12px; color: var(--gris-texto);"></span>
+  <div style="width:1px; height:24px; background:var(--gris-medio); margin:0 4px;"></div>
+  <button class="btn-auth" onclick="seleccionarPresupuestosFolder()" id="btn-presupuestos">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    Carpeta Presupuestos
+  </button>
+  <span id="presupuestos-status" style="font-size:12px; color: var(--gris-texto);"></span>
+  <div style="width:1px; height:24px; background:var(--gris-medio); margin:0 4px;"></div>
+  <button class="btn-auth" onclick="window.open('seguimiento-eventos.html','_blank')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+    Ver Seguimiento de Eventos
+  </button>
+</div>
+
+<main>
+
+  <!-- STEPS -->
+  <div class="steps">
+    <div class="step active" id="step1-ind">
+      <div class="step-num">1</div> Subir Cotización
+    </div>
+    <span class="step-sep">›</span>
+    <div class="step" id="step2-ind">
+      <div class="step-num">2</div> Revisar Datos
+    </div>
+    <span class="step-sep">›</span>
+    <div class="step" id="step3-ind">
+      <div class="step-num">3</div> Generar Nota
+    </div>
+  </div>
+
+  <!-- STEP 1: UPLOAD -->
+  <div id="step1">
+    <div class="card">
+      <div class="card-title">Subir Excel de Cotización Aprobada</div>
+      <div class="upload-zone" id="dropzone"
+           ondragover="event.preventDefault(); this.classList.add('dragover')"
+           ondragleave="this.classList.remove('dragover')"
+           ondrop="handleDrop(event)">
+        <input type="file" accept=".xlsx,.xls" onchange="handleFile(this.files[0])">
+        <span class="upload-icon">📄</span>
+        <h3>Arrastra el archivo aquí o haz clic para buscar</h3>
+        <p>Archivos .xlsx o .xls · Plantilla estándar Rita Roux</p>
+      </div>
+
+      <div class="or-divider">o</div>
+
+      <div class="paste-zone" id="paste-zone">
+        <p><strong>Copia las celdas en Excel</strong> (Ctrl+A o selección) y pégalas aquí con Ctrl+V</p>
+        <textarea
+          class="paste-textarea"
+          id="paste-textarea"
+          placeholder="Ctrl+V aquí para pegar las celdas copiadas desde Excel..."
+          oninput="handlePasteInput(this)"
+          onpaste="handlePasteEvent(event)"
+        ></textarea>
+      </div>
+    </div>
+
+    <!-- HISTORICO -->
+    <div class="card">
+      <div class="card-title">Historial de Notas de Venta</div>
+      <div id="historico-container">
+        <div class="empty-state">Cargando historial…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: FORM -->
+  <div id="step2" class="hidden">
+
+    <!-- EMISOR — no editable -->
+    <div class="emisor-box">
+      <div class="emisor-brand">
+        <div class="emisor-logo-mark">RITA<br>ROUX</div>
+        <div>
+          <div class="emisor-name">Inversiones Verónica Méndez Risopátrón E.I.R.L.</div>
+          <div class="emisor-legal">Empresa Emisora &nbsp;·&nbsp; Clases Culturales y Eventos <span class="emisor-lock">🔒</span></div>
+        </div>
+      </div>
+      <div class="emisor-data">
+        <div class="emisor-field">
+          <span class="emisor-field-label">RUT</span>
+          <span class="emisor-field-value">76.208.211-K</span>
+        </div>
+        <div class="emisor-field">
+          <span class="emisor-field-label">Dirección</span>
+          <span class="emisor-field-value">Mac Iver 484, Oficina 105</span>
+        </div>
+        <div class="emisor-field">
+          <span class="emisor-field-label">Email</span>
+          <span class="emisor-field-value">finanzas@ritaroux.cl</span>
+        </div>
+        <div class="emisor-field">
+          <span class="emisor-field-label">Banco</span>
+          <span class="emisor-field-value">Santander · Cta. 90557599</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="client-box-header">
+        <div>
+          <div class="client-box-title">Empresa Receptora · Datos de Facturación</div>
+          <div class="client-box-sub">Datos del cliente para emisión de factura</div>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <div class="form-group" style="margin:0">
+            <label>Nº Nota de Venta</label>
+            <input type="text" id="f-nv" readonly style="background:#f9f9f9;font-weight:700;color:var(--rojo);width:160px;">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Fecha de Emisión</label>
+            <input type="date" id="f-fecha-emision" style="width:160px;">
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#f9f9f9;border:1px solid var(--gris-medio);padding:18px 20px;margin-bottom:20px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gris-texto);margin-bottom:14px;">Datos de Facturación</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Razón Social</label>
+            <input type="text" id="f-empresa" placeholder="Nombre empresa cliente">
+          </div>
+          <div class="form-group">
+            <label>RUT Empresa</label>
+            <input type="text" id="f-rut" placeholder="12.345.678-9" oninput="onRutInput(this)" onblur="validarRutField(true)">
+            <span class="field-error" id="err-rut">RUT inválido. Verifica el dígito verificador.</span>
+          </div>
+          <div class="form-group full">
+            <label>Glosa</label>
+            <input type="text" id="f-glosa" placeholder="Descripción para la factura">
+          </div>
+          <div class="form-group">
+            <label>Mail de Contacto</label>
+            <input type="text" inputmode="email" autocomplete="email" id="f-mail" placeholder="contacto@empresa.cl" onblur="validarMailField(true)" oninput="validarMailField(false)">
+            <span class="field-error" id="err-mail">Correo inválido. Debe tener el formato nombre@dominio.cl</span>
+          </div>
+          <div class="form-group">
+            <label>Solicitante</label>
+            <input type="text" id="f-solicitante" placeholder="Nombre contacto">
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gris-texto);margin-bottom:14px;">Datos del Evento</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Evento</label>
+          <input type="text" id="f-evento" placeholder="Nombre o tipo de evento">
+        </div>
+        <div class="form-group">
+          <label>Fecha del Evento</label>
+          <input type="text" id="f-fecha-evento" placeholder="ej: 10 de junio de 2026">
+        </div>
+        <div class="form-group">
+          <label>Hora</label>
+          <input type="text" id="f-hora" placeholder="ej: 19:00 a 22:00 pm">
+        </div>
+        <div class="form-group">
+          <label>Nº de Personas</label>
+          <input type="number" id="f-personas" placeholder="60">
+        </div>
+      </div>
+    </div>
+
+    <!-- ITEMS -->
+    <div class="card">
+      <div class="card-title">Detalle de Servicios</div>
+      <div id="items-container"></div>
+
+      <div class="totales">
+        <div class="totales-box">
+          <div class="total-row">
+            <span class="label">Subtotal</span>
+            <span id="t-subtotal">$0</span>
+          </div>
+          <div class="total-row">
+            <span class="label">IVA (19%)</span>
+            <span id="t-iva">$0</span>
+          </div>
+          <div class="total-row">
+            <span class="label">Total</span>
+            <span id="t-total">$0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-secondary" onclick="goStep(1)">← Volver</button>
+        <button class="btn btn-primary" onclick="generarNota()">Generar Nota de Venta →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: SUCCESS -->
+  <div id="step3" class="hidden">
+    <div class="card">
+      <div class="card-title">Nota de Venta Generada</div>
+      <div class="success-banner">
+        ✓ <strong id="success-nv"></strong> generada correctamente y guardada en Google Drive.
+      </div>
+      <div style="display:flex; gap:12px; margin-top:8px;">
+        <button class="btn btn-primary" onclick="descargarPDF()">⬇ Descargar PDF</button>
+        <button class="btn btn-secondary" onclick="nuevaNota()">Nueva Nota de Venta</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Historial de Notas de Venta</div>
+      <div id="historico-container2"></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Google API -->
+<script>
+// ─── CONFIG GOOGLE ────────────────────────────────────────────────────────────
+const GOOGLE_CLIENT_ID = '958779096029-nck5hsvdeh4irli9o96m7r6dnmt1eq8u.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets';
+const FOLDER_NAME = 'Notas de Venta Rita Roux';
+const SHEET_NAME = 'Historico Notas de Venta';
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let tokenClient;
+let accessToken = null;
+let parsedData = null;
+let pdfBlob = null;
+let currentNV = null;
+let folderId = null;
+let sheetId = null;
+let historial = [];
+let localDirHandle = null;       // carpeta para guardar PDFs de NV
+let presupuestosDirHandle = null; // carpeta Presupuestos → Excel contador + historial
+
+// ─── CARPETA LOCAL ─────────────────────────────────────────────────────────────
+function mostrarErrorCarpetaUI(elId, msg) {
+  const el = document.getElementById(elId);
+  el.textContent = msg;
+  el.style.color = '#CC1F1F';
+  el.style.fontWeight = '600';
+}
+
+async function seleccionarCarpetaLocal() {
+  if (!window.showDirectoryPicker) {
+    mostrarErrorCarpetaUI('carpeta-status', '⚠ No soportado aquí — abre el archivo en Chrome/Edge (no en la vista previa interna)');
+    return;
+  }
+  try {
+    localDirHandle = await window.showDirectoryPicker({ mode: 'readwrite', startIn: 'documents' });
+    await persistirCarpeta(localDirHandle);
+    actualizarUIcarpeta();
+  } catch(e) {
+    if (e.name !== 'AbortError') mostrarErrorCarpetaUI('carpeta-status', '⚠ Error: ' + e.message);
+  }
+}
+
+function actualizarUIcarpeta() {
+  const el = document.getElementById('carpeta-status');
+  const btn = document.getElementById('btn-carpeta');
+  if (localDirHandle) {
+    el.textContent = '📁 ' + localDirHandle.name;
+    el.style.color = '#2E7D32';
+    el.style.fontWeight = '600';
+    btn.title = 'Cambiar carpeta';
+  } else {
+    el.textContent = '';
+  }
+}
+
+async function persistirCarpeta(handle) {
+  return new Promise((resolve) => {
+    const req = indexedDB.open('rr_config', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('cfg');
+    req.onsuccess = e => {
+      const tx = e.target.result.transaction('cfg', 'readwrite');
+      tx.objectStore('cfg').put(handle, 'dirHandle');
+      tx.oncomplete = resolve;
+      tx.onerror = resolve;
+    };
+    req.onerror = resolve;
+  });
+}
+
+async function restaurarCarpeta() {
+  return new Promise((resolve) => {
+    const req = indexedDB.open('rr_config', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('cfg');
+    req.onsuccess = e => {
+      try {
+        const tx = e.target.result.transaction('cfg', 'readonly');
+        const getReq = tx.objectStore('cfg').get('dirHandle');
+        getReq.onsuccess = async () => {
+          if (getReq.result) {
+            try {
+              const perm = await getReq.result.queryPermission({ mode: 'readwrite' });
+              if (perm === 'granted') {
+                localDirHandle = getReq.result;
+                actualizarUIcarpeta();
+              }
+            } catch(e) {}
+          }
+          resolve();
+        };
+        getReq.onerror = resolve;
+      } catch(e) { resolve(); }
+    };
+    req.onerror = resolve;
+  });
+}
+
+// ─── CARPETA PRESUPUESTOS (Excel contador + historial) ────────────────────────
+async function seleccionarPresupuestosFolder() {
+  if (!window.showDirectoryPicker) {
+    mostrarErrorCarpetaUI('presupuestos-status', '⚠ No soportado aquí — abre el archivo en Chrome/Edge (no en la vista previa interna)');
+    return;
+  }
+  try {
+    presupuestosDirHandle = await window.showDirectoryPicker({ mode: 'readwrite', startIn: 'documents' });
+    await persistirPresupuestosHandle(presupuestosDirHandle);
+    actualizarUIPresupuestos();
+    document.getElementById('presupuestos-status').textContent = '✓ ' + presupuestosDirHandle.name;
+  } catch(e) {
+    if (e.name !== 'AbortError') mostrarErrorCarpetaUI('presupuestos-status', '⚠ Error: ' + e.message);
+  }
+}
+
+function actualizarUIPresupuestos() {
+  const el = document.getElementById('presupuestos-status');
+  if (presupuestosDirHandle) {
+    el.textContent = '📊 ' + presupuestosDirHandle.name;
+    el.style.color = '#2E7D32';
+    el.style.fontWeight = '600';
+  }
+}
+
+async function persistirPresupuestosHandle(handle) {
+  return new Promise(resolve => {
+    const req = indexedDB.open('rr_nv_config', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('cfg');
+    req.onsuccess = e => {
+      const tx = e.target.result.transaction('cfg', 'readwrite');
+      tx.objectStore('cfg').put(handle, 'presupuestosDir');
+      tx.oncomplete = resolve; tx.onerror = resolve;
+    };
+    req.onerror = resolve;
+  });
+}
+
+async function restaurarPresupuestosHandle() {
+  return new Promise(resolve => {
+    const req = indexedDB.open('rr_nv_config', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('cfg');
+    req.onsuccess = e => {
+      try {
+        const tx = e.target.result.transaction('cfg', 'readonly');
+        const r = tx.objectStore('cfg').get('presupuestosDir');
+        r.onsuccess = async () => {
+          if (r.result) {
+            const perm = await r.result.queryPermission({ mode: 'readwrite' }).catch(() => 'denied');
+            if (perm === 'granted') {
+              presupuestosDirHandle = r.result;
+              actualizarUIPresupuestos();
+            }
+          }
+          resolve();
+        };
+        r.onerror = resolve;
+      } catch(e) { resolve(); }
+    };
+    req.onerror = resolve;
+  });
+}
+
+// ─── EXCEL CONTADOR NV ────────────────────────────────────────────────────────
+async function leerContadorNV() {
+  if (!presupuestosDirHandle) return null;
+  try {
+    const fh = await presupuestosDirHandle.getFileHandle('contador_NV.xlsx').catch(() => null);
+    if (!fh) return null;
+    const file = await fh.getFile();
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const año   = ws['B1'] ? parseInt(ws['B1'].v) : 0;
+    const num   = ws['B2'] ? parseInt(ws['B2'].v) : 0;
+    const curYear = new Date().getFullYear();
+    return año === curYear ? (isNaN(num) ? 0 : num) : 0;
+  } catch(e) { return null; }
+}
+
+async function escribirContadorNV(num) {
+  if (!presupuestosDirHandle) return;
+  try {
+    const year = new Date().getFullYear();
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['Año',    year],
+      ['Número', num]
+    ]);
+    ws['!cols'] = [{wch:10},{wch:10}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Contador');
+    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const fh = await presupuestosDirHandle.getFileHandle('contador_NV.xlsx', { create: true });
+    const wr = await fh.createWritable();
+    await wr.write(new Blob([out]));
+    await wr.close();
+  } catch(e) { console.warn('Error escribiendo contador NV:', e); }
+}
+
+// ─── EXCEL HISTORIAL NV ───────────────────────────────────────────────────────
+async function agregarAlHistorialExcel(nota) {
+  if (!presupuestosDirHandle) return;
+  try {
+    const HEADERS = ['Nº Nota de Venta','Fecha Emisión','Empresa','RUT','Solicitante','Mail','Evento','Fecha Evento','Nº Personas','Subtotal','IVA','Total'];
+    let rows = [HEADERS];
+    const fh0 = await presupuestosDirHandle.getFileHandle('historial_notas_venta.xlsx').catch(() => null);
+    if (fh0) {
+      const file = await fh0.getFile();
+      const buf = await file.arrayBuffer();
+      const wb0 = XLSX.read(buf, { type: 'array' });
+      const ws0 = wb0.Sheets[wb0.SheetNames[0]];
+      const existing = XLSX.utils.sheet_to_json(ws0, { header: 1, defval: '' });
+      if (existing.length > 0) rows = existing;
+    }
+    rows.push([nota.nv, nota.fecha_emision, nota.empresa, nota.rut,
+               nota.solicitante, nota.mail, nota.evento, nota.fecha_evento,
+               nota.personas, nota.subtotal, nota.iva, nota.total]);
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:16},{wch:14},{wch:30},{wch:14},{wch:22},{wch:26},{wch:22},{wch:16},{wch:12},{wch:14},{wch:12},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Historial');
+    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const fh = await presupuestosDirHandle.getFileHandle('historial_notas_venta.xlsx', { create: true });
+    const wr = await fh.createWritable();
+    await wr.write(new Blob([out]));
+    await wr.close();
+  } catch(e) { console.warn('Error guardando historial Excel:', e); }
+}
+
+// ─── EXCEL SEGUIMIENTO DE EVENTOS ──────────────────────────────────────────────
+// Cada Nota de Venta generada crea automáticamente su evento en el sistema de
+// seguimiento (seguimiento_eventos.xlsx, misma carpeta Presupuestos). Así, en
+// Seguimiento de Eventos sólo aparecen eventos que tienen una Nota de Venta real.
+
+// "Fecha Evento" se escribe a mano en texto libre (ej: "10 de junio de 2026" o
+// "18/07/2026") para el PDF. Seguimiento de Eventos necesita formato ISO
+// (YYYY-MM-DD) para ordenar y calcular días restantes — la convertimos acá.
+const MESES_ES = { enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,setiembre:9,octubre:10,noviembre:11,diciembre:12 };
+function parseFechaFlexible(texto) {
+  if (!texto) return '';
+  const t = texto.trim();
+  let m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  m = t.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  m = t.toLowerCase().match(/(\d{1,2})\s*(?:de)?\s*([a-záéíóúñ]+)\s*(?:de|del)?\s*(\d{4})/);
+  if (m) {
+    const dia = parseInt(m[1], 10);
+    const mesNombre = m[2].normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const mes = MESES_ES[mesNombre];
+    const anio = parseInt(m[3], 10);
+    if (mes && dia && anio) return `${anio}-${String(mes).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+  }
+  return '';
+}
+
+async function agregarEventoSeguimiento(nota) {
+  if (!presupuestosDirHandle) return false;
+  try {
+    let perm = await presupuestosDirHandle.queryPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') perm = await presupuestosDirHandle.requestPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') return false;
+
+    const HEADERS = ['Nº Nota Venta','Nombre Evento','Cliente','Fecha Evento','Tipo','OC','Factura 50%','Pago 50%','Factura 100%','Pago 100%','Fact. Prov. Recibidas','Fact. Prov. Pagadas','Total','Pagado','Diferencia','Comentarios'];
+    let rowsEv = [HEADERS];
+    let wsSalas = null, wsCancelados = null;
+
+    const fh0 = await presupuestosDirHandle.getFileHandle('seguimiento_eventos.xlsx').catch(() => null);
+    if (fh0) {
+      const file = await fh0.getFile();
+      const buf = await file.arrayBuffer();
+      const wb0 = XLSX.read(buf, { type: 'array' });
+      const ws0 = wb0.Sheets['Eventos'] || wb0.Sheets[wb0.SheetNames[0]];
+      const existing = XLSX.utils.sheet_to_json(ws0, { header: 1, defval: '' });
+      if (existing.length > 0) rowsEv = existing;
+      // Preservar las otras hojas que mantiene Seguimiento de Eventos
+      if (wb0.Sheets['Salas']) wsSalas = wb0.Sheets['Salas'];
+      if (wb0.Sheets['Cancelados']) wsCancelados = wb0.Sheets['Cancelados'];
+    }
+
+    // Evitar duplicados si la NV ya tiene evento creado
+    const yaExiste = rowsEv.slice(1).some(r => r[0] === nota.nv);
+    if (!yaExiste) {
+      const fechaISO = parseFechaFlexible(nota.fecha_evento);
+      rowsEv.push([nota.nv, nota.evento || nota.glosa || nota.empresa, nota.empresa, fechaISO,
+                 'corp', '', '', '', '', '', '', '', nota.total, 0, nota.total,
+                 fechaISO ? `Generado automáticamente desde ${nota.nv}` : `Generado desde ${nota.nv} · revisar fecha del evento ("${nota.fecha_evento}")`]);
+    }
+
+    const wb = XLSX.utils.book_new();
+    const wsEv = XLSX.utils.aoa_to_sheet(rowsEv);
+    wsEv['!cols'] = [{wch:14},{wch:28},{wch:24},{wch:13},{wch:9},{wch:6},{wch:11},{wch:9},{wch:12},{wch:9},{wch:18},{wch:16},{wch:13},{wch:13},{wch:13},{wch:30}];
+    XLSX.utils.book_append_sheet(wb, wsEv, 'Eventos');
+    if (wsSalas) XLSX.utils.book_append_sheet(wb, wsSalas, 'Salas');
+    if (wsCancelados) XLSX.utils.book_append_sheet(wb, wsCancelados, 'Cancelados');
+
+    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const fh = await presupuestosDirHandle.getFileHandle('seguimiento_eventos.xlsx', { create: true });
+    const wr = await fh.createWritable();
+    await wr.write(new Blob([out]));
+    await wr.close();
+    return true;
+  } catch(e) { console.warn('Error creando evento de seguimiento:', e); return false; }
+}
+
+async function guardarPDFLocal(blob, filename) {
+  if (!localDirHandle) return false;
+  try {
+    let perm = await localDirHandle.queryPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') {
+      perm = await localDirHandle.requestPermission({ mode: 'readwrite' });
+    }
+    if (perm !== 'granted') return false;
+    const fh = await localDirHandle.getFileHandle(filename, { create: true });
+    const w = await fh.createWritable();
+    await w.write(blob);
+    await w.close();
+    return true;
+  } catch(e) {
+    console.warn('No se pudo guardar localmente:', e.message);
+    return false;
+  }
+}
+
+// ─── GOOGLE AUTH ──────────────────────────────────────────────────────────────
+window.onload = () => {
+  const script = document.createElement('script');
+  script.src = 'https://accounts.google.com/gsi/client';
+  script.onload = initGoogle;
+  document.head.appendChild(script);
+  renderHistoricoLocal();
+  restaurarCarpeta();
+  restaurarPresupuestosHandle().then(() => checkCotizacionPendiente());
+};
+
+// ─── RECEPCIÓN DE COTIZACIÓN DESDE COTIZADOR ──────────────────────────────────
+async function checkCotizacionPendiente() {
+  const raw = localStorage.getItem('rr_cotizacion_pendiente');
+  if (!raw) return;
+  try {
+    const data = JSON.parse(raw);
+    localStorage.removeItem('rr_cotizacion_pendiente');
+    parsedData = {
+      rut_cliente: '', fecha: data.fecha || '',
+      evento: data.evento || '', cliente: data.cliente || '',
+      empresa: data.cliente || '', solicitante: data.cliente || '',
+      mail: '', glosa: data.evento || '',
+      fecha_produccion: data.fecha || '', hora: '', personas: data.personas || '',
+      secciones: (data.secciones || []).map(s => ({
+        nombre: s.nombre,
+        items: (s.items || []).map(i => ({
+          desc: i.desc, horas: i.horas, vUnit: i.vUnit, vNeto: i.vNeto
+        }))
+      }))
+    };
+    await populateForm(parsedData);
+    goStep(2);
+  } catch(e) { console.error('Error procesando cotización pendiente:', e); }
+}
+
+function initGoogle() {
+  if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.includes('TU_CLIENT_ID')) {
+    document.getElementById('auth-status').textContent = '⚠️ Falta configurar Google Client ID';
+    return;
+  }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: SCOPES,
+    callback: (response) => {
+      if (response.error) return;
+      accessToken = response.access_token;
+      document.getElementById('auth-status').textContent = '🟢 Conectado a Google Drive';
+      document.getElementById('auth-status').className = 'auth-status connected';
+      document.getElementById('user-info').textContent = '';
+      loadHistorial();
+    }
+  });
+}
+
+function handleAuthClick() {
+  if (!tokenClient) {
+    alert('Primero debes configurar el Google Client ID. Ver instrucciones.');
+    return;
+  }
+  tokenClient.requestAccessToken();
+}
+
+// ─── STEP NAVIGATION ──────────────────────────────────────────────────────────
+function goStep(n) {
+  document.getElementById('step1').classList.toggle('hidden', n !== 1);
+  document.getElementById('step2').classList.toggle('hidden', n !== 2);
+  document.getElementById('step3').classList.toggle('hidden', n !== 3);
+  ['step1-ind','step2-ind','step3-ind'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    el.className = 'step';
+    if (i + 1 < n) el.classList.add('done');
+    else if (i + 1 === n) el.classList.add('active');
+  });
+}
+
+// ─── FILE HANDLING ─────────────────────────────────────────────────────────────
+function handleDrop(ev) {
+  ev.preventDefault();
+  document.getElementById('dropzone').classList.remove('dragover');
+  const file = ev.dataTransfer.files[0];
+  if (file) handleFile(file);
+}
+
+function handleFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      parsedData = parseRitaRoux(ws);
+      populateForm(parsedData);
+      goStep(2);
+    } catch(err) {
+      alert('Error leyendo el archivo. Verifica que sea la plantilla estándar Rita Roux.\n\n' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ─── PASTE HANDLER ─────────────────────────────────────────────────────────────
+function handlePasteEvent(ev) {
+  ev.preventDefault();
+  const text = ev.clipboardData.getData('text/plain');
+  if (!text || !text.trim()) return;
+  procesarTextoPegado(text);
+}
+
+function handlePasteInput(ta) {
+  const text = ta.value;
+  if (!text || !text.trim()) return;
+  procesarTextoPegado(text);
+}
+
+function procesarTextoPegado(text) {
+  try {
+    // Convertir TSV (Excel clipboard) a array 2D
+    const data = text.trim().split('\n').map(row =>
+      row.split('\t').map(c => c.trim())
+    );
+    parsedData = parseData2D(data);
+    // Limpiar textarea
+    const ta = document.getElementById('paste-textarea');
+    if (ta) ta.value = '';
+    populateForm(parsedData);
+    goStep(2);
+  } catch(err) {
+    alert('Error procesando los datos pegados. Asegúrate de copiar las celdas desde la plantilla Rita Roux.\n\n' + err.message);
+  }
+}
+
+// ─── PARSE EXCEL ──────────────────────────────────────────────────────────────
+function parseRitaRoux(ws) {
+  const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+  return parseData2D(data);
+}
+
+function parseData2D(data) {
+  const result = {
+    rut_cliente: '', fecha: '', evento: '', cliente: '',
+    empresa: '', solicitante: '', mail: '', glosa: '',
+    fecha_produccion: '', hora: '', personas: '',
+    secciones: []
+  };
+
+  // Helper: extrae el valor de una fila buscando en cols 2..N
+  function valFila(row) {
+    for (let j = 2; j < row.length; j++) {
+      const v = String(row[j] || '').trim();
+      if (v) return v;
+    }
+    return String(row[1] || '').trim();
+  }
+
+  // Helper: extrae valor después de ":" en cualquier columna
+  function valDespuesDeDosP(row) {
+    for (let j = 0; j < row.length; j++) {
+      const cell = String(row[j] || '');
+      const idx = cell.indexOf(':');
+      if (idx !== -1) {
+        const v = cell.slice(idx + 1).trim();
+        if (v) return v;
+      }
+    }
+    // Si el valor está en la siguiente celda
+    return valFila(row);
+  }
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i].map(c => String(c || '').trim());
+    const rowJoined = row.join(' ').toUpperCase();
+    const etiqueta = (row[0] + ' ' + row[1]).toUpperCase();
+
+    if (etiqueta.includes('EVENTO') && !etiqueta.includes('PRODUCCION') && !etiqueta.includes('FECHA') && i < 20) {
+      result.evento = valFila(row);
+    }
+    if (etiqueta.includes('CLIENTE') && i < 20) {
+      result.cliente = valFila(row);
+    }
+    if ((etiqueta.includes('FECHA PRODUCCI') || etiqueta.includes('PRODUCCION')) && i < 20) {
+      result.fecha_produccion = valFila(row);
+    }
+    if (etiqueta.includes('HORA') && !etiqueta.includes('FECHA') && i < 20) {
+      result.hora = valFila(row);
+    }
+    if ((etiqueta.includes('PERSONAS') || etiqueta.includes('Nº PERSONAS')) && i < 20) {
+      result.personas = valFila(row);
+    }
+    if (etiqueta.includes('FECHA') && !etiqueta.includes('PRODUCCI') && i < 20) {
+      const v = row[2] || row[3] || row[4] || '';
+      if (v) result.fecha = v;
+    }
+
+    // Extraer datos del cliente desde sección DATOS FACTURACIÓN (cualquier fila)
+    if (rowJoined.includes('RAZ') && rowJoined.includes('SOCIAL')) {
+      const v = valDespuesDeDosP(row);
+      if (v && !result.empresa) result.empresa = v;
+    }
+    if ((etiqueta.includes('RUT') || rowJoined.includes(' RUT')) && !rowJoined.includes('76.208')) {
+      const v = valDespuesDeDosP(row);
+      if (v && v.includes('-') && !result.rut_cliente) result.rut_cliente = v;
+    }
+    if (rowJoined.includes('MAIL') || rowJoined.includes('E-MAIL') || rowJoined.includes('EMAIL')) {
+      const allCells = row.join(' ');
+      const emailMatch = allCells.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
+      if (emailMatch && !emailMatch[0].includes('ritaroux') && !result.mail) {
+        result.mail = emailMatch[0];
+      }
+    }
+    if (rowJoined.includes('SOLICITANTE') && i < 20) {
+      result.solicitante = valFila(row);
+    }
+
+    // Columnas H-K (índices 7-10): Nombre, RUT, Glosa, Mail para facturación
+    const colH = String(data[i][7] || '').trim();
+    const colI = String(data[i][8] || '').trim();
+    const colJ = String(data[i][9] || '').trim();
+    const colK = String(data[i][10] || '').trim();
+    if (colH && !result.empresa) result.empresa = colH;
+    if (colI && colI.includes('-') && !result.rut_cliente) result.rut_cliente = colI;
+    if (colJ && !result.glosa) result.glosa = colJ;
+    if (colK && colK.includes('@') && !result.mail) result.mail = colK;
+  }
+
+  const SECCIONES_CONOCIDAS = ['ARRIENDO LOCAL', 'CATERING', 'SERVICIOS GENERALES', 'OTROS SERVICIOS'];
+  let seccionActual = null;
+  let itemsActual = [];
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i].map(c => String(c || '').trim());
+    const col1 = row[1] ? row[1].toUpperCase() : '';
+    const col0 = row[0] ? row[0].toUpperCase() : '';
+    const contenido = col1 || col0;
+
+    const esSeccion = SECCIONES_CONOCIDAS.some(s => contenido.includes(s));
+    if (esSeccion) {
+      if (seccionActual) result.secciones.push({ nombre: seccionActual, items: itemsActual });
+      seccionActual = row[1] || row[0];
+      itemsActual = [];
+      continue;
+    }
+
+    if (contenido.includes('TOTAL') || col0.includes('TOTAL')) break;
+
+    if (contenido.includes('Nº HORAS') || contenido.includes('VALOR UNITARIO') ||
+        contenido.includes('VALOR NETO') || contenido.includes('COTIZACI')) continue;
+
+    if (seccionActual) {
+      const desc = row[1] || row[0];
+      if (!desc) continue;
+
+      const parseN = s => parseMonto(s);
+      const horas = parseN(row[2]);
+      const vUnit = parseN(row[3]);
+      const vNeto = parseN(row[4]);
+
+      if (desc && (vNeto > 0 || vUnit > 0)) {
+        itemsActual.push({ desc, horas, vUnit, vNeto });
+      }
+    }
+  }
+  if (seccionActual && itemsActual.length > 0) {
+    result.secciones.push({ nombre: seccionActual, items: itemsActual });
+  }
+
+  return result;
+}
+
+// ─── POPULATE FORM ─────────────────────────────────────────────────────────────
+async function populateForm(d) {
+  const nextNum = await getNextNV();
+  currentNV = nextNum;
+  document.getElementById('f-nv').value = nextNum;
+
+  const hoy = new Date().toISOString().split('T')[0];
+  document.getElementById('f-fecha-emision').value = hoy;
+
+  document.getElementById('f-empresa').value = d.empresa || d.cliente || '';
+  document.getElementById('f-rut').value = d.rut_cliente || '';
+  document.getElementById('f-solicitante').value = d.solicitante || d.cliente || '';
+  document.getElementById('f-mail').value = d.mail || '';
+  document.getElementById('f-glosa').value = d.glosa || '';
+  document.getElementById('f-evento').value = d.evento || '';
+  document.getElementById('f-fecha-evento').value = d.fecha_produccion || d.fecha || '';
+  document.getElementById('f-hora').value = d.hora || '';
+  document.getElementById('f-personas').value = d.personas || '';
+
+  renderItems(d.secciones);
+  calcTotales();
+}
+
+// ─── RENDER ITEMS ──────────────────────────────────────────────────────────────
+function renderItems(secciones) {
+  const container = document.getElementById('items-container');
+  container.innerHTML = '';
+
+  secciones.forEach((sec, si) => {
+    const h = document.createElement('div');
+    h.className = 'section-header';
+    h.textContent = sec.nombre;
+    container.appendChild(h);
+
+    const tbl = document.createElement('table');
+    tbl.className = 'items';
+    tbl.innerHTML = `<thead><tr>
+      <th style="width:45%">Descripción</th>
+      <th style="width:12%">Nº Horas</th>
+      <th style="width:18%">Valor Unitario</th>
+      <th style="width:18%">Valor Neto</th>
+      <th style="width:7%"></th>
+    </tr></thead><tbody id="tbody-${si}"></tbody>`;
+    container.appendChild(tbl);
+
+    sec.items.forEach((item, ii) => addItemRow(si, ii, item));
+  });
+}
+
+function addItemRow(si, ii, item) {
+  const tbody = document.getElementById(`tbody-${si}`);
+  const tr = document.createElement('tr');
+  tr.dataset.si = si;
+  tr.dataset.ii = ii;
+  tr.innerHTML = `
+    <td><input type="text" value="${item.desc}" onchange="updateItem(this)" data-field="desc"></td>
+    <td><input type="number" value="${item.horas || ''}" onchange="recalcRow(this)" data-field="horas" style="text-align:right"></td>
+    <td><input type="text" value="${fmtNum(item.vUnit)}" onchange="recalcRow(this)" data-field="vUnit" style="text-align:right"></td>
+    <td><input type="text" value="${fmtNum(item.vNeto)}" onchange="updateVNeto(this)" data-field="vNeto" style="text-align:right"></td>
+    <td><button class="btn-del" onclick="delRow(this)" title="Eliminar">×</button></td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function recalcRow(inp) {
+  const tr = inp.closest('tr');
+  const horas = parseFloat(tr.querySelector('[data-field=horas]').value) || 0;
+  const vUnit = parseMonto(tr.querySelector('[data-field=vUnit]').value);
+  const vNeto = horas * vUnit;
+  tr.querySelector('[data-field=vNeto]').value = vNeto > 0 ? fmtNum(vNeto) : '';
+  calcTotales();
+}
+
+function updateVNeto(inp) { calcTotales(); }
+function updateItem(inp) {}
+function delRow(btn) { btn.closest('tr').remove(); calcTotales(); }
+
+// ─── TOTALES ───────────────────────────────────────────────────────────────────
+function calcTotales() {
+  let sub = 0;
+  document.querySelectorAll('[data-field=vNeto]').forEach(inp => {
+    sub += parseMonto(inp.value);
+  });
+  const iva = Math.round(sub * 0.19);
+  const total = sub + iva;
+  document.getElementById('t-subtotal').textContent = fmtCLP(sub);
+  document.getElementById('t-iva').textContent = fmtCLP(iva);
+  document.getElementById('t-total').textContent = fmtCLP(total);
+  return { sub, iva, total };
+}
+
+function getItemsFromDOM() {
+  const secciones = [];
+  const headers = document.querySelectorAll('.section-header');
+  headers.forEach((h, si) => {
+    const tbody = document.getElementById(`tbody-${si}`);
+    if (!tbody) return;
+    const items = [];
+    tbody.querySelectorAll('tr').forEach(tr => {
+      const desc = tr.querySelector('[data-field=desc]')?.value || '';
+      const horas = tr.querySelector('[data-field=horas]')?.value || '';
+      const vUnit = parseMonto(tr.querySelector('[data-field=vUnit]')?.value || '0');
+      const vNeto = parseMonto(tr.querySelector('[data-field=vNeto]')?.value || '0');
+      if (desc || vNeto > 0) items.push({ desc, horas, vUnit, vNeto });
+    });
+    if (items.length > 0) secciones.push({ nombre: h.textContent, items });
+  });
+  return secciones;
+}
+
+// ─── NV NUMBER ─────────────────────────────────────────────────────────────────
+async function getNextNV() {
+  const year = new Date().getFullYear();
+
+  // Fuente primaria: Excel contador en carpeta Presupuestos
+  const excelNum = await leerContadorNV();
+  if (excelNum !== null) {
+    return `NV-${year}-${String(excelNum + 1).padStart(3, '0')}`;
+  }
+
+  // Fallback: localStorage
+  const local = JSON.parse(localStorage.getItem('rr_historial') || '[]');
+  if (local.length > 0) {
+    const last = local[local.length - 1].nv;
+    const parts = last.split('-');
+    if (parts[1] == year) {
+      const num = parseInt(parts[2]) + 1;
+      return `NV-${year}-${String(num).padStart(3, '0')}`;
+    }
+  }
+  return `NV-${year}-001`;
+}
+
+// ─── GENERAR NOTA ──────────────────────────────────────────────────────────────
+async function generarNota() {
+  const campos = ['f-empresa','f-rut','f-solicitante','f-mail','f-fecha-evento'];
+  for (const id of campos) {
+    if (!document.getElementById(id).value.trim()) {
+      alert('Por favor completa todos los campos requeridos.');
+      document.getElementById(id).focus();
+      return;
+    }
+  }
+
+  if (!validarRutField(true)) {
+    alert('El RUT ingresado no es válido. Verifica el formato y el dígito verificador.');
+    document.getElementById('f-rut').focus();
+    return;
+  }
+
+  if (!validarMailField(true)) {
+    alert('El correo ingresado no es válido. Debe tener el formato nombre@dominio.cl');
+    document.getElementById('f-mail').focus();
+    return;
+  }
+
+  if (!presupuestosDirHandle) {
+    const conectar = confirm('No has conectado la carpeta "Presupuestos".\n\nSin conectarla, esta Nota de Venta NO se guardará en el historial de Excel ni aparecerá en Seguimiento de Eventos.\n\n¿Seleccionar la carpeta ahora?');
+    if (conectar) await seleccionarPresupuestosFolder();
+  }
+
+  const { sub, iva, total } = calcTotales();
+  const secciones = getItemsFromDOM();
+
+  const nota = {
+    nv: document.getElementById('f-nv').value,
+    fecha_emision: document.getElementById('f-fecha-emision').value,
+    empresa: document.getElementById('f-empresa').value,
+    rut: document.getElementById('f-rut').value,
+    glosa: document.getElementById('f-glosa').value,
+    solicitante: document.getElementById('f-solicitante').value,
+    mail: document.getElementById('f-mail').value,
+    evento: document.getElementById('f-evento').value,
+    fecha_evento: document.getElementById('f-fecha-evento').value,
+    hora: document.getElementById('f-hora').value,
+    personas: document.getElementById('f-personas').value,
+    secciones,
+    subtotal: sub,
+    iva,
+    total
+  };
+
+  pdfBlob = generarPDF(nota);
+
+  const local = JSON.parse(localStorage.getItem('rr_historial') || '[]');
+  local.push({
+    nv: nota.nv,
+    fecha_emision: nota.fecha_emision,
+    empresa: nota.empresa,
+    rut: nota.rut,
+    solicitante: nota.solicitante,
+    mail: nota.mail,
+    fecha_evento: nota.fecha_evento,
+    personas: nota.personas,
+    subtotal: nota.subtotal,
+    iva: nota.iva,
+    total: nota.total
+  });
+  localStorage.setItem('rr_historial', JSON.stringify(local));
+  historial = local;
+
+  // Guardar contador + historial en Excel (carpeta Presupuestos)
+  const nvNum = parseInt(nota.nv.split('-')[2]) || 1;
+  await escribirContadorNV(nvNum);
+  await agregarAlHistorialExcel(nota);
+  const eventoAgregado = await agregarEventoSeguimiento(nota);
+
+  // Guardar PDF en carpeta local
+  const pdfFilename = `${nota.nv}_${nota.empresa.replace(/\s+/g,'_')}.pdf`;
+  const savedLocal = await guardarPDFLocal(pdfBlob, pdfFilename);
+
+  if (accessToken) {
+    await subirADrive(nota, pdfBlob);
+    await actualizarSheet(nota);
+  }
+
+  const successEl = document.getElementById('success-nv');
+  successEl.textContent = nota.nv;
+  const banner = successEl.closest('.success-banner');
+  if (banner) {
+    const seguimientoMsg = eventoAgregado
+      ? ' Evento agregado a Seguimiento de Eventos.'
+      : ' ⚠ No se pudo agregar a Seguimiento de Eventos (conecta la carpeta Presupuestos).';
+    banner.innerHTML = savedLocal
+      ? `✓ <strong>${nota.nv}</strong> generada y guardada en <strong>${localDirHandle.name}</strong>.${seguimientoMsg}`
+      : `✓ <strong>${nota.nv}</strong> generada correctamente.${accessToken ? ' Guardada en Google Drive.' : ''}${seguimientoMsg}`;
+  }
+  goStep(3);
+  renderHistoricoLocal();
+  renderHistoricoLocal2();
+}
+
+// ─── GENERAR PDF ───────────────────────────────────────────────────────────────
+function generarPDF(nota) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+  const W = 215.9, margin = 18;
+  let y = 0;
+
+  doc.setFillColor(204, 31, 31);
+  doc.rect(0, 0, W, 38, 'F');
+
+  doc.setTextColor(26, 26, 26);
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bolditalic');
+  doc.text('RITA ROUX', margin, 16);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(60, 20, 20);
+  doc.text('PRODUCCIONES', margin, 22);
+
+  doc.setTextColor(26, 26, 26);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  const emisorX = W - margin;
+  doc.text('RUT 76.208.211-K', emisorX, 10, { align: 'right' });
+  doc.text('Mac Iver 484, Oficina 105', emisorX, 15, { align: 'right' });
+  doc.text('finanzas@ritaroux.cl', emisorX, 20, { align: 'right' });
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.text('NOTA DE VENTA', emisorX, 30, { align: 'right' });
+  doc.setFontSize(16);
+  doc.setTextColor(255, 220, 220);
+  doc.text(nota.nv, emisorX, 36, { align: 'right' });
+
+  y = 48;
+
+  // ── RECUADRO EMISOR ──────────────────────────────────────────────
+  const halfW = (W - margin * 2 - 6) / 2;
+  doc.setFillColor(26, 26, 26);
+  doc.rect(margin, y, halfW, 30, 'F');
+  doc.setTextColor(170, 170, 170);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.text('EMPRESA EMISORA', margin + 4, y + 6);
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Inv. Verónica Méndez Risopátrón E.I.R.L.', margin + 4, y + 13);
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(200, 200, 200);
+  doc.text('RUT 76.208.211-K', margin + 4, y + 19);
+  doc.text('Mac Iver 484, Oficina 105', margin + 4, y + 24);
+  doc.text('finanzas@ritaroux.cl', margin + 4, y + 29);
+
+  // ── RECUADRO RECEPTOR ────────────────────────────────────────────
+  const rxX = margin + halfW + 6;
+  doc.setFillColor(245, 245, 245);
+  doc.rect(rxX, y, halfW, 30, 'F');
+  doc.setTextColor(204, 31, 31);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.text('EMPRESA RECEPTORA · DATOS DE FACTURACIÓN', rxX + 4, y + 6);
+  doc.setTextColor(26, 26, 26);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text(String(nota.empresa || ''), rxX + 4, y + 13);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.text(`RUT: ${nota.rut || ''}`, rxX + 4, y + 19);
+  if (nota.glosa) doc.text(`Glosa: ${nota.glosa}`, rxX + 4, y + 24);
+  doc.setTextColor(80, 80, 80);
+  doc.text(nota.mail || '', rxX + 4, y + 29);
+
+  y += 36;
+
+  // ── BLOQUE EVENTO / CLIENTE ──────────────────────────────────────
+  doc.setFillColor(250, 250, 250);
+  doc.rect(margin, y, W - margin * 2, 28, 'F');
+  doc.setTextColor(26, 26, 26);
+
+  const col1 = margin + 4, col2 = W / 2 + 4;
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(204, 31, 31);
+  doc.text('DATOS DEL EVENTO', col1, y + 5);
+  doc.setTextColor(26, 26, 26);
+  doc.setFontSize(8);
+  const campos = [
+    ['Solicitante:', nota.solicitante, col1, y + 11],
+    ['Evento:', nota.evento, col1, y + 17],
+    ['Mail:', nota.mail, col1, y + 23],
+    ['Fecha:', nota.fecha_evento, col2, y + 11],
+    ['Hora:', nota.hora, col2, y + 17],
+    ['Nº personas:', nota.personas, col2, y + 23],
+  ];
+  campos.forEach(([lbl, val, x, yy]) => {
+    doc.setFont('helvetica', 'bold');
+    doc.text(lbl, x, yy);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(val || ''), x + doc.getTextWidth(lbl) + 2, yy);
+  });
+
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Fecha de emisión: ${formatFecha(nota.fecha_emision)}`, margin, y + 32);
+  y += 38;
+
+  nota.secciones.forEach(sec => {
+    if (!sec.items || sec.items.length === 0) return;
+
+    doc.setFillColor(26, 26, 26);
+    doc.rect(margin, y, W - margin * 2, 7, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text(sec.nombre.toUpperCase(), margin + 3, y + 5);
+    y += 7;
+
+    const tableData = sec.items.map(item => [
+      item.desc,
+      item.horas > 0 ? String(item.horas) : '',
+      item.vUnit > 0 ? fmtCLP(item.vUnit) : '',
+      fmtCLP(item.vNeto)
+    ]);
+
+    doc.autoTable({
+      startY: y,
+      head: [['Descripción', 'Nº Horas', 'Valor Unit.', 'Valor Neto']],
+      body: tableData,
+      margin: { left: margin, right: margin },
+      styles: { fontSize: 8.5, cellPadding: 3, textColor: [26, 26, 26] },
+      headStyles: { fillColor: [240, 240, 240], textColor: [26, 26, 26], fontStyle: 'bold', fontSize: 8 },
+      columnStyles: {
+        0: { cellWidth: 85 },
+        1: { halign: 'right', cellWidth: 20 },
+        2: { halign: 'right', cellWidth: 38 },
+        3: { halign: 'right', cellWidth: 38 }
+      },
+      theme: 'plain',
+      alternateRowStyles: { fillColor: [250, 250, 250] },
+    });
+    y = doc.lastAutoTable.finalY + 6;
+  });
+
+  const totY = y + 4;
+  doc.setDrawColor(220, 220, 220);
+  doc.line(margin, totY, W - margin, totY);
+
+  const tX = W - margin;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 100);
+  doc.text('Subtotal', tX - 40, totY + 8);
+  doc.setTextColor(26, 26, 26);
+  doc.text(fmtCLP(nota.subtotal), tX, totY + 8, { align: 'right' });
+
+  doc.setTextColor(100, 100, 100);
+  doc.text('IVA (19%)', tX - 40, totY + 15);
+  doc.setTextColor(26, 26, 26);
+  doc.text(fmtCLP(nota.iva), tX, totY + 15, { align: 'right' });
+
+  doc.setDrawColor(204, 31, 31);
+  doc.line(tX - 60, totY + 18, tX, totY + 18);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(204, 31, 31);
+  doc.text('TOTAL', tX - 40, totY + 26);
+  doc.text(fmtCLP(nota.total), tX, totY + 26, { align: 'right' });
+
+  // ── DATOS DE PAGO ────────────────────────────────────
+  const bY2 = totY + 34;
+  const pageH = doc.internal.pageSize.height;
+  if (bY2 + 24 < pageH - 20) {
+    doc.setFillColor(245, 245, 245);
+    doc.rect(margin, bY2, W - margin * 2, 22, 'F');
+    doc.setTextColor(204, 31, 31);
+    doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+    doc.text('DATOS PARA TRANSFERENCIA', margin + 4, bY2 + 7);
+    doc.setTextColor(26, 26, 26);
+    doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+    doc.text('Inversiones Verónica Méndez Risopátrón E.I.R.L.  ·  RUT 76.208.211-K', margin + 4, bY2 + 13);
+    doc.text('Banco Santander  ·  Cta. Cte. N° 90557599  ·  finanzas@ritaroux.cl', margin + 4, bY2 + 19);
+  }
+
+  doc.setFillColor(26, 26, 26);
+  doc.rect(0, pageH - 12, W, 12, 'F');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(200, 200, 200);
+  doc.text('Inversiones Verónica Méndez Risopátrón E.I.R.L.  ·  Mac Iver 484, Oficina 105  ·  finanzas@ritaroux.cl  ·  RUT 76.208.211-K',
+    W / 2, pageH - 4.5, { align: 'center' });
+
+  return doc.output('blob');
+}
+
+// ─── GOOGLE DRIVE ──────────────────────────────────────────────────────────────
+async function ensureFolder() {
+  if (folderId) return folderId;
+  const q = encodeURIComponent(`name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const res = await gfetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
+  if (res.files && res.files.length > 0) { folderId = res.files[0].id; return folderId; }
+  const created = await gfetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
+  });
+  folderId = created.id;
+  return folderId;
+}
+
+async function subirADrive(nota, blob) {
+  const folder = await ensureFolder();
+  const cliente_slug = nota.solicitante.replace(/\s+/g, '');
+  const fecha_slug = String(nota.fecha_evento).replace(/\s+/g, '');
+  const filename = `${nota.nv}_${cliente_slug}_${fecha_slug}.pdf`;
+
+  const form = new FormData();
+  const meta = { name: filename, parents: [folder], mimeType: 'application/pdf' };
+  form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
+  form.append('file', blob, filename);
+
+  await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: form
+  });
+}
+
+async function ensureSheet() {
+  if (sheetId) return sheetId;
+  const q = encodeURIComponent(`name='${SHEET_NAME}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`);
+  const res = await gfetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`);
+  if (res.files && res.files.length > 0) { sheetId = res.files[0].id; return sheetId; }
+  const created = await gfetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: SHEET_NAME, mimeType: 'application/vnd.google-apps.spreadsheet' })
+  });
+  sheetId = created.id;
+  const hdrResp = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Hoja%201!A1:K1?valueInputOption=RAW`, {
+    method: 'PUT',
+    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values: [['Nº Nota de Venta','Fecha Emisión','Empresa','RUT','Solicitante','Mail','Fecha Evento','Nº Personas','Subtotal','IVA','Total']] })
+  });
+  return sheetId;
+}
+
+async function actualizarSheet(nota) {
+  try {
+    const sid = await ensureSheet();
+    const row = [nota.nv, nota.fecha_emision, nota.empresa, nota.rut,
+      nota.solicitante, nota.mail, nota.fecha_evento, String(nota.personas),
+      nota.subtotal, nota.iva, nota.total];
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/Hoja%201!A:K:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ values: [row] })
+    });
+    const json = await resp.json();
+    if (json.error) {
+      alert('Nota generada correctamente. Error al guardar en historial: ' + json.error.message);
+    }
+  } catch(e) {
+    alert('Nota generada correctamente. Error de conexión con Sheets: ' + e.message);
+  }
+}
+
+async function loadHistorial() {
+  try {
+    const sid = await ensureSheet();
+    const res = await gfetch(`https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/Hoja%201!A2:K`);
+    if (res.values) {
+      historial = res.values.map(r => ({
+        nv: r[0], fecha_emision: r[1], empresa: r[2], rut: r[3],
+        solicitante: r[4], mail: r[5], fecha_evento: r[6],
+        personas: r[7], subtotal: r[8], iva: r[9], total: r[10]
+      }));
+      localStorage.setItem('rr_historial', JSON.stringify(historial));
+    }
+  } catch(e) {}
+  renderHistoricoLocal();
+}
+
+async function gfetch(url, opts = {}) {
+  if (!opts.headers) opts.headers = {};
+  opts.headers['Authorization'] = `Bearer ${accessToken}`;
+  const r = await fetch(url, opts);
+  return r.json();
+}
+
+// ─── RENDER HISTORICO ──────────────────────────────────────────────────────────
+function renderHistoricoLocal() {
+  const data = JSON.parse(localStorage.getItem('rr_historial') || '[]');
+  const el = document.getElementById('historico-container');
+  if (el) el.innerHTML = renderTablaHistorico(data);
+}
+
+function renderHistoricoLocal2() {
+  const data = JSON.parse(localStorage.getItem('rr_historial') || '[]');
+  const el = document.getElementById('historico-container2');
+  if (el) el.innerHTML = renderTablaHistorico(data);
+}
+
+function renderTablaHistorico(data) {
+  if (!data || data.length === 0) return '<div class="empty-state">Aún no hay notas de venta emitidas.</div>';
+  const rows = [...data].reverse().map(n => `
+    <tr>
+      <td class="nv">${n.nv || ''}</td>
+      <td>${formatFecha(n.fecha_emision) || ''}</td>
+      <td>${n.empresa || ''}</td>
+      <td>${n.solicitante || ''}</td>
+      <td>${n.fecha_evento || ''}</td>
+      <td class="monto">${fmtCLP(Number(n.total) || 0)}</td>
+    </tr>`).join('');
+  return `<table class="historico">
+    <thead><tr>
+      <th>Nº NV</th><th>Emisión</th><th>Empresa</th><th>Solicitante</th><th>Fecha Evento</th><th>Total</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+// ─── DESCARGA / RESET ──────────────────────────────────────────────────────────
+function descargarPDF() {
+  if (!pdfBlob) return;
+  const url = URL.createObjectURL(pdfBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${currentNV}.pdf`;
+  a.click();
+}
+
+function nuevaNota() {
+  parsedData = null; pdfBlob = null; currentNV = null;
+  document.getElementById('items-container').innerHTML = '';
+  goStep(1);
+  renderHistoricoLocal();
+}
+
+// ─── VALIDACIÓN RUT ────────────────────────────────────────────────────────────
+function limpiarRut(rut) {
+  return (rut || '').toString().replace(/[^0-9kK]/g, '').toUpperCase();
+}
+
+function formatearRut(rut) {
+  const limpio = limpiarRut(rut);
+  if (!limpio) return '';
+  const cuerpo = limpio.slice(0, -1);
+  const dv = limpio.slice(-1);
+  if (!cuerpo) return dv;
+  const cuerpoFmt = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${cuerpoFmt}-${dv}`;
+}
+
+function dvEsperado(cuerpo) {
+  let suma = 0, multiplo = 2;
+  for (let i = cuerpo.length - 1; i >= 0; i--) {
+    suma += parseInt(cuerpo[i], 10) * multiplo;
+    multiplo = multiplo === 7 ? 2 : multiplo + 1;
+  }
+  const resto = 11 - (suma % 11);
+  if (resto === 11) return '0';
+  if (resto === 10) return 'K';
+  return String(resto);
+}
+
+function validarRut(rut) {
+  const limpio = limpiarRut(rut);
+  if (limpio.length < 2) return false;
+  const cuerpo = limpio.slice(0, -1);
+  const dv = limpio.slice(-1);
+  if (!/^\d+$/.test(cuerpo)) return false;
+  return dv === dvEsperado(cuerpo);
+}
+
+function onRutInput(input) {
+  const pos = input.value.length;
+  input.value = formatearRut(input.value);
+  // si se borró, no reformatear de más; sólo recolocar cursor al final
+  if (document.activeElement === input) {
+    input.setSelectionRange(input.value.length, input.value.length);
+  }
+  validarRutField(false);
+}
+
+function validarRutField(mostrarError) {
+  const input = document.getElementById('f-rut');
+  const err = document.getElementById('err-rut');
+  const valor = input.value.trim();
+  const ok = valor !== '' && validarRut(valor);
+  if (valor === '' && !mostrarError) { input.classList.remove('invalid'); err.classList.remove('show'); return true; }
+  input.classList.toggle('invalid', !ok);
+  err.classList.toggle('show', !ok && (mostrarError || valor.length > 0));
+  return ok;
+}
+
+// ─── VALIDACIÓN EMAIL ──────────────────────────────────────────────────────────
+function validarEmail(mail) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((mail || '').trim());
+}
+
+function validarMailField(mostrarError) {
+  const input = document.getElementById('f-mail');
+  const err = document.getElementById('err-mail');
+  const valor = input.value.trim();
+  const ok = validarEmail(valor);
+  if (valor === '' && !mostrarError) { input.classList.remove('invalid'); err.classList.remove('show'); return true; }
+  input.classList.toggle('invalid', !ok);
+  err.classList.toggle('show', !ok);
+  return ok;
+}
+
+// ─── UTILS ─────────────────────────────────────────────────────────────────────
+function fmtCLP(n) {
+  if (!n && n !== 0) return '$0';
+  return '$' + Math.round(n).toLocaleString('es-CL');
+}
+
+function fmtNum(n) {
+  if (!n || n === 0) return '';
+  return Math.round(n).toLocaleString('es-CL');
+}
+
+function parseMonto(s) {
+  if (!s) return 0;
+  let str = String(s).replace(/[$\s]/g, '').trim();
+  if (!str) return 0;
+
+  const hasDot   = str.includes('.');
+  const hasComma = str.includes(',');
+
+  if (hasDot && hasComma) {
+    // Ambos presentes: el último es el decimal
+    if (str.lastIndexOf('.') > str.lastIndexOf(',')) {
+      str = str.replace(/,/g, '');               // 1,234.56  → 1234.56
+    } else {
+      str = str.replace(/\./g, '').replace(',', '.'); // 1.234,56 → 1234.56
+    }
+  } else if (hasDot) {
+    const parts = str.split('.');
+    // Múltiples puntos O último grupo tiene 3 dígitos → separador de miles
+    if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
+      str = str.replace(/\./g, '');              // 180.000   → 180000
+    }
+    // else: punto decimal  1.5 → 1.5
+  } else if (hasComma) {
+    const parts = str.split(',');
+    if (parts.length > 2 || (parts.length === 2 && parts[1].length === 3)) {
+      str = str.replace(/,/g, '');               // 180,000   → 180000
+    } else {
+      str = str.replace(',', '.');               // 180,5     → 180.5
+    }
+  }
+
+  const n = parseFloat(str);
+  return isNaN(n) ? 0 : n;
+}
+
+function formatFecha(f) {
+  if (!f) return '';
+  try {
+    const [y, m, d] = f.split('-');
+    return `${d}/${m}/${y}`;
+  } catch { return f; }
+}
+</script>
+</body>
+</html>

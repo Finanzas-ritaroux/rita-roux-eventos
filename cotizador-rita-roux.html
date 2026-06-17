@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rita Roux · Cotizador de Eventos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root {
+  --rojo: #CC1F1F; --rojo-oscuro: #A01818; --rojo-claro: #FFF5F5; --rojo-borde: #F0C0C0;
+  --negro: #1A1A1A; --gris: #F4F4F4; --gris-medio: #E0E0E0; --gris-texto: #777;
+  --blanco: #FFFFFF; --azul: #1565C0; --azul-claro: #E8F0FD; --verde: #2E7D32; --verde-claro: #E8F5E9;
+  --sidebar: 310px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: var(--gris); color: var(--negro); min-height: 100vh; display: flex; flex-direction: column; }
+
+/* ── HEADER ───────────────────────────────────────────── */
+header { background: var(--negro); display: flex; align-items: stretch; position: sticky; top: 0; z-index: 100; }
+.hdr-logo { background: var(--rojo); padding: 14px 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 110px; }
+.hdr-logo .lt { color: var(--negro); font-size: 18px; font-weight: 900; letter-spacing: 3px; font-style: italic; text-transform: uppercase; line-height: 1; }
+.hdr-logo .ls { color: var(--negro); font-size: 7px; letter-spacing: 3px; text-transform: uppercase; margin-top: 3px; opacity: .65; }
+.hdr-info { padding: 14px 22px; display: flex; flex-direction: column; justify-content: center; flex: 1; }
+.hdr-info h1 { color: var(--blanco); font-size: 15px; font-weight: 300; letter-spacing: 2px; text-transform: uppercase; }
+.hdr-info p  { color: var(--rojo); font-size: 10px; letter-spacing: 1px; margin-top: 2px; }
+.hdr-actions { display: flex; align-items: center; gap: 8px; padding: 0 22px; }
+.btn { padding: 8px 20px; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; border: none; font-family: inherit; transition: all .15s; }
+.btn-primary { background: var(--rojo); color: var(--blanco); }
+.btn-primary:hover { background: var(--rojo-oscuro); }
+.btn-secondary { background: transparent; color: var(--blanco); border: 1.5px solid rgba(255,255,255,.3); }
+.btn-secondary:hover { border-color: var(--blanco); }
+.btn-ghost { background: transparent; color: var(--gris-texto); border: 1.5px solid var(--gris-medio); }
+.btn-ghost:hover { border-color: var(--negro); color: var(--negro); }
+
+/* ── LAYOUT ──────────────────────────────────────────── */
+.app { display: flex; flex: 1; min-height: 0; }
+
+/* ── SIDEBAR CATÁLOGO ─────────────────────────────────── */
+.sidebar {
+  width: var(--sidebar); flex-shrink: 0;
+  background: var(--blanco); border-right: 1px solid var(--gris-medio);
+  display: flex; flex-direction: column;
+  position: sticky; top: 52px; height: calc(100vh - 52px); overflow: hidden;
+}
+.sidebar-header { padding: 14px 16px 10px; border-bottom: 1px solid var(--gris-medio); }
+.sidebar-header h2 { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--gris-texto); }
+
+/* Category tabs */
+.cat-tabs { display: flex; overflow-x: auto; border-bottom: 2px solid var(--gris-medio); scrollbar-width: none; }
+.cat-tabs::-webkit-scrollbar { display: none; }
+.cat-tab { flex-shrink: 0; padding: 8px 12px; font-size: 11px; font-weight: 600; cursor: pointer; color: var(--gris-texto); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .15s; white-space: nowrap; }
+.cat-tab:hover { color: var(--negro); }
+.cat-tab.active { color: var(--rojo); border-bottom-color: var(--rojo); }
+
+/* Items list */
+.cat-content { flex: 1; overflow-y: auto; padding: 8px 0; }
+.cat-panel { display: none; }
+.cat-panel.active { display: block; }
+.cat-item {
+  display: flex; align-items: center; gap: 0; padding: 7px 14px;
+  cursor: pointer; transition: background .1s;
+  border-bottom: 1px solid transparent;
+}
+.cat-item:hover { background: var(--gris); }
+.cat-item-info { flex: 1; min-width: 0; }
+.cat-item-name { font-size: 12px; font-weight: 600; color: var(--negro); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cat-item-price { font-size: 10px; color: var(--gris-texto); margin-top: 1px; }
+.cat-item-add { background: none; border: 1px solid var(--gris-medio); color: var(--gris-texto); width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; font-weight: 300; flex-shrink: 0; transition: all .15s; border-radius: 2px; }
+.cat-item:hover .cat-item-add { border-color: var(--rojo); color: var(--rojo); background: var(--rojo-claro); }
+
+/* Custom item */
+.cat-custom { padding: 10px 14px; border-top: 1px solid var(--gris-medio); }
+.custom-label { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gris-texto); margin-bottom: 6px; }
+.custom-row { display: flex; gap: 6px; }
+.custom-input { flex: 1; border: 1px solid var(--gris-medio); padding: 5px 8px; font-size: 12px; font-family: inherit; color: var(--negro); border-radius: 2px; outline: none; }
+.custom-input:focus { border-color: var(--rojo); }
+.btn-custom-add { background: var(--rojo); color: var(--blanco); border: none; padding: 5px 12px; font-size: 11px; font-weight: 700; cursor: pointer; font-family: inherit; border-radius: 2px; }
+
+/* ── MAIN AREA ───────────────────────────────────────── */
+.main { flex: 1; overflow-y: auto; padding: 24px 28px 60px; }
+
+/* Meta row */
+.meta-row {
+  background: var(--blanco); border: 1px solid var(--gris-medio); padding: 14px 18px;
+  display: grid; grid-template-columns: 2fr 2fr 1fr 1fr; gap: 12px; margin-bottom: 20px;
+}
+.meta-field { display: flex; flex-direction: column; gap: 3px; }
+.meta-label { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gris-texto); }
+.meta-input { border: none; border-bottom: 1px solid var(--gris-medio); padding: 4px 0; font-size: 13px; font-family: inherit; color: var(--negro); outline: none; background: transparent; }
+.meta-input:focus { border-bottom-color: var(--rojo); }
+.meta-input::placeholder { color: #ccc; }
+
+/* Quote sections */
+.quote-section { margin-bottom: 20px; }
+.section-hdr {
+  background: var(--negro); color: var(--blanco);
+  padding: 8px 14px; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.section-hdr-actions { display: flex; gap: 6px; }
+.btn-section { background: none; border: 1px solid rgba(255,255,255,.25); color: rgba(255,255,255,.7); padding: 2px 10px; font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; font-family: inherit; transition: all .15s; }
+.btn-section:hover { border-color: var(--blanco); color: var(--blanco); }
+
+/* Items table */
+.items-table { width: 100%; border-collapse: collapse; background: var(--blanco); border: 1px solid var(--gris-medio); border-top: none; }
+.items-table thead th { background: var(--gris); padding: 6px 10px; font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--gris-texto); border-bottom: 1px solid var(--gris-medio); text-align: left; }
+.items-table thead th.right { text-align: right; }
+.items-table tbody tr { border-bottom: 1px solid var(--gris-medio); }
+.items-table tbody tr:last-child { border-bottom: none; }
+.items-table tbody tr:hover { background: #FAFAFA; }
+.items-table tbody td { padding: 5px 8px; vertical-align: middle; }
+.items-table tbody td.right { text-align: right; }
+
+/* Cell inputs */
+.cell-input {
+  width: 100%; border: none; padding: 4px 6px; font-size: 12.5px; font-family: inherit;
+  color: var(--negro); background: transparent; outline: none; text-align: inherit;
+}
+.cell-input:focus { background: var(--rojo-claro); border-radius: 2px; }
+.cell-input.qty { width: 70px; text-align: right; }
+.cell-input.price { width: 110px; text-align: right; }
+.cell-total { font-size: 12.5px; color: var(--negro); font-variant-numeric: tabular-nums; padding-right: 8px; }
+
+/* Rec badge */
+.rec-badge { font-size: 9px; color: #aaa; margin-left: 4px; white-space: nowrap; }
+.price-edited .rec-badge { color: var(--rojo); }
+.price-cell { display: flex; align-items: center; justify-content: flex-end; }
+
+/* Del button */
+.btn-del { background: none; border: none; cursor: pointer; color: var(--gris-medio); font-size: 15px; padding: 0 4px; transition: color .15s; }
+.btn-del:hover { color: var(--rojo); }
+
+/* Empty row */
+.empty-row td { padding: 16px 14px; font-size: 12px; color: var(--gris-texto); text-align: center; font-style: italic; }
+
+/* Add row button */
+.add-row-btn { background: transparent; border: none; color: var(--rojo); font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; padding: 7px 14px; width: 100%; text-align: left; border: 1px solid var(--gris-medio); border-top: none; background: #FAFAFA; font-family: inherit; }
+.add-row-btn:hover { background: var(--rojo-claro); }
+
+/* Totals */
+.totals-wrap { margin-top: 24px; display: flex; justify-content: flex-end; }
+.totals-box { min-width: 300px; background: var(--blanco); border: 1px solid var(--gris-medio); }
+.totals-row { display: flex; justify-content: space-between; padding: 9px 16px; border-bottom: 1px solid var(--gris-medio); font-size: 13px; }
+.totals-row:last-child { border-bottom: none; font-weight: 700; font-size: 16px; color: var(--rojo); background: var(--rojo-claro); }
+.totals-row .tl { color: var(--gris-texto); }
+.totals-row:last-child .tl { color: var(--rojo); }
+.totals-row .tv { font-variant-numeric: tabular-nums; }
+
+/* Add section button */
+.add-section-wrap { margin-top: 12px; }
+.btn-add-section { background: transparent; border: 1.5px dashed var(--gris-medio); color: var(--gris-texto); padding: 9px 20px; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; font-family: inherit; width: 100%; transition: all .15s; }
+.btn-add-section:hover { border-color: var(--rojo); color: var(--rojo); background: var(--rojo-claro); }
+
+/* Toast */
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--negro); color: var(--blanco); padding: 12px 20px; font-size: 12px; font-weight: 600; opacity: 0; transition: opacity .3s; pointer-events: none; z-index: 9999; border-left: 3px solid var(--rojo); }
+.toast.show { opacity: 1; }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 48px 24px; color: var(--gris-texto); font-size: 13px; }
+.empty-state strong { display: block; font-size: 15px; margin-bottom: 8px; color: var(--negro); }
+
+/* Responsive */
+@media (max-width: 860px) {
+  .sidebar { width: 260px; }
+  .meta-row { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-logo">
+    <div class="lt">Rita<br>Roux</div>
+    <div class="ls">Eventos</div>
+  </div>
+  <div class="hdr-info">
+    <h1>Cotizador de Eventos</h1>
+    <p>Construye presupuestos · exporta a PDF</p>
+  </div>
+  <div class="hdr-actions">
+    <button class="btn btn-secondary" onclick="nuevaCotizacion()">↺ Nueva</button>
+    <button class="btn btn-secondary" id="btn-carpeta-cot" onclick="seleccionarCarpetaCotizaciones()" title="Seleccionar carpeta Presupuestos donde guardar cotizaciones">📁 Carpeta</button>
+    <button class="btn btn-secondary" onclick="window.open('historico-presupuestos.html','_blank')">🧾 Histórico Presupuestos</button>
+    <button class="btn btn-secondary" onclick="copiarExcel()">⎘ Copiar</button>
+    <button class="btn btn-secondary" onclick="descargarPDF()">⬇ PDF</button>
+    <button class="btn btn-primary" onclick="emitirNotaVenta()" style="background:#1565C0;border-color:#1565C0;">📋 Emitir Nota de Venta</button>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- ── CATÁLOGO LATERAL ──────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>Catálogo de servicios</h2>
+    </div>
+
+    <!-- Tabs -->
+    <div class="cat-tabs" id="cat-tabs"></div>
+
+    <!-- Content panels -->
+    <div class="cat-content" id="cat-content"></div>
+  </aside>
+
+  <!-- ── COTIZADOR PRINCIPAL ───────────────────────────── -->
+  <main class="main">
+
+    <!-- Meta info -->
+    <div class="meta-row">
+      <div class="meta-field">
+        <div class="meta-label">Cliente / Empresa</div>
+        <input class="meta-input" id="m-cliente" placeholder="Nombre del cliente" oninput="saveMeta()">
+      </div>
+      <div class="meta-field">
+        <div class="meta-label">Tipo de Evento</div>
+        <input class="meta-input" id="m-evento" placeholder="ej: Matrimonio, Aniversario empresa" oninput="saveMeta()">
+      </div>
+      <div class="meta-field">
+        <div class="meta-label">Fecha del Evento</div>
+        <input class="meta-input" id="m-fecha" placeholder="DD/MM/YYYY" oninput="saveMeta()">
+      </div>
+      <div class="meta-field">
+        <div class="meta-label">Nº Personas</div>
+        <input class="meta-input" id="m-personas" type="number" placeholder="0" oninput="saveMeta()">
+      </div>
+    </div>
+
+    <!-- Quote sections -->
+    <div id="quote-sections"></div>
+
+    <!-- Add section -->
+    <div class="add-section-wrap">
+      <button class="btn-add-section" onclick="addSection()">+ Agregar sección adicional</button>
+    </div>
+
+    <!-- Totals -->
+    <div class="totals-wrap">
+      <div class="totals-box">
+        <div class="totals-row"><span class="tl">Subtotal (Neto)</span><span class="tv" id="t-sub">$0</span></div>
+        <div class="totals-row"><span class="tl">IVA (19%)</span><span class="tv" id="t-iva">$0</span></div>
+        <div class="totals-row"><span class="tl">TOTAL</span><span class="tv" id="t-total">$0</span></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CATÁLOGO COMPLETO — precios recomendados basados en historial
+// ═══════════════════════════════════════════════════════
+const CATALOG_CATS = [
+  {
+    id: 'locaciones', label: '🏛 Locaciones', section: 'ARRIENDO LOCAL', qtyLabel: 'Nº horas',
+    items: [
+      { name: 'La Pérgola',           rec: 300000, unit: 'hora' },
+      { name: 'Salón Victoriano',     rec: 100000, unit: 'hora' },
+      { name: 'Parque Principal',     rec: 380000, unit: 'hora' },
+      { name: 'Ginko',                rec: 280000, unit: 'hora' },
+      { name: 'Invernadero',          rec: 200000, unit: 'hora' },
+      { name: 'La Carpa de Rita',     rec: 500000, unit: 'hora' },
+      { name: 'Sala de Yoga',         rec: 150000, unit: 'hora' },
+      { name: 'Cochera',              rec: 500000, unit: 'flat' },
+      { name: 'Montaje / Desmontaje', rec: 100000, unit: 'hora' },
+    ]
+  },
+  {
+    id: 'catering', label: '🍽 Catering', section: 'CATERING', qtyLabel: 'Nº personas',
+    items: [
+      // Desayunos
+      { name: 'Desayuno Rita',                          rec: 20000,  unit: 'persona', group: 'Desayunos' },
+      { name: 'Desayuno Rita Gozadora',                 rec: 28000,  unit: 'persona', group: 'Desayunos' },
+      { name: 'Desayuno a la Carta',                    rec: 25000,  unit: 'persona', group: 'Desayunos' },
+      // Brunch
+      { name: 'Brunch del Parque',                      rec: 35500,  unit: 'persona', group: 'Brunch' },
+      { name: 'Brunch Royale',                          rec: 35000,  unit: 'persona', group: 'Brunch' },
+      // Almuerzos
+      { name: 'Almuerzo del Parque',                    rec: 40000,  unit: 'persona', group: 'Almuerzos' },
+      { name: 'Almuerzo a la Carta',                    rec: 30000,  unit: 'persona', group: 'Almuerzos' },
+      { name: 'Lunch Club',                             rec: 28000,  unit: 'persona', group: 'Almuerzos' },
+      // Coffee
+      { name: 'Coffee Break',                           rec: 12000,  unit: 'persona', group: 'Coffee' },
+      { name: 'Coffee de Bienvenida',                   rec: 15000,  unit: 'persona', group: 'Coffee' },
+      { name: 'Estación Café (permanente)',              rec: 150000, unit: 'flat',    group: 'Coffee' },
+      // Té
+      { name: 'Hora del Té',                            rec: 25000,  unit: 'persona', group: 'Otros' },
+      // Cócteles
+      { name: 'Cóctel Roux (4 bocados)',                rec: 40000,  unit: 'persona', group: 'Cócteles' },
+      { name: 'Cóctel Roux (8 sal. + 4 dul.)',          rec: 60000,  unit: 'persona', group: 'Cócteles' },
+      { name: 'Cóctel Sri Lanka (10 sal. + 5 dul.)',    rec: 68000,  unit: 'persona', group: 'Cócteles' },
+      { name: 'Cóctel 15 bocados',                      rec: 68000,  unit: 'persona', group: 'Cócteles' },
+      // Extras flat
+      { name: 'Fee Banquetería',                        rec: 350000, unit: 'flat',    group: 'Extras' },
+      { name: 'Fee Catering Externo',                   rec: 150000, unit: 'flat',    group: 'Extras' },
+      { name: 'Tabla de Quesos',                        rec: 150000, unit: 'flat',    group: 'Extras' },
+      { name: 'Descorche',                              rec: 10000,  unit: 'botella', group: 'Extras' },
+    ]
+  },
+  {
+    id: 'flores', label: '🌸 Flores', section: 'SERVICIOS GENERALES Y EQUIPO', qtyLabel: 'Cantidad',
+    items: [
+      { name: 'Flores Básicas',                           rec: 100000,  unit: 'flat' },
+      { name: 'Flores y Ambientación Esenciales',         rec: 200000,  unit: 'flat' },
+      { name: 'Flores Jardín en Flor',                    rec: 380000,  unit: 'flat' },
+      { name: 'Flores Jardín Soñado',                     rec: 500000,  unit: 'flat' },
+      { name: 'Escenografía Botánica',                    rec: 800000,  unit: 'flat' },
+    ]
+  },
+  {
+    id: 'audio', label: '🔊 Audio', section: 'SERVICIOS GENERALES Y EQUIPO', qtyLabel: 'Cantidad',
+    items: [
+      { name: 'Pantalla 55"',                  rec: 50000,  unit: 'flat' },
+      { name: 'Audio / Amplificación',         rec: 250000, unit: 'flat' },
+      { name: 'Audio música ambiente',         rec: 350000, unit: 'flat' },
+      { name: 'Pantalla 55" + Audio',          rec: 250000, unit: 'flat' },
+    ]
+  },
+  {
+    id: 'mobiliario', label: '🪑 Mobiliario', section: 'SERVICIOS GENERALES Y EQUIPO', qtyLabel: 'Cantidad',
+    items: [
+      { name: 'Sillas crossback (25 u.)',             rec: 170000, unit: 'flat' },
+      { name: 'Sillas crossback',                     rec: 260000, unit: 'flat' },
+      { name: 'Mesas redondas + sillas crossback',    rec: 380000, unit: 'flat' },
+      { name: 'Arriendo mobiliario completo',         rec: 450000, unit: 'flat' },
+      { name: 'Lounge 6 personas',                    rec: 180000, unit: 'hora' },
+      { name: 'Estufas (c/u)',                        rec: 65000,  unit: 'unidad' },
+      { name: 'Barras (c/u)',                         rec: 50000,  unit: 'unidad' },
+      { name: 'Lámparas de lágrima (10 u.)',          rec: 450000, unit: 'flat' },
+    ]
+  },
+  {
+    id: 'carpas', label: '⛺ Carpas', section: 'SERVICIOS GENERALES Y EQUIPO', qtyLabel: 'Cantidad',
+    items: [
+      { name: 'Carpa básica',                rec: 850000,  unit: 'flat' },
+      { name: 'Carpa Ginko ceremonial',      rec: 1800000, unit: 'flat' },
+      { name: 'Carpa Jardín Principal',      rec: 2200000, unit: 'flat' },
+    ]
+  },
+  {
+    id: 'fijos', label: '🧹 Fijos', section: 'SERVICIOS GENERALES Y EQUIPO', qtyLabel: 'Cantidad',
+    items: [
+      { name: 'Housekeeping (evento grande)', rec: 180000, unit: 'flat' },
+      { name: 'Housekeeping (mediano)',        rec: 100000, unit: 'flat' },
+      { name: 'Housekeeping (mínimo)',         rec: 50000,  unit: 'flat' },
+      { name: 'Servicio Mesera',               rec: 50000,  unit: 'flat' },
+    ]
+  },
+  {
+    id: 'personal', label: '👤 Personal', section: 'SERVICIOS GENERALES Y EQUIPO', qtyLabel: 'Cantidad',
+    items: [
+      { name: 'Bartender',  rec: 60000, unit: 'hora' },
+      { name: 'Mesero/a',   rec: 50000, unit: 'hora' },
+    ]
+  },
+];
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+const DEFAULT_SECTIONS = ['ARRIENDO LOCAL', 'CATERING', 'SERVICIOS GENERALES Y EQUIPO'];
+
+let quoteState = DEFAULT_SECTIONS.map(s => ({ name: s, items: [] }));
+let activeCat = 'locaciones';
+
+// ── META ──────────────────────────────────────────────
+function saveMeta() {
+  localStorage.setItem('rr_cotizador_meta', JSON.stringify({
+    cliente: document.getElementById('m-cliente').value,
+    evento: document.getElementById('m-evento').value,
+    fecha: document.getElementById('m-fecha').value,
+    personas: document.getElementById('m-personas').value,
+  }));
+}
+function loadMeta() {
+  const m = JSON.parse(localStorage.getItem('rr_cotizador_meta') || '{}');
+  if (document.getElementById('m-cliente')) {
+    document.getElementById('m-cliente').value = m.cliente || '';
+    document.getElementById('m-evento').value  = m.evento  || '';
+    document.getElementById('m-fecha').value   = m.fecha   || '';
+    document.getElementById('m-personas').value = m.personas || '';
+  }
+}
+function getMeta() {
+  return {
+    cliente:  document.getElementById('m-cliente').value,
+    evento:   document.getElementById('m-evento').value,
+    fecha:    document.getElementById('m-fecha').value,
+    personas: document.getElementById('m-personas').value,
+  };
+}
+
+// ── PERSISTENCE ───────────────────────────────────────
+function saveState() {
+  localStorage.setItem('rr_cotizador', JSON.stringify(quoteState));
+}
+function loadState() {
+  try { return JSON.parse(localStorage.getItem('rr_cotizador')); } catch { return null; }
+}
+
+// ═══════════════════════════════════════════════════════
+// CATALOG RENDER
+// ═══════════════════════════════════════════════════════
+function renderCatalog() {
+  const tabs = document.getElementById('cat-tabs');
+  const content = document.getElementById('cat-content');
+  tabs.innerHTML = '';
+  content.innerHTML = '';
+
+  CATALOG_CATS.forEach(cat => {
+    // Tab
+    const tab = document.createElement('div');
+    tab.className = 'cat-tab' + (cat.id === activeCat ? ' active' : '');
+    tab.textContent = cat.label;
+    tab.onclick = () => { activeCat = cat.id; renderCatalog(); };
+    tabs.appendChild(tab);
+
+    // Panel
+    const panel = document.createElement('div');
+    panel.className = 'cat-panel' + (cat.id === activeCat ? ' active' : '');
+
+    let lastGroup = null;
+    cat.items.forEach(item => {
+      if (item.group && item.group !== lastGroup) {
+        const g = document.createElement('div');
+        g.style.cssText = 'padding: 6px 14px 2px; font-size:9px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#bbb; border-top:1px solid #f0f0f0;';
+        g.textContent = item.group;
+        panel.appendChild(g);
+        lastGroup = item.group;
+      }
+      const el = document.createElement('div');
+      el.className = 'cat-item';
+      el.innerHTML = `
+        <div class="cat-item-info">
+          <div class="cat-item-name">${item.name}</div>
+          <div class="cat-item-price">Rec. ${fmtCLP(item.rec)} ${item.unit === 'flat' ? '' : '/ ' + item.unit}</div>
+        </div>
+        <button class="cat-item-add" title="Agregar">+</button>
+      `;
+      el.querySelector('.cat-item-add').onclick = (e) => {
+        e.stopPropagation();
+        addFromCatalog(cat.section, item);
+      };
+      panel.appendChild(el);
+    });
+
+    // Custom item input
+    const custom = document.createElement('div');
+    custom.className = 'cat-custom';
+    custom.innerHTML = `
+      <div class="custom-label">Ítem personalizado</div>
+      <div class="custom-row">
+        <input class="custom-input" id="ci-${cat.id}" placeholder="Nombre del ítem" onkeydown="if(event.key==='Enter')addCustom('${cat.id}','${cat.section}')">
+        <button class="btn-custom-add" onclick="addCustom('${cat.id}','${cat.section}')">+</button>
+      </div>
+    `;
+    panel.appendChild(custom);
+
+    content.appendChild(panel);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// QUOTE MUTATIONS
+// ═══════════════════════════════════════════════════════
+function addFromCatalog(sectionName, item) {
+  let sec = quoteState.find(s => s.name === sectionName);
+  if (!sec) {
+    quoteState.push({ name: sectionName, items: [] });
+    sec = quoteState[quoteState.length - 1];
+  }
+  sec.items.push({
+    desc: item.name,
+    qty: item.unit === 'flat' ? 1 : 1,
+    unitPrice: item.rec,
+    rec: item.rec,
+    unit: item.unit,
+  });
+  saveState();
+  renderQuote();
+  showToast('+ ' + item.name);
+}
+
+function addCustom(catId, sectionName) {
+  const input = document.getElementById('ci-' + catId);
+  const name = input.value.trim();
+  if (!name) return;
+  let sec = quoteState.find(s => s.name === sectionName);
+  if (!sec) {
+    quoteState.push({ name: sectionName, items: [] });
+    sec = quoteState[quoteState.length - 1];
+  }
+  sec.items.push({ desc: name, qty: 1, unitPrice: 0, rec: 0, unit: 'flat' });
+  input.value = '';
+  saveState();
+  renderQuote();
+  showToast('+ ' + name);
+}
+
+function addSection() {
+  const name = prompt('Nombre de la nueva sección:');
+  if (!name || !name.trim()) return;
+  quoteState.push({ name: name.trim().toUpperCase(), items: [] });
+  saveState();
+  renderQuote();
+}
+
+function addBlankRow(si) {
+  quoteState[si].items.push({ desc: '', qty: 1, unitPrice: 0, rec: 0, unit: 'flat' });
+  saveState();
+  renderQuote();
+  // Focus the new row's description
+  setTimeout(() => {
+    const inputs = document.querySelectorAll(`[data-si="${si}"] .cell-input[data-field="desc"]`);
+    if (inputs.length > 0) inputs[inputs.length - 1].focus();
+  }, 50);
+}
+
+function removeRow(si, ii) {
+  quoteState[si].items.splice(ii, 1);
+  saveState();
+  renderQuote();
+}
+
+function removeSection(si) {
+  if (quoteState[si].items.length > 0) {
+    if (!confirm(`¿Eliminar la sección "${quoteState[si].name}" con todos sus ítems?`)) return;
+  }
+  quoteState.splice(si, 1);
+  saveState();
+  renderQuote();
+}
+
+// ═══════════════════════════════════════════════════════
+// QUOTE RENDER
+// ═══════════════════════════════════════════════════════
+function renderQuote() {
+  const container = document.getElementById('quote-sections');
+  container.innerHTML = '';
+
+  if (quoteState.length === 0) {
+    container.innerHTML = `<div class="empty-state"><strong>Cotización vacía</strong>Selecciona ítems del catálogo para comenzar</div>`;
+    calcTotals();
+    return;
+  }
+
+  quoteState.forEach((sec, si) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'quote-section';
+    wrap.setAttribute('data-si', si);
+
+    // Section header
+    const hdr = document.createElement('div');
+    hdr.className = 'section-hdr';
+    hdr.innerHTML = `
+      <span>${sec.name}</span>
+      <div class="section-hdr-actions">
+        <button class="btn-section" onclick="addBlankRow(${si})">+ Ítem</button>
+        ${quoteState.length > 1 ? `<button class="btn-section" onclick="removeSection(${si})" style="border-color:rgba(255,100,100,.4);color:rgba(255,150,150,.9)">✕ Quitar</button>` : ''}
+      </div>
+    `;
+    wrap.appendChild(hdr);
+
+    // Table
+    const qtyHeader = getQtyLabel(sec.name);
+    const table = document.createElement('table');
+    table.className = 'items-table';
+    table.innerHTML = `<thead><tr>
+      <th style="width:46%">Descripción</th>
+      <th class="right" style="width:13%">${qtyHeader}</th>
+      <th class="right" style="width:19%">Valor Unit.</th>
+      <th class="right" style="width:16%">Valor Neto</th>
+      <th style="width:6%"></th>
+    </tr></thead><tbody id="tbody-${si}"></tbody>`;
+    wrap.appendChild(table);
+
+    const tbody = table.querySelector('tbody');
+
+    if (sec.items.length === 0) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="5">Sin ítems — usa el catálogo o "+ Ítem" para agregar</td></tr>`;
+    } else {
+      sec.items.forEach((item, ii) => {
+        const total = (item.qty || 0) * (item.unitPrice || 0);
+        const priceEdited = item.rec > 0 && item.unitPrice !== item.rec;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><input class="cell-input" data-field="desc" data-si="${si}" data-ii="${ii}" value="${escHtml(item.desc)}" placeholder="Descripción" oninput="updateField(${si},${ii},'desc',this.value)"></td>
+          <td class="right"><input class="cell-input qty" data-field="qty" data-si="${si}" data-ii="${ii}" type="number" value="${item.qty}" min="0" oninput="updateQty(${si},${ii},this.value)" style="text-align:right"></td>
+          <td class="right">
+            <div class="price-cell ${priceEdited ? 'price-edited' : ''}">
+              <input class="cell-input price" data-field="up" data-si="${si}" data-ii="${ii}" value="${fmtNum(item.unitPrice)}" oninput="updatePrice(${si},${ii},this.value)" style="text-align:right">
+              ${item.rec > 0 ? `<span class="rec-badge" title="Precio recomendado: ${fmtCLP(item.rec)}">${priceEdited ? '≠rec' : 'rec'}</span>` : ''}
+            </div>
+          </td>
+          <td class="right"><span class="cell-total">${fmtCLP(total)}</span></td>
+          <td><button class="btn-del" onclick="removeRow(${si},${ii})">×</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Add row button
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add-row-btn';
+    addBtn.textContent = '+ Agregar ítem a esta sección';
+    addBtn.onclick = () => addBlankRow(si);
+    wrap.appendChild(addBtn);
+
+    container.appendChild(wrap);
+  });
+
+  calcTotals();
+}
+
+function getQtyLabel(sectionName) {
+  if (sectionName === 'ARRIENDO LOCAL') return 'Nº Horas';
+  if (sectionName === 'CATERING') return 'Nº Personas';
+  return 'Cantidad';
+}
+
+// ═══════════════════════════════════════════════════════
+// FIELD UPDATES
+// ═══════════════════════════════════════════════════════
+function updateField(si, ii, field, val) {
+  quoteState[si].items[ii][field] = val;
+  saveState();
+}
+
+function updateQty(si, ii, val) {
+  quoteState[si].items[ii].qty = parseFloat(val) || 0;
+  saveState();
+  refreshRow(si, ii);
+}
+
+function updatePrice(si, ii, val) {
+  quoteState[si].items[ii].unitPrice = parseMonto(val) || 0;
+  saveState();
+  refreshRow(si, ii);
+}
+
+function refreshRow(si, ii) {
+  const item = quoteState[si].items[ii];
+  const total = (item.qty || 0) * (item.unitPrice || 0);
+  const totalEl = document.querySelector(`[data-si="${si}"] tbody tr:nth-child(${ii + 1}) .cell-total`);
+  if (totalEl) totalEl.textContent = fmtCLP(total);
+  const priceEdited = item.rec > 0 && item.unitPrice !== item.rec;
+  const priceCell = document.querySelector(`[data-si="${si}"] tbody tr:nth-child(${ii + 1}) .price-cell`);
+  if (priceCell) {
+    priceCell.classList.toggle('price-edited', priceEdited);
+    const badge = priceCell.querySelector('.rec-badge');
+    if (badge) badge.textContent = priceEdited ? '≠rec' : 'rec';
+  }
+  calcTotals();
+}
+
+// ═══════════════════════════════════════════════════════
+// TOTALS
+// ═══════════════════════════════════════════════════════
+function calcTotals() {
+  let sub = 0;
+  quoteState.forEach(sec => {
+    sec.items.forEach(item => { sub += (item.qty || 0) * (item.unitPrice || 0); });
+  });
+  const iva = Math.round(sub * 0.19);
+  const total = sub + iva;
+  document.getElementById('t-sub').textContent   = fmtCLP(sub);
+  document.getElementById('t-iva').textContent   = fmtCLP(iva);
+  document.getElementById('t-total').textContent = fmtCLP(total);
+  return { sub, iva, total };
+}
+
+// ═══════════════════════════════════════════════════════
+// RESET
+// ═══════════════════════════════════════════════════════
+function nuevaCotizacion() {
+  if (!confirm('¿Empezar una cotización nueva? Se borrará la actual.')) return;
+  quoteState = DEFAULT_SECTIONS.map(s => ({ name: s, items: [] }));
+  saveState();
+  localStorage.removeItem('rr_cotizador_meta');
+  document.getElementById('m-cliente').value  = '';
+  document.getElementById('m-evento').value   = '';
+  document.getElementById('m-fecha').value    = '';
+  document.getElementById('m-personas').value = '';
+  renderQuote();
+}
+
+// ═══════════════════════════════════════════════════════
+// EXPORT — COPY TO CLIPBOARD (TSV for Excel paste)
+// ═══════════════════════════════════════════════════════
+function buildExportData() {
+  const meta = getMeta();
+  const { sub, iva, total } = calcTotals();
+  const rows = [];
+
+  rows.push(['COTIZACIÓN INVERSIONES VERÓNICA MÉNDEZ RISOPÁTRÓN E.I.R.L.', '', '', '']);
+  rows.push(['RUT 76.208.211-K  ·  Mac Iver 484, Oficina 105  ·  Clases Culturales y Eventos', '', '', '']);
+  rows.push(['', '', '', '']);
+  if (meta.cliente)  rows.push(['Cliente:', meta.cliente, '', '']);
+  if (meta.evento)   rows.push(['Evento:', meta.evento, '', '']);
+  if (meta.fecha)    rows.push(['Fecha del evento:', meta.fecha, '', '']);
+  if (meta.personas) rows.push(['Nº personas:', meta.personas, '', '']);
+  rows.push(['', '', '', '']);
+
+  quoteState.forEach(sec => {
+    if (sec.items.length === 0) return;
+    const qtyHdr = getQtyLabel(sec.name);
+    rows.push([sec.name, qtyHdr, 'Valor Unitario', 'Valor Neto']);
+    sec.items.forEach(item => {
+      if (item.desc || item.unitPrice > 0) {
+        rows.push([
+          item.desc,
+          item.qty > 0 ? item.qty : '',
+          item.unitPrice > 0 ? fmtCLP(item.unitPrice) : '',
+          fmtCLP((item.qty || 0) * (item.unitPrice || 0))
+        ]);
+      }
+    });
+    rows.push(['', '', '', '']);
+  });
+
+  rows.push(['', '', 'SUBTOTAL (Neto)', fmtCLP(sub)]);
+  rows.push(['', '', 'IVA (19%)', fmtCLP(iva)]);
+  rows.push(['', '', 'TOTAL', fmtCLP(total)]);
+
+  return rows;
+}
+
+function copiarExcel() {
+  const rows = buildExportData();
+  const tsv = rows.map(r => r.join('\t')).join('\n');
+  navigator.clipboard.writeText(tsv).then(() => {
+    showToast('¡Copiado! Abre Excel y pega con Ctrl+V');
+  }).catch(() => {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = tsv;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('¡Copiado! Pega en Excel con Ctrl+V');
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// EXPORT — DOWNLOAD PDF
+// ═══════════════════════════════════════════════════════
+let cotizacionesDirHandle = null;
+
+async function seleccionarCarpetaCotizaciones() {
+  if (!window.showDirectoryPicker) {
+    showToast('⚠ Este visor no soporta conectar carpetas. Abre el archivo en Chrome o Edge (no en la vista previa interna).');
+    return;
+  }
+  try {
+    cotizacionesDirHandle = await window.showDirectoryPicker({ mode: 'readwrite', startIn: 'documents' });
+    await persistirCarpetaCot(cotizacionesDirHandle);
+    document.getElementById('btn-carpeta-cot').textContent = '📁 ' + cotizacionesDirHandle.name;
+    showToast('Carpeta: ' + cotizacionesDirHandle.name);
+  } catch(e) {
+    if (e.name !== 'AbortError') showToast('⚠ No se pudo conectar la carpeta: ' + e.message);
+  }
+}
+
+// Misma carpeta "Presupuestos" que usan Notas de Venta, Seguimiento, Dashboard
+// e Histórico de Presupuestos (mismo IndexedDB store/clave) para que, al
+// conectarla una vez en cualquiera de las apps, todas la reconozcan sola.
+async function persistirCarpetaCot(handle) {
+  return new Promise(resolve => {
+    const req = indexedDB.open('rr_nv_config', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('cfg');
+    req.onsuccess = e => {
+      const tx = e.target.result.transaction('cfg', 'readwrite');
+      tx.objectStore('cfg').put(handle, 'presupuestosDir');
+      tx.oncomplete = resolve; tx.onerror = resolve;
+    };
+    req.onerror = resolve;
+  });
+}
+
+async function restaurarCarpetaCot() {
+  return new Promise(resolve => {
+    const req = indexedDB.open('rr_nv_config', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('cfg');
+    req.onsuccess = e => {
+      try {
+        const tx = e.target.result.transaction('cfg', 'readonly');
+        const r = tx.objectStore('cfg').get('presupuestosDir');
+        r.onsuccess = async () => {
+          if (r.result) {
+            const perm = await r.result.queryPermission({ mode: 'readwrite' }).catch(() => 'denied');
+            if (perm === 'granted') {
+              cotizacionesDirHandle = r.result;
+              document.getElementById('btn-carpeta-cot').textContent = '📁 ' + cotizacionesDirHandle.name;
+            }
+          }
+          resolve();
+        };
+        r.onerror = resolve;
+      } catch(e) { resolve(); }
+    };
+    req.onerror = resolve;
+  });
+}
+
+async function descargarPDF() {
+  if (typeof window.jspdf === 'undefined') {
+    showToast('Cargando librería PDF, intenta en un segundo…');
+    return;
+  }
+  const blob = generarPDFCotizacion();
+  const meta = getMeta();
+  const slug = (meta.cliente || 'Cotizacion').replace(/\s+/g, '_').slice(0, 20);
+  const fecha = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const filename = `Cotizacion_RitaRoux_${slug}_${fecha}.pdf`;
+
+  await registrarPresupuestoHistorico();
+
+  if (cotizacionesDirHandle) {
+    try {
+      let perm = await cotizacionesDirHandle.queryPermission({ mode: 'readwrite' });
+      if (perm !== 'granted') perm = await cotizacionesDirHandle.requestPermission({ mode: 'readwrite' });
+      if (perm === 'granted') {
+        const fh = await cotizacionesDirHandle.getFileHandle(filename, { create: true });
+        const wr = await fh.createWritable();
+        await wr.write(blob);
+        await wr.close();
+        showToast('✓ Guardado en ' + cotizacionesDirHandle.name);
+        return;
+      }
+    } catch(e) { console.warn(e); }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+  showToast('Descargando PDF…');
+}
+
+// ═══════════════════════════════════════════════════════
+// HISTÓRICO DE PRESUPUESTOS (Excel en carpeta Presupuestos)
+// ═══════════════════════════════════════════════════════
+async function numeroCotizacion() {
+  const year = new Date().getFullYear();
+  let n = 0;
+  if (cotizacionesDirHandle) {
+    try {
+      const fh = await cotizacionesDirHandle.getFileHandle('historial_presupuestos.xlsx').catch(() => null);
+      if (fh) {
+        const file = await fh.getFile();
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        n = Math.max(0, rows.length - 1);
+      }
+    } catch(e) { /* ignore */ }
+  } else {
+    const local = JSON.parse(localStorage.getItem('rr_historial_presupuestos') || '[]');
+    n = local.length;
+  }
+  return `COT-${year}-${String(n + 1).padStart(3, '0')}`;
+}
+
+async function registrarPresupuestoHistorico() {
+  const meta = getMeta();
+  const { sub, iva, total } = calcTotals();
+  const nCot = await numeroCotizacion();
+  const registro = {
+    cotizacion: nCot,
+    fecha: new Date().toISOString().slice(0, 10),
+    cliente: meta.cliente || '(sin nombre)',
+    evento: meta.evento || '',
+    fechaEvento: meta.fecha || '',
+    personas: meta.personas || '',
+    subtotal: sub, iva, total
+  };
+
+  // Cache local siempre (funciona aunque no haya carpeta seleccionada)
+  const local = JSON.parse(localStorage.getItem('rr_historial_presupuestos') || '[]');
+  local.push(registro);
+  localStorage.setItem('rr_historial_presupuestos', JSON.stringify(local));
+
+  if (!cotizacionesDirHandle) return;
+  try {
+    let perm = await cotizacionesDirHandle.queryPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') perm = await cotizacionesDirHandle.requestPermission({ mode: 'readwrite' });
+    if (perm !== 'granted') return;
+
+    const HEADERS = ['Nº Cotización','Fecha','Cliente','Evento','Fecha Evento','Nº Personas','Subtotal','IVA','Total'];
+    let rows = [HEADERS];
+    const fh0 = await cotizacionesDirHandle.getFileHandle('historial_presupuestos.xlsx').catch(() => null);
+    if (fh0) {
+      const file = await fh0.getFile();
+      const buf = await file.arrayBuffer();
+      const wb0 = XLSX.read(buf, { type: 'array' });
+      const ws0 = wb0.Sheets[wb0.SheetNames[0]];
+      const existing = XLSX.utils.sheet_to_json(ws0, { header: 1, defval: '' });
+      if (existing.length > 0) rows = existing;
+    }
+    rows.push([registro.cotizacion, registro.fecha, registro.cliente, registro.evento,
+               registro.fechaEvento, registro.personas, registro.subtotal, registro.iva, registro.total]);
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:14},{wch:12},{wch:26},{wch:24},{wch:14},{wch:10},{wch:13},{wch:11},{wch:13}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Historial');
+    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const fh = await cotizacionesDirHandle.getFileHandle('historial_presupuestos.xlsx', { create: true });
+    const wr = await fh.createWritable();
+    await wr.write(new Blob([out]));
+    await wr.close();
+  } catch(e) { console.warn('Error guardando histórico de presupuestos:', e); }
+}
+
+function generarPDFCotizacion() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+  const W = 215.9, M = 18;
+  let y = 0;
+  const meta = getMeta();
+  const { sub, iva, total } = calcTotals();
+
+  // ── HEADER BAND ──────────────────────────────────────
+  doc.setFillColor(204, 31, 31);
+  doc.rect(0, 0, W, 38, 'F');
+
+  doc.setTextColor(26, 26, 26);
+  doc.setFontSize(22);
+  doc.setFont('helvetica', 'bolditalic');
+  doc.text('RITA ROUX', M, 16);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(40, 10, 10);
+  doc.text('CLASES CULTURALES Y EVENTOS', M, 22);
+
+  const rX = W - M;
+  doc.setTextColor(26, 26, 26);
+  doc.setFontSize(7.5);
+  doc.text('RUT 76.208.211-K', rX, 10, { align: 'right' });
+  doc.text('Mac Iver 484, Oficina 105', rX, 15, { align: 'right' });
+  doc.text('finanzas@ritaroux.cl', rX, 20, { align: 'right' });
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.text('COTIZACIÓN', rX, 30, { align: 'right' });
+  const fechaHoy = new Date().toLocaleDateString('es-CL', { day:'2-digit', month:'2-digit', year:'numeric' });
+  doc.setFontSize(9);
+  doc.setTextColor(255, 220, 220);
+  doc.text(fechaHoy, rX, 36, { align: 'right' });
+
+  y = 48;
+
+  // ── EMISOR / CLIENTE ─────────────────────────────────
+  const boxW = (W - M * 2 - 6) / 2;
+
+  doc.setFillColor(26, 26, 26);
+  doc.rect(M, y, boxW, 38, 'F');
+  doc.setTextColor(150, 150, 150);
+  doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+  doc.text('EMPRESA EMISORA', M + 4, y + 6);
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+  doc.text('Inv. Verónica Méndez Risopátrón E.I.R.L.', M + 4, y + 13);
+  doc.setFontSize(7.5); doc.setFont('helvetica', 'normal');
+  doc.setTextColor(200, 200, 200);
+  doc.text('RUT 76.208.211-K', M + 4, y + 19);
+  doc.text('Mac Iver 484, Oficina 105', M + 4, y + 25);
+  doc.text('finanzas@ritaroux.cl', M + 4, y + 31);
+  doc.text('Clases Culturales y Eventos', M + 4, y + 37);
+
+  const cX = M + boxW + 6;
+  doc.setFillColor(245, 245, 245);
+  doc.rect(cX, y, boxW, 38, 'F');
+  doc.setTextColor(204, 31, 31);
+  doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+  doc.text('CLIENTE / EVENTO', cX + 4, y + 6);
+  doc.setTextColor(26, 26, 26);
+  doc.setFontSize(8.5); doc.setFont('helvetica', 'bold');
+  doc.text((meta.cliente || 'Sin especificar').slice(0, 42), cX + 4, y + 13);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+  doc.setTextColor(60, 60, 60);
+  if (meta.evento)   doc.text('Evento: '      + meta.evento,   cX + 4, y + 20);
+  if (meta.fecha)    doc.text('Fecha:  '      + meta.fecha,    cX + 4, y + 26);
+  if (meta.personas) doc.text('Nº personas: ' + meta.personas, cX + 4, y + 32);
+
+  y += 44;
+
+  // ── SECCIONES ────────────────────────────────────────
+  quoteState.forEach(sec => {
+    const items = (sec.items || []).filter(i => i.desc || i.unitPrice > 0);
+    if (items.length === 0) return;
+
+    if (y > 220) { doc.addPage(); y = 20; }
+
+    doc.setFillColor(26, 26, 26);
+    doc.rect(M, y, W - M * 2, 7, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+    doc.text((sec.name || '').toUpperCase(), M + 3, y + 5);
+    y += 7;
+
+    const qtyHdr = getQtyLabel(sec.name);
+    const rows = items.map(item => [
+      item.desc || '',
+      item.qty > 0 ? String(item.qty) : '',
+      item.unitPrice > 0 ? fmtCLP(item.unitPrice) : '',
+      fmtCLP((item.qty || 0) * (item.unitPrice || 0))
+    ]);
+
+    doc.autoTable({
+      startY: y,
+      head: [['Descripción', qtyHdr, 'Valor Unit.', 'Valor Neto']],
+      body: rows,
+      margin: { left: M, right: M },
+      styles: { fontSize: 8.5, cellPadding: 3, textColor: [26, 26, 26] },
+      headStyles: { fillColor: [240, 240, 240], textColor: [26, 26, 26], fontStyle: 'bold', fontSize: 8 },
+      columnStyles: {
+        0: { cellWidth: 85 },
+        1: { halign: 'right', cellWidth: 20 },
+        2: { halign: 'right', cellWidth: 38 },
+        3: { halign: 'right', cellWidth: 38 }
+      },
+      theme: 'plain',
+      alternateRowStyles: { fillColor: [250, 250, 250] },
+    });
+    y = doc.lastAutoTable.finalY + 6;
+  });
+
+  // ── TOTALES ──────────────────────────────────────────
+  if (y > 200) { doc.addPage(); y = 20; }
+
+  const tY = y + 4;
+  doc.setDrawColor(220, 220, 220);
+  doc.line(M, tY, W - M, tY);
+
+  const tX2 = W - M;
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 100);
+  doc.text('Subtotal (Neto)', tX2 - 50, tY + 8);
+  doc.setTextColor(26, 26, 26);
+  doc.text(fmtCLP(sub), tX2, tY + 8, { align: 'right' });
+
+  doc.setTextColor(100, 100, 100);
+  doc.text('IVA (19%)', tX2 - 50, tY + 15);
+  doc.setTextColor(26, 26, 26);
+  doc.text(fmtCLP(iva), tX2, tY + 15, { align: 'right' });
+
+  doc.setDrawColor(204, 31, 31);
+  doc.line(tX2 - 62, tY + 18, tX2, tY + 18);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+  doc.setTextColor(204, 31, 31);
+  doc.text('TOTAL', tX2 - 50, tY + 26);
+  doc.text(fmtCLP(total), tX2, tY + 26, { align: 'right' });
+
+  // ── DATOS DE PAGO ────────────────────────────────────
+  const bY = tY + 34;
+  const pH = doc.internal.pageSize.height;
+  if (bY + 24 < pH - 20) {
+    doc.setFillColor(245, 245, 245);
+    doc.rect(M, bY, W - M * 2, 22, 'F');
+    doc.setTextColor(204, 31, 31);
+    doc.setFontSize(7); doc.setFont('helvetica', 'bold');
+    doc.text('DATOS PARA TRANSFERENCIA', M + 4, bY + 7);
+    doc.setTextColor(26, 26, 26);
+    doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+    doc.text('Inversiones Verónica Méndez Risopátrón E.I.R.L.  ·  RUT 76.208.211-K', M + 4, bY + 13);
+    doc.text('Banco Santander  ·  Cta. Cte. N° 90557599  ·  finanzas@ritaroux.cl', M + 4, bY + 19);
+  }
+
+  // ── FOOTER ───────────────────────────────────────────
+  doc.setFillColor(26, 26, 26);
+  doc.rect(0, pH - 12, W, 12, 'F');
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
+  doc.setTextColor(200, 200, 200);
+  doc.text(
+    'Inversiones Verónica Méndez Risopátrón E.I.R.L.  ·  Mac Iver 484, Oficina 105  ·  finanzas@ritaroux.cl  ·  RUT 76.208.211-K',
+    W / 2, pH - 4.5, { align: 'center' }
+  );
+
+  return doc.output('blob');
+}
+
+// ═══════════════════════════════════════════════════════
+// EMITIR NOTA DE VENTA
+// ═══════════════════════════════════════════════════════
+function emitirNotaVenta() {
+  const meta = getMeta();
+  const { sub, iva, total } = calcTotals();
+
+  if (!meta.cliente && quoteState.every(s => s.items.length === 0)) {
+    alert('La cotización está vacía. Agrega ítems antes de emitir una Nota de Venta.');
+    return;
+  }
+
+  const data = {
+    cliente:   meta.cliente,
+    evento:    meta.evento,
+    fecha:     meta.fecha,
+    personas:  meta.personas,
+    secciones: quoteState
+      .map(sec => ({
+        nombre: sec.name,
+        items: sec.items
+          .filter(i => i.desc || i.unitPrice > 0)
+          .map(i => ({
+            desc:  i.desc,
+            horas: i.qty,
+            vUnit: i.unitPrice,
+            vNeto: (i.qty || 0) * (i.unitPrice || 0)
+          }))
+      }))
+      .filter(s => s.items.length > 0),
+    subtotal: sub, iva, total
+  };
+
+  localStorage.setItem('rr_cotizacion_pendiente', JSON.stringify(data));
+  window.open('rita-roux-notas-venta.html', '_blank');
+  showToast('Abriendo Notas de Venta…');
+}
+
+// ═══════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════
+function fmtCLP(n) {
+  if (!n && n !== 0) return '$0';
+  return '$' + Math.round(n).toLocaleString('es-CL');
+}
+function fmtNum(n) {
+  if (!n || n === 0) return '';
+  return Math.round(n).toLocaleString('es-CL');
+}
+function parseMonto(s) {
+  if (!s) return 0;
+  let str = String(s).replace(/[$\s]/g, '').trim();
+  if (!str) return 0;
+  const hasDot = str.includes('.'), hasComma = str.includes(',');
+  if (hasDot && hasComma) {
+    str = str.lastIndexOf('.') > str.lastIndexOf(',')
+      ? str.replace(/,/g, '')
+      : str.replace(/\./g, '').replace(',', '.');
+  } else if (hasDot) {
+    const p = str.split('.');
+    if (p.length > 2 || (p.length === 2 && p[1].length === 3)) str = str.replace(/\./g, '');
+  } else if (hasComma) {
+    const p = str.split(',');
+    str = (p.length > 2 || (p.length === 2 && p[1].length === 3)) ? str.replace(/,/g, '') : str.replace(',', '.');
+  }
+  return parseFloat(str) || 0;
+}
+function escHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+window.onload = () => {
+  // Cada vez que se abre el Cotizador debe partir con una planilla limpia,
+  // nunca con la última cotización que se haya hecho.
+  localStorage.removeItem('rr_cotizador');
+  localStorage.removeItem('rr_cotizador_meta');
+  renderCatalog();
+  renderQuote();
+  restaurarCarpetaCot();
+};
+</script>
+</body>
+</html>

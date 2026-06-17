@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rita Roux · Histórico de Presupuestos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --rojo:#CC1F1F;--rojo-osc:#A01818;--rojo-cl:#FFF5F5;
+  --negro:#1A1A1A;--gris:#F4F4F4;--gris-m:#E0E0E0;--gris-t:#777;
+  --blanco:#FFFFFF;--verde:#2E7D32;--verde-cl:#E8F5E9;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:var(--gris);color:var(--negro);min-height:100vh}
+header{background:var(--negro);display:flex;align-items:stretch;position:sticky;top:0;z-index:100}
+.hdr-logo{background:var(--rojo);padding:14px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:110px}
+.hdr-logo .lt{color:var(--negro);font-size:18px;font-weight:900;letter-spacing:3px;font-style:italic;text-transform:uppercase;line-height:1}
+.hdr-logo .ls{color:var(--negro);font-size:7px;letter-spacing:3px;text-transform:uppercase;margin-top:3px;opacity:.65}
+.hdr-info{padding:14px 22px;display:flex;flex-direction:column;justify-content:center;flex:1}
+.hdr-info h1{color:var(--blanco);font-size:15px;font-weight:300;letter-spacing:2px;text-transform:uppercase}
+.hdr-info p{color:var(--rojo);font-size:10px;letter-spacing:1px;margin-top:2px}
+.hdr-act{display:flex;align-items:center;gap:8px;padding:0 22px}
+.btn{padding:8px 16px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:none;font-family:inherit;border-radius:2px;transition:all .15s}
+.btn-sec{background:transparent;color:var(--blanco);border:1.5px solid rgba(255,255,255,.3)}.btn-sec:hover{border-color:var(--blanco)}
+.btn-pr{background:var(--rojo);color:var(--blanco)}.btn-pr:hover{background:var(--rojo-osc)}
+
+.main{max-width:1200px;margin:0 auto;padding:22px 24px}
+
+.banner{background:var(--blanco);border:1px solid var(--gris-m);border-radius:4px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:14px}
+.banner.ok{border-color:var(--verde);background:var(--verde-cl)}
+.banner-text{flex:1;font-size:12px;color:var(--gris-t)}
+.banner.ok .banner-text{color:var(--verde)}
+
+.sum-row{display:flex;gap:0;background:var(--blanco);border:1px solid var(--gris-m);border-radius:4px;margin-bottom:18px;overflow-x:auto}
+.sum-c{flex:1;min-width:140px;padding:14px 18px;border-right:1px solid var(--gris-m)}
+.sum-c:last-child{border-right:none}
+.sum-l{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gris-t);margin-bottom:5px}
+.sum-v{font-size:22px;font-weight:300}
+
+.toolbar{display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
+.srch{flex:1;min-width:200px;position:relative}
+.srch input{width:100%;padding:8px 12px 8px 30px;border:1px solid var(--gris-m);font-family:inherit;font-size:12px;border-radius:2px;outline:none}
+.srch input:focus{border-color:var(--rojo)}
+.srch::before{content:"⌕";position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--gris-t);font-size:15px}
+
+.tbl{background:var(--blanco);border:1px solid var(--gris-m);border-radius:4px;overflow:hidden}
+.tbl table{width:100%;border-collapse:collapse}
+.tbl th{background:var(--negro);color:var(--blanco);padding:10px 14px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;text-align:left;font-weight:600;white-space:nowrap}
+.tbl td{padding:10px 14px;font-size:12px;border-bottom:1px solid var(--gris-m)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover td{background:#fafafa}
+.amt{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.empty{text-align:center;padding:60px 20px;color:var(--gris-t)}
+.empty .ico{font-size:36px;margin-bottom:10px}
+.cot-tag{font-family:monospace;font-size:11px;background:var(--gris);padding:2px 6px;border-radius:2px;color:var(--negro);font-weight:600}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-logo"><span class="lt">Rita</span><span class="lt">Roux</span><span class="ls">Café</span></div>
+  <div class="hdr-info">
+    <h1>Histórico de Presupuestos</h1>
+    <p>Todas las cotizaciones generadas</p>
+  </div>
+  <div class="hdr-act">
+    <button class="btn btn-sec" onclick="volver()">← Volver</button>
+    <button class="btn btn-sec" id="btn-carpeta" onclick="elegirCarpeta()">📁 Carpeta</button>
+    <button class="btn btn-pr" onclick="window.open('cotizador-rita-roux.html','_blank')">+ Nueva Cotización</button>
+  </div>
+</header>
+
+<div class="main">
+  <div class="banner" id="banner">
+    <div class="banner-text">Conecta la carpeta <b>Presupuestos</b> (la misma que usas en el Cotizador) para ver el histórico completo guardado en Excel. Mientras tanto se muestra el respaldo local de este navegador.</div>
+    <button class="btn btn-sec" style="background:var(--negro)" onclick="elegirCarpeta()">📁 Conectar carpeta</button>
+  </div>
+
+  <div class="sum-row" id="sumRow"></div>
+
+  <div class="toolbar">
+    <div class="srch"><input type="text" id="srch" placeholder="Buscar por cliente o evento…" oninput="render()"></div>
+  </div>
+
+  <div id="tblWrap"></div>
+</div>
+
+<script>
+let dirHandle = null;
+let registros = [];
+
+function volver(){
+  if (window.opener && !window.opener.closed) { window.close(); return; }
+  if (window.history.length > 1) { window.history.back(); return; }
+  window.location.href = 'seguimiento-eventos.html';
+}
+
+async function persistirHandle(handle){
+  return new Promise(resolve=>{
+    const req = indexedDB.open('rr_nv_config', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('cfg');
+    req.onsuccess = e => {
+      const tx = e.target.result.transaction('cfg','readwrite');
+      tx.objectStore('cfg').put(handle,'presupuestosDir');
+      tx.oncomplete = resolve; tx.onerror = resolve;
+    };
+    req.onerror = resolve;
+  });
+}
+async function restaurarHandle(){
+  return new Promise(resolve=>{
+    const req = indexedDB.open('rr_nv_config', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('cfg');
+    req.onsuccess = e => {
+      try{
+        const tx = e.target.result.transaction('cfg','readonly');
+        const r = tx.objectStore('cfg').get('presupuestosDir');
+        r.onsuccess = async () => {
+          if(r.result){
+            const perm = await r.result.queryPermission({mode:'readwrite'}).catch(()=>'denied');
+            if(perm==='granted') dirHandle = r.result;
+          }
+          resolve();
+        };
+        r.onerror = resolve;
+      }catch(e){ resolve(); }
+    };
+    req.onerror = resolve;
+  });
+}
+
+function mostrarErrorCarpeta(msg){
+  const b = document.getElementById('banner');
+  b.classList.remove('ok');
+  b.querySelector('.banner-text').innerHTML = `⚠ ${msg}`;
+}
+
+async function elegirCarpeta(){
+  if(!window.showDirectoryPicker){
+    mostrarErrorCarpeta('Este visor no soporta conectar carpetas (función no disponible en navegadores embebidos / vista previa interna de VS Code). Abre este archivo en una ventana real de <b>Chrome</b> o <b>Edge</b> — clic derecho sobre el archivo → "Abrir con" → Chrome/Edge.');
+    return;
+  }
+  try{
+    dirHandle = await window.showDirectoryPicker({ mode:'readwrite', startIn:'documents' });
+    await persistirHandle(dirHandle);
+    await cargarDatos();
+  }catch(e){
+    if(e.name!=='AbortError') mostrarErrorCarpeta('No se pudo conectar la carpeta: ' + e.message);
+  }
+}
+
+async function cargarDatos(){
+  if(dirHandle){
+    try{
+      let perm = await dirHandle.queryPermission({mode:'readwrite'});
+      if(perm!=='granted') perm = await dirHandle.requestPermission({mode:'readwrite'});
+      if(perm==='granted'){
+        const fh = await dirHandle.getFileHandle('historial_presupuestos.xlsx').catch(()=>null);
+        if(fh){
+          const file = await fh.getFile();
+          const buf = await file.arrayBuffer();
+          const wb = XLSX.read(buf,{type:'array'});
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(ws,{defval:''});
+          registros = rows.map(r=>({
+            cotizacion: r['Nº Cotización']||'',
+            fecha: r['Fecha']||'',
+            cliente: r['Cliente']||'',
+            evento: r['Evento']||'',
+            fechaEvento: r['Fecha Evento']||'',
+            personas: r['Nº Personas']||'',
+            subtotal: +r['Subtotal']||0,
+            iva: +r['IVA']||0,
+            total: +r['Total']||0,
+          }));
+          document.getElementById('btn-carpeta').textContent = '📁 ' + dirHandle.name;
+          document.getElementById('banner').classList.add('ok');
+          document.getElementById('banner').querySelector('.banner-text').innerHTML = `Conectado a la carpeta <b>${dirHandle.name}</b> · ${registros.length} presupuestos en historial_presupuestos.xlsx`;
+          render(); return;
+        }
+      }
+    }catch(e){ console.warn(e); }
+  }
+  // Fallback: localStorage cache (mismo origen que el cotizador)
+  const local = JSON.parse(localStorage.getItem('rr_historial_presupuestos')||'[]');
+  registros = local;
+  render();
+}
+
+function fmtM(n){ if(!n&&n!==0) return '—'; return '$'+Math.round(n).toLocaleString('es-CL'); }
+function fmtF(s){ if(!s) return '—'; try{ return new Date(s+'T00:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'short',year:'numeric'}); }catch(e){ return s; } }
+
+function render(){
+  const q = document.getElementById('srch').value.toLowerCase();
+  const lista = registros
+    .filter(r => !q || r.cliente.toLowerCase().includes(q) || r.evento.toLowerCase().includes(q))
+    .sort((a,b)=> new Date(b.fecha) - new Date(a.fecha));
+
+  const totalCotizado = registros.reduce((a,r)=>a+(r.total||0),0);
+  document.getElementById('sumRow').innerHTML = `
+    <div class="sum-c"><div class="sum-l">Presupuestos generados</div><div class="sum-v">${registros.length}</div></div>
+    <div class="sum-c"><div class="sum-l">Monto total cotizado</div><div class="sum-v">${fmtM(totalCotizado)}</div></div>
+    <div class="sum-c"><div class="sum-l">Promedio por cotización</div><div class="sum-v">${fmtM(registros.length?totalCotizado/registros.length:0)}</div></div>
+  `;
+
+  const wrap = document.getElementById('tblWrap');
+  if(!lista.length){
+    wrap.innerHTML = `<div class="empty"><div class="ico">🧾</div><p>Sin presupuestos registrados todavía.</p></div>`;
+    return;
+  }
+  wrap.innerHTML = `<div class="tbl"><table>
+    <thead><tr><th>Nº Cotización</th><th>Fecha generada</th><th>Cliente</th><th>Evento</th><th>Fecha evento</th><th>Personas</th><th>Subtotal</th><th>IVA</th><th>Total</th></tr></thead>
+    <tbody>${lista.map(r=>`<tr>
+      <td><span class="cot-tag">${r.cotizacion}</span></td>
+      <td>${fmtF(r.fecha)}</td>
+      <td style="font-weight:600">${r.cliente}</td>
+      <td>${r.evento||'—'}</td>
+      <td>${fmtF(r.fechaEvento)}</td>
+      <td>${r.personas||'—'}</td>
+      <td class="amt">${fmtM(r.subtotal)}</td>
+      <td class="amt">${fmtM(r.iva)}</td>
+      <td class="amt" style="font-weight:600">${fmtM(r.total)}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+(async function init(){
+  await restaurarHandle();
+  await cargarDatos();
+})();
+</script>
+</body>
+</html>

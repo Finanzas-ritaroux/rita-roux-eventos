@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rita Roux · Flujo de Eventos Automatizado</title>
+<style>
+:root {
+  --rojo:    #CC1F1F;
+  --negro:   #1A1A1A;
+  --gris:    #F4F4F4;
+  --gris-m:  #E0E0E0;
+  --blanco:  #FFFFFF;
+  --c-ai:    #6A1B9A;
+  --c-form:  #1565C0;
+  --c-comm:  #2E7D32;
+  --c-doc:   #CC1F1F;
+  --c-alert: #E65100;
+  --c-crm:   #00695C;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background: #EAEAEA;
+  color: var(--negro);
+}
+
+/* ── HEADER ─────────────────────────────────── */
+header {
+  background: var(--negro);
+  display: flex;
+  align-items: stretch;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  box-shadow: 0 2px 8px rgba(0,0,0,.4);
+}
+.hdr-logo {
+  background: var(--rojo);
+  padding: 14px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 100px;
+}
+.hdr-logo .lt {
+  color: var(--negro);
+  font-size: 18px;
+  font-weight: 900;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  line-height: 1;
+}
+.hdr-logo .ls {
+  color: var(--negro);
+  font-size: 7px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-top: 3px;
+  opacity: .65;
+}
+.hdr-title {
+  padding: 14px 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+}
+.hdr-title h1 {
+  color: var(--blanco);
+  font-size: 14px;
+  font-weight: 300;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.hdr-title p {
+  color: var(--rojo);
+  font-size: 9px;
+  letter-spacing: 1px;
+  margin-top: 2px;
+}
+
+/* ── LEGEND ─────────────────────────────────── */
+.legend {
+  background: var(--blanco);
+  border-bottom: 2px solid var(--gris-m);
+  padding: 8px 24px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.leg-lbl {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #bbb;
+  margin-right: 4px;
+}
+.leg-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: #444;
+  padding: 2px 8px 2px 6px;
+  border-radius: 10px;
+  background: var(--gris);
+}
+.leg-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+.sep { width: 1px; height: 18px; background: var(--gris-m); margin: 0 6px; }
+.actor-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── OUTER SCROLL WRAPPER ────────────────────── */
+.scroll-wrap { overflow-x: auto; padding: 24px; }
+.canvas { min-width: 1220px; }
+
+/* ── SOURCES ROW ─────────────────────────────── */
+.sources-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.sources-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.src-lbl {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #aaa;
+  text-align: center;
+  margin-bottom: 8px;
+}
+.src-chip {
+  background: var(--negro);
+  color: #ccc;
+  padding: 5px 12px;
+  border-radius: 14px;
+  font-size: 10px;
+  font-weight: 600;
+  border: 1px solid #444;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.down-arrow {
+  width: 2px;
+  height: 24px;
+  background: var(--gris-m);
+  position: relative;
+  margin: 0 auto;
+}
+.down-arrow::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: -4px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--gris-m);
+}
+
+/* ── MAIN FLOW ROW ───────────────────────────── */
+.flow-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+
+/* arrow column between stages */
+.arr-col {
+  width: 44px;
+  flex-shrink: 0;
+  padding-top: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.arr-col svg { width: 44px; height: 20px; }
+.arr-decision {
+  font-size: 7.5px;
+  color: #aaa;
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: .3px;
+  line-height: 1.3;
+  margin-top: 2px;
+}
+
+/* stage column */
+.s-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* ── STAGE CARD ──────────────────────────────── */
+.s-card {
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0,0,0,.14);
+  transition: box-shadow .2s;
+}
+.s-col:hover .s-card { box-shadow: 0 4px 20px rgba(0,0,0,.22); }
+
+.s-hdr {
+  background: var(--negro);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.s-num {
+  background: var(--rojo);
+  color: var(--blanco);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+.s-name {
+  color: var(--blanco);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  flex: 1;
+  line-height: 1.25;
+}
+.s-ico { font-size: 17px; }
+
+.s-actors {
+  background: #242424;
+  padding: 4px 10px;
+  display: flex;
+  gap: 4px;
+}
+.actor-badge {
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+.ab-teresa  { background: rgba(204,31,31,.2);   color: #FF8080; }
+.ab-gerardo { background: rgba(21,101,192,.2);  color: #64B5F6; }
+.ab-sistema { background: rgba(46,125,50,.2);   color: #81C784; }
+.ab-cliente { background: rgba(255,255,255,.1); color: #bbb; }
+
+.s-desc {
+  background: var(--blanco);
+  padding: 9px 12px;
+  font-size: 9.5px;
+  color: #555;
+  line-height: 1.55;
+  min-height: 54px;
+  border: 1px solid var(--gris-m);
+  border-top: none;
+}
+
+/* connector line stage → automations */
+.v-line {
+  width: 2px;
+  height: 18px;
+  background: var(--gris-m);
+  margin: 0 auto;
+  position: relative;
+}
+.v-line::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: -4px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--gris-m);
+}
+
+/* ── AUTOMATION ITEMS ────────────────────────── */
+.a-lbl {
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #aaa;
+  text-align: center;
+  margin: 4px 0 6px;
+}
+.a-list { display: flex; flex-direction: column; gap: 5px; }
+
+.a-item {
+  border-left: 3px solid;
+  background: var(--blanco);
+  padding: 6px 9px;
+  border-radius: 0 3px 3px 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,.07);
+  transition: transform .12s, box-shadow .12s;
+  cursor: default;
+}
+.a-item:hover {
+  transform: translateX(3px);
+  box-shadow: 0 2px 6px rgba(0,0,0,.12);
+}
+.a-tag {
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 2px;
+}
+.a-title { font-size: 9.5px; font-weight: 700; color: var(--negro); margin-bottom: 1px; }
+.a-desc  { font-size: 8.5px; color: #777; line-height: 1.4; }
+
+/* type colors */
+.t-ai    { border-left-color: var(--c-ai);    } .t-ai    .a-tag { color: var(--c-ai);    }
+.t-form  { border-left-color: var(--c-form);  } .t-form  .a-tag { color: var(--c-form);  }
+.t-comm  { border-left-color: var(--c-comm);  } .t-comm  .a-tag { color: var(--c-comm);  }
+.t-doc   { border-left-color: var(--c-doc);   } .t-doc   .a-tag { color: var(--c-doc);   }
+.t-alert { border-left-color: var(--c-alert); } .t-alert .a-tag { color: var(--c-alert); }
+.t-crm   { border-left-color: var(--c-crm);   } .t-crm   .a-tag { color: var(--c-crm);   }
+
+/* already exists badge */
+.exists {
+  font-size: 7px;
+  background: rgba(46,125,50,.12);
+  color: var(--c-comm);
+  border: 1px solid rgba(46,125,50,.3);
+  padding: 1px 5px;
+  border-radius: 8px;
+  font-weight: 700;
+  letter-spacing: .3px;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+/* ── OUTPUTS ROW ─────────────────────────────── */
+.outputs-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 16px;
+}
+.out-lbl { font-size: 8px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #aaa; margin-bottom: 8px; }
+.outputs-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.out-chip {
+  background: var(--blanco);
+  border: 1px solid var(--gris-m);
+  color: #555;
+  padding: 5px 12px;
+  border-radius: 14px;
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ── SWIMLANE ────────────────────────────────── */
+.swimlane {
+  margin-top: 20px;
+  border: 1px solid var(--gris-m);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.sw-title {
+  background: var(--negro);
+  color: var(--rojo);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 7px 14px;
+}
+.sw-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 9.5px;
+  background: var(--blanco);
+}
+.sw-table th {
+  background: var(--gris);
+  padding: 7px 10px;
+  text-align: left;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #888;
+  border-right: 1px solid var(--gris-m);
+  border-bottom: 1px solid var(--gris-m);
+}
+.sw-table td {
+  padding: 8px 10px;
+  border-right: 1px solid var(--gris-m);
+  border-bottom: 1px solid var(--gris-m);
+  vertical-align: top;
+  color: #444;
+  line-height: 1.5;
+}
+.sw-table tr:last-child td { border-bottom: none; }
+.sw-name { font-weight: 700; font-size: 10px; color: var(--negro); }
+.sw-sub  { color: #888; font-size: 8.5px; }
+.tbl-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 3px; vertical-align: middle; }
+
+/* ── TOOLS FOOTER ────────────────────────────── */
+.tools-section {
+  margin-top: 16px;
+  background: var(--negro);
+  border-radius: 3px;
+  padding: 16px 18px;
+}
+.tools-title {
+  color: var(--rojo);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+.tool-card {
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1);
+  padding: 8px 10px;
+  border-radius: 3px;
+}
+.tool-name { color: var(--blanco); font-size: 9.5px; font-weight: 700; margin-bottom: 2px; }
+.tool-use  { color: #777; font-size: 8px; line-height: 1.4; }
+.tool-type { margin-top: 5px; font-size: 7.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ──────────────────────────────────────────── -->
+<header>
+  <div class="hdr-logo">
+    <div class="lt">Rita<br>Roux</div>
+    <div class="ls">Eventos</div>
+  </div>
+  <div class="hdr-title">
+    <h1>Flujo de Gestión de Eventos — Sistema Automatizado</h1>
+    <p>Teresa Díaz · Gerardo Butrón · Inversiones Verónica Méndez Risopátrón E.I.R.L.</p>
+  </div>
+</header>
+
+<!-- ── LEGEND ──────────────────────────────────────────── -->
+<div class="legend">
+  <span class="leg-lbl">Automatización:</span>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--c-ai)"></div>IA / Auto-respuesta</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--c-form)"></div>Formulario / Captura</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--c-comm)"></div>Comunicación automática</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--c-doc)"></div>Documento automático</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--c-alert)"></div>Alerta / Notificación</div>
+  <div class="leg-item"><div class="leg-dot" style="background:var(--c-crm)"></div>CRM / Registro</div>
+  <div class="sep"></div>
+  <span class="leg-lbl">Actores:</span>
+  <div class="leg-item"><div class="actor-dot" style="background:#FF8080"></div>Teresa</div>
+  <div class="leg-item"><div class="actor-dot" style="background:#64B5F6"></div>Gerardo</div>
+  <div class="leg-item"><div class="actor-dot" style="background:#81C784"></div>Sistema</div>
+  <div class="leg-item"><div class="actor-dot" style="background:#aaa"></div>Cliente</div>
+  <div class="sep"></div>
+  <div class="leg-item" style="background:rgba(46,125,50,.1); border:1px solid rgba(46,125,50,.3);">
+    <div class="leg-dot" style="background:var(--c-comm)"></div>
+    <span style="color:var(--c-comm);font-weight:700;">ya existe</span>
+  </div>
+</div>
+
+<!-- ── MAIN CANVAS ─────────────────────────────────────── -->
+<div class="scroll-wrap">
+<div class="canvas">
+
+  <!-- FUENTES -->
+  <div class="sources-block">
+    <div class="src-lbl">Fuentes de contacto entrante</div>
+    <div class="sources-row">
+      <div class="src-chip">📱 Instagram DM</div>
+      <div class="src-chip">💬 WhatsApp</div>
+      <div class="src-chip">📧 Email</div>
+      <div class="src-chip">👥 Referidos</div>
+      <div class="src-chip">📞 Llamada directa</div>
+    </div>
+    <div class="down-arrow"></div>
+  </div>
+
+  <!-- ── FLOW ROW ──────────────────────────────────────── -->
+  <div class="flow-row">
+
+    <!-- ════════════════ ETAPA 1 ════════════════ -->
+    <div class="s-col">
+      <div class="s-card">
+        <div class="s-hdr">
+          <div class="s-num">1</div>
+          <div class="s-name">Cotizaciones<br><span style="opacity:.5;font-weight:400;letter-spacing:0;font-size:9px;">Entrada de leads</span></div>
+          <div class="s-ico">📥</div>
+        </div>
+        <div class="s-actors">
+          <span class="actor-badge ab-teresa">Teresa</span>
+          <span class="actor-badge ab-sistema">Sistema</span>
+          <span class="actor-badge ab-cliente">Cliente</span>
+        </div>
+        <div class="s-desc">
+          Llega el primer contacto del interesado. Teresa califica si vale la pena seguir, identifica el tipo de evento y presupuesto disponible. El punto crucial es la <strong>primera conversación real</strong>.
+        </div>
+      </div>
+      <div class="v-line"></div>
+      <div class="a-lbl">Automatizaciones</div>
+      <div class="a-list">
+        <div class="a-item t-ai">
+          <span class="a-tag">🤖 IA</span>
+          <div class="a-title">Auto-respuesta inmediata</div>
+          <div class="a-desc">IG DM / WhatsApp Business: acuse de recibo + 5 preguntas clave (fecha, tipo, personas, espacio, presupuesto aprox.)</div>
+        </div>
+        <div class="a-item t-form">
+          <span class="a-tag">📋 Formulario</span>
+          <div class="a-title">Pre-filtro de lead</div>
+          <div class="a-desc">Typeform o Google Forms: captura estructurada. Teresa recibe resumen listo para evaluar en segundos.</div>
+        </div>
+        <div class="a-item t-crm">
+          <span class="a-tag">🗂 CRM</span>
+          <div class="a-title">Registro automático de lead</div>
+          <div class="a-desc">Airtable: lead entra con estado "Nuevo". Visible para Teresa con toda la info organizada.</div>
+        </div>
+        <div class="a-item t-alert">
+          <span class="a-tag">🔔 Alerta</span>
+          <div class="a-title">Notificación a Teresa</div>
+          <div class="a-desc">Resumen del formulario vía email o WhatsApp. Si lead es corporativo premium → marcado con prioridad alta.</div>
+        </div>
+        <div class="a-item t-ai">
+          <span class="a-tag">🤖 IA</span>
+          <div class="a-title">Clasificador de prioridad</div>
+          <div class="a-desc">Matrimonio premium, corporativo grande → alta. Evento social menor, presupuesto bajo → normal.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow 1→2 -->
+    <div class="arr-col">
+      <svg viewBox="0 0 44 20"><line x1="0" y1="10" x2="33" y2="10" stroke="#CCC" stroke-width="2"/><polygon points="31,6 43,10 31,14" fill="#CCC"/></svg>
+      <div class="arr-decision">¿Lead<br>calificado?</div>
+    </div>
+
+    <!-- ════════════════ ETAPA 2 ════════════════ -->
+    <div class="s-col">
+      <div class="s-card">
+        <div class="s-hdr">
+          <div class="s-num">2</div>
+          <div class="s-name">Presupuesto<br><span style="opacity:.5;font-weight:400;letter-spacing:0;font-size:9px;">Propuesta formal</span></div>
+          <div class="s-ico">📊</div>
+        </div>
+        <div class="s-actors">
+          <span class="actor-badge ab-teresa">Teresa</span>
+          <span class="actor-badge ab-sistema">Sistema</span>
+          <span class="actor-badge ab-cliente">Cliente</span>
+        </div>
+        <div class="s-desc">
+          Teresa arma la propuesta y la presenta. Hay entre 3 y 7 ping-poneos hasta cerrar. El riesgo: el "sí verbal" que no compromete. Se necesita <strong>confirmación escrita</strong> antes de bloquear fecha.
+        </div>
+      </div>
+      <div class="v-line"></div>
+      <div class="a-lbl">Automatizaciones</div>
+      <div class="a-list">
+        <div class="a-item t-doc">
+          <span class="a-tag">📄 Documento <span class="exists">✓ ya existe</span></span>
+          <div class="a-title">Cotizador → PDF automático</div>
+          <div class="a-desc">Cotizador RR genera PDF con template Rita Roux. Guardado en Presupuestos/cotizaciones/ por cliente y fecha.</div>
+        </div>
+        <div class="a-item t-comm">
+          <span class="a-tag">💬 Comunicación</span>
+          <div class="a-title">Follow-up automático D+3</div>
+          <div class="a-desc">Si no hay respuesta en 3 días: "¿Tuviste oportunidad de revisar la propuesta?" vía WhatsApp/email.</div>
+        </div>
+        <div class="a-item t-doc">
+          <span class="a-tag">📄 Documento</span>
+          <div class="a-title">Versioning de propuestas</div>
+          <div class="a-desc">Cada versión se guarda con número y fecha. Siempre claro cuál es la versión final aceptada.</div>
+        </div>
+        <div class="a-item t-doc">
+          <span class="a-tag">📄 Documento</span>
+          <div class="a-title">Confirmación formal por escrito</div>
+          <div class="a-desc">PDF de cotización firmado digitalmente (HelloSign / firma por WhatsApp) = compromiso real del cliente.</div>
+        </div>
+        <div class="a-item t-alert">
+          <span class="a-tag">🔔 Alerta</span>
+          <div class="a-title">Vigencia 30 días</div>
+          <div class="a-desc">Alerta automática cuando una cotización está próxima a vencer sin respuesta del cliente.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow 2→3 -->
+    <div class="arr-col">
+      <svg viewBox="0 0 44 20"><line x1="0" y1="10" x2="33" y2="10" stroke="#CCC" stroke-width="2"/><polygon points="31,6 43,10 31,14" fill="#CCC"/></svg>
+      <div class="arr-decision">¿Propuesta<br>aceptada?</div>
+    </div>
+
+    <!-- ════════════════ ETAPA 3 ════════════════ -->
+    <div class="s-col">
+      <div class="s-card">
+        <div class="s-hdr">
+          <div class="s-num">3</div>
+          <div class="s-name">Nota de Venta<br><span style="opacity:.5;font-weight:400;letter-spacing:0;font-size:9px;">Cierre comercial</span></div>
+          <div class="s-ico">📝</div>
+        </div>
+        <div class="s-actors">
+          <span class="actor-badge ab-teresa">Teresa</span>
+          <span class="actor-badge ab-gerardo">Gerardo</span>
+          <span class="actor-badge ab-sistema">Sistema</span>
+        </div>
+        <div class="s-desc">
+          Se genera la NV oficial. Teresa traspasa a Gerardo. Hay dos flujos: <strong>sin OC</strong> (pago directo) o <strong>con OC</strong> (empresa grande, pago en 30–60d post factura). Los datos de facturación se recogen aquí.
+        </div>
+      </div>
+      <div class="v-line"></div>
+      <div class="a-lbl">Automatizaciones</div>
+      <div class="a-list">
+        <div class="a-item t-form">
+          <span class="a-tag">📋 Formulario</span>
+          <div class="a-title">Datos de facturación al cliente</div>
+          <div class="a-desc">Al confirmar, se envía form al cliente: RUT, razón social, dirección, mail, ¿requiere OC? Llega listo a Gerardo.</div>
+        </div>
+        <div class="a-item t-doc">
+          <span class="a-tag">📄 Documento <span class="exists">✓ ya existe</span></span>
+          <div class="a-title">Generador de Nota de Venta</div>
+          <div class="a-desc">Sistema NV genera PDF con número correlativo desde contador Excel. Incluye detalles del evento y condiciones de pago.</div>
+        </div>
+        <div class="a-item t-alert">
+          <span class="a-tag">🔔 Alerta</span>
+          <div class="a-title">Notificación automática a Gerardo</div>
+          <div class="a-desc">Email + PDF de NV adjunto con todos los datos del cliente. Gerardo entra al flujo desde este momento.</div>
+        </div>
+        <div class="a-item t-crm">
+          <span class="a-tag">🗂 CRM <span class="exists">✓ ya existe</span></span>
+          <div class="a-title">Registro en historial Excel</div>
+          <div class="a-desc">historial_notas_venta.xlsx en Presupuestos/ — registro de todas las NV con datos completos.</div>
+        </div>
+        <div class="a-item t-alert">
+          <span class="a-tag">🔔 Alerta</span>
+          <div class="a-title">Fork OC: flujo alternativo</div>
+          <div class="a-desc">Si cliente tiene OC: alerta a Gerardo para esperar número OC antes de confirmar proveedores. Plazo extendido.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow 3→4 -->
+    <div class="arr-col">
+      <svg viewBox="0 0 44 20"><line x1="0" y1="10" x2="33" y2="10" stroke="#CCC" stroke-width="2"/><polygon points="31,6 43,10 31,14" fill="#CCC"/></svg>
+      <div class="arr-decision">NV firmada<br>+ 1° pago</div>
+    </div>
+
+    <!-- ════════════════ ETAPA 4 ════════════════ -->
+    <div class="s-col">
+      <div class="s-card">
+        <div class="s-hdr">
+          <div class="s-num">4</div>
+          <div class="s-name">Evento por hacerse<br><span style="opacity:.5;font-weight:400;letter-spacing:0;font-size:9px;">Producción y cobranza</span></div>
+          <div class="s-ico">🗓</div>
+        </div>
+        <div class="s-actors">
+          <span class="actor-badge ab-teresa">Teresa</span>
+          <span class="actor-badge ab-gerardo">Gerardo</span>
+          <span class="actor-badge ab-sistema">Sistema</span>
+          <span class="actor-badge ab-cliente">Cliente</span>
+        </div>
+        <div class="s-desc">
+          Teresa coordina personal, proveedores y compras. Gerardo hace seguimiento de cobros. Los cambios de último momento son inevitables y deben quedar documentados en la NV.
+        </div>
+      </div>
+      <div class="v-line"></div>
+      <div class="a-lbl">Automatizaciones</div>
+      <div class="a-list">
+        <div class="a-item t-alert">
+          <span class="a-tag">🔔 Alerta</span>
+          <div class="a-title">Calendario de cobros automático</div>
+          <div class="a-desc">Alertas a Gerardo: D-30 (50% reserva), D-7 (30% segundo tramo), D-2 (20% saldo final). Configurable por modalidad.</div>
+        </div>
+        <div class="a-item t-comm">
+          <span class="a-tag">💬 Comunicación</span>
+          <div class="a-title">Recordatorio al cliente D-7</div>
+          <div class="a-desc">"Tu evento es en una semana. Aquí los detalles confirmados: fecha, hora, acceso, contacto de producción."</div>
+        </div>
+        <div class="a-item t-doc">
+          <span class="a-tag">📄 Documento</span>
+          <div class="a-title">Checklist de producción</div>
+          <div class="a-desc">Notion / Google Sheets: personal (bartender, mesero), proveedores (flores, DJ, foto), compras internas. Estado visible.</div>
+        </div>
+        <div class="a-item t-comm">
+          <span class="a-tag">💬 Comunicación</span>
+          <div class="a-title">Confirmación proveedores D-3</div>
+          <div class="a-desc">WhatsApp automático a cada proveedor confirmando: fecha, hora de llegada, detalle del evento.</div>
+        </div>
+        <div class="a-item t-doc">
+          <span class="a-tag">📄 Documento</span>
+          <div class="a-title">NV editable con registro de cambios</div>
+          <div class="a-desc">Cada modificación al evento queda registrada con fecha. Gerardo recibe notificación automática con el delta.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow 4→5 -->
+    <div class="arr-col">
+      <svg viewBox="0 0 44 20"><line x1="0" y1="10" x2="33" y2="10" stroke="#CCC" stroke-width="2"/><polygon points="31,6 43,10 31,14" fill="#CCC"/></svg>
+      <div class="arr-decision">Evento<br>ejecutado</div>
+    </div>
+
+    <!-- ════════════════ ETAPA 5 ════════════════ -->
+    <div class="s-col">
+      <div class="s-card">
+        <div class="s-hdr">
+          <div class="s-num">5</div>
+          <div class="s-name">Evento finalizado<br><span style="opacity:.5;font-weight:400;letter-spacing:0;font-size:9px;">Cierre y cobranza</span></div>
+          <div class="s-ico">✅</div>
+        </div>
+        <div class="s-actors">
+          <span class="actor-badge ab-gerardo">Gerardo</span>
+          <span class="actor-badge ab-sistema">Sistema</span>
+          <span class="actor-badge ab-cliente">Cliente</span>
+        </div>
+        <div class="s-desc">
+          Se cierran los ajustes finales (extras del evento), se emite la factura y se cobra el saldo. El ciclo no termina cuando termina el evento — termina cuando entra el <strong>último pago</strong>.
+        </div>
+      </div>
+      <div class="v-line"></div>
+      <div class="a-lbl">Automatizaciones</div>
+      <div class="a-list">
+        <div class="a-item t-alert">
+          <span class="a-tag">🔔 Alerta</span>
+          <div class="a-title">Alerta a Gerardo para facturar</div>
+          <div class="a-desc">"Evento completado. Emitir factura por $X más ajustes: [detalle extras]. Datos cliente adjuntos."</div>
+        </div>
+        <div class="a-item t-comm">
+          <span class="a-tag">💬 Comunicación</span>
+          <div class="a-title">Encuesta de satisfacción 24h</div>
+          <div class="a-desc">Google Forms automático al cliente 24h post-evento. Respuestas van al registro del evento. Alimenta mejora continua.</div>
+        </div>
+        <div class="a-item t-alert">
+          <span class="a-tag">🔔 Alerta</span>
+          <div class="a-title">Seguimiento de cobro pendiente</div>
+          <div class="a-desc">Si queda saldo: recordatorios a Gerardo en D+7, D+15, D+30. Con historial de contactos previos.</div>
+        </div>
+        <div class="a-item t-crm">
+          <span class="a-tag">🗂 CRM</span>
+          <div class="a-title">Cierre en base de datos clientes</div>
+          <div class="a-desc">El evento queda archivado: datos, monto, tipo, fecha, satisfacción. Base para análisis y remarketing.</div>
+        </div>
+        <div class="a-item t-comm">
+          <span class="a-tag">💬 Comunicación</span>
+          <div class="a-title">Follow-up D+30</div>
+          <div class="a-desc">"Fue un placer tenerlos en Rita Roux. Para tu próximo evento, ya sabes dónde estamos." → fidelización.</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end flow-row -->
+
+  <!-- SALIDAS -->
+  <div class="outputs-block">
+    <div class="down-arrow" style="margin-bottom:8px;"></div>
+    <div class="out-lbl">Salidas del proceso</div>
+    <div class="outputs-row">
+      <div class="out-chip">🧾 Factura emitida (SII)</div>
+      <div class="out-chip">💰 Pago cobrado</div>
+      <div class="out-chip">⭐ Encuesta de satisfacción</div>
+      <div class="out-chip">📁 Evento archivado</div>
+      <div class="out-chip">👥 Cliente en base de datos</div>
+      <div class="out-chip">🔁 Potencial evento futuro</div>
+    </div>
+  </div>
+
+  <!-- ── SWIMLANE ─────────────────────────────────────── -->
+  <div class="swimlane">
+    <div class="sw-title">Responsabilidades por actor en cada etapa</div>
+    <table class="sw-table">
+      <thead>
+        <tr>
+          <th style="width:120px">Actor</th>
+          <th>Etapa 1 · Cotización</th>
+          <th>Etapa 2 · Presupuesto</th>
+          <th>Etapa 3 · Nota de Venta</th>
+          <th>Etapa 4 · Producción</th>
+          <th>Etapa 5 · Cierre</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <div class="sw-name"><span class="tbl-dot" style="background:#FF8080"></span>Teresa</div>
+            <div class="sw-sub">Eventos</div>
+          </td>
+          <td>Responde leads calificados, evalúa viabilidad, primera reunión o llamada con cliente.</td>
+          <td>Arma propuesta, negocia, presenta versiones hasta cierre.</td>
+          <td>Completa NV con datos del evento. Traspasa a Gerardo.</td>
+          <td>Coordina personal, proveedores y compras. Registra cambios.</td>
+          <td>Registra extras y ajustes del evento. Informa a Gerardo.</td>
+        </tr>
+        <tr>
+          <td>
+            <div class="sw-name"><span class="tbl-dot" style="background:#64B5F6"></span>Gerardo</div>
+            <div class="sw-sub">Finanzas</div>
+          </td>
+          <td>—</td>
+          <td>—</td>
+          <td>Recibe NV + datos cliente. Gestiona datos de facturación y OC.</td>
+          <td>Emite cobros según calendario. Gestiona OC si aplica.</td>
+          <td>Emite factura, gestiona cobro final, cierra contablemente.</td>
+        </tr>
+        <tr>
+          <td>
+            <div class="sw-name"><span class="tbl-dot" style="background:#81C784"></span>Sistema</div>
+            <div class="sw-sub">Automático</div>
+          </td>
+          <td>Auto-respuesta, formulario de captura, registro en CRM, notificación a Teresa.</td>
+          <td>Genera PDF cotización, follow-up D+3, alerta vigencia 30d.</td>
+          <td>Genera NV con número correlativo, registra en historial Excel, alerta a Gerardo.</td>
+          <td>Alertas de cobro, recordatorio cliente D-7, confirmaciones proveedores D-3.</td>
+          <td>Alerta factura, encuesta satisfacción, seguimiento cobro pendiente, follow-up D+30.</td>
+        </tr>
+        <tr>
+          <td>
+            <div class="sw-name"><span class="tbl-dot" style="background:#aaa"></span>Cliente</div>
+          </td>
+          <td>Envía consulta por cualquier canal. Completa formulario de pre-filtro.</td>
+          <td>Revisa propuesta, negocia, confirma versión final por escrito.</td>
+          <td>Entrega datos de facturación. Firma / acepta NV. Paga primer tramo.</td>
+          <td>Paga según calendario. Comunica cambios. Confirma detalles.</td>
+          <td>Paga saldo final. Completa encuesta de satisfacción.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── TOOLS ───────────────────────────────────────── -->
+  <div class="tools-section">
+    <div class="tools-title">Stack de Herramientas Recomendado</div>
+    <div class="tools-grid">
+      <div class="tool-card">
+        <div class="tool-name">WhatsApp Business + ManyChat</div>
+        <div class="tool-use">Auto-respuestas, flujos de captura, mensajes programados</div>
+        <div class="tool-type" style="color:var(--c-ai)">IA / Auto-respuesta</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">Typeform / Google Forms</div>
+        <div class="tool-use">Formulario pre-filtro leads, datos de facturación, encuesta post-evento</div>
+        <div class="tool-type" style="color:var(--c-form)">Formulario</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">Airtable</div>
+        <div class="tool-use">CRM de leads y eventos. Vistas por estado, fecha, tipo de cliente</div>
+        <div class="tool-type" style="color:var(--c-crm)">CRM / Registro</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">Cotizador RR</div>
+        <div class="tool-use">Ya existe. Genera PDF de propuesta con template Rita Roux, guarda en cotizaciones/</div>
+        <div class="tool-type" style="color:var(--c-doc)">✓ Ya existe</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">Sistema NV</div>
+        <div class="tool-use">Ya existe. Genera Nota de Venta, contador Excel, historial Excel en Presupuestos/</div>
+        <div class="tool-type" style="color:var(--c-doc)">✓ Ya existe</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">Make / Zapier</div>
+        <div class="tool-use">Conector entre apps: formulario → CRM → alerta WhatsApp → email. Sin código.</div>
+        <div class="tool-type" style="color:var(--c-alert)">Automatización</div>
+      </div>
+      <div class="tool-card">
+        <div class="tool-name">Notion</div>
+        <div class="tool-use">Checklist de producción por evento: personal, proveedores, compras, estado</div>
+        <div class="tool-type" style="color:var(--c-crm)">CRM / Registro</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end canvas -->
+</div><!-- end scroll-wrap -->
+
+<!-- ── NOTE ── -->
+<div style="padding:12px 24px 24px; font-size:10px; color:#aaa; text-align:center;">
+  Rita Roux · Sistema de Gestión de Eventos · Elaborado por Finanzas & Administración
+</div>
+
+</body>
+</html>

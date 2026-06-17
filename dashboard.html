@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rita Roux · Dashboard de Eventos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --rojo:#CC1F1F;--rojo-osc:#A01818;--rojo-cl:#FFF5F5;
+  --negro:#1A1A1A;--gris:#F4F4F4;--gris-m:#E0E0E0;--gris-t:#777;
+  --blanco:#FFFFFF;--verde:#2E7D32;--verde-bg:#E8F5E9;
+  --s6:#2E7D32;--s45:#43A047;--s23:#F9A825;--s1:#E65100;--s0:#CC1F1F;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:var(--gris);color:var(--negro);min-height:100vh}
+
+header{background:var(--negro);display:flex;align-items:stretch;position:sticky;top:0;z-index:100}
+.hdr-logo{background:var(--rojo);padding:14px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:110px}
+.hdr-logo .lt{color:var(--negro);font-size:18px;font-weight:900;letter-spacing:3px;font-style:italic;text-transform:uppercase;line-height:1}
+.hdr-logo .ls{color:var(--negro);font-size:7px;letter-spacing:3px;text-transform:uppercase;margin-top:3px;opacity:.65}
+.hdr-info{padding:14px 22px;display:flex;flex-direction:column;justify-content:center;flex:1}
+.hdr-info h1{color:var(--blanco);font-size:15px;font-weight:300;letter-spacing:2px;text-transform:uppercase}
+.hdr-info p{color:var(--rojo);font-size:10px;letter-spacing:1px;margin-top:2px}
+.hdr-act{display:flex;align-items:center;gap:8px;padding:0 22px}
+.btn{padding:8px 16px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:none;font-family:inherit;border-radius:2px;transition:all .15s}
+.btn-sec{background:transparent;color:var(--blanco);border:1.5px solid rgba(255,255,255,.3)}.btn-sec:hover{border-color:var(--blanco)}
+.btn-pr{background:var(--rojo);color:var(--blanco)}.btn-pr:hover{background:var(--rojo-osc)}
+
+.main{max-width:1280px;margin:0 auto;padding:24px}
+
+.banner{background:var(--blanco);border:1px solid var(--gris-m);border-radius:4px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:14px}
+.banner.ok{border-color:var(--verde);background:var(--verde-bg)}
+.banner-text{flex:1;font-size:12px;color:var(--gris-t)}
+.banner.ok .banner-text{color:var(--verde)}
+
+/* BIG CARDS */
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.card{background:var(--blanco);border:1px solid var(--gris-m);border-radius:6px;padding:20px}
+.card-lbl{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gris-t);margin-bottom:8px}
+.card-val{font-size:32px;font-weight:300;letter-spacing:-1px}
+.card-sub{font-size:11px;color:var(--gris-t);margin-top:6px}
+.c-rojo{color:var(--rojo)}.c-verde{color:var(--verde)}
+
+/* SECTIONS */
+.grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:16px}
+.panel{background:var(--blanco);border:1px solid var(--gris-m);border-radius:6px;padding:20px}
+.panel-title{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gris-t);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--gris-m)}
+
+/* BAR LIST (months) */
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.bar-lbl{width:80px;font-size:11px;color:var(--gris-t);flex-shrink:0;text-transform:capitalize}
+.bar-track{flex:1;height:18px;background:var(--gris);border-radius:3px;overflow:hidden;position:relative}
+.bar-fill{height:100%;background:var(--rojo);border-radius:3px;transition:width .4s}
+.bar-val{width:90px;text-align:right;font-size:11px;font-weight:600;flex-shrink:0;font-variant-numeric:tabular-nums}
+
+/* SEMAPHORE DIST */
+.sem-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.sem-dot-big{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.sem-name{flex:1;font-size:12px;font-weight:600}
+.sem-count{font-size:18px;font-weight:300}
+
+/* TIPO DIST */
+.tipo-pill{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:4px;background:var(--gris);margin:0 8px 8px 0}
+.tipo-pill b{font-size:16px;font-weight:700}
+
+/* PENDING LIST */
+.pend-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gris-m)}
+.pend-row:last-child{border-bottom:none}
+.pend-name{font-size:12px;font-weight:600}
+.pend-client{font-size:10px;color:var(--gris-t)}
+.pend-amt{font-size:13px;font-weight:700;color:var(--rojo)}
+
+.empty{text-align:center;padding:30px;color:var(--gris-t);font-size:12px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-logo"><span class="lt">Rita</span><span class="lt">Roux</span><span class="ls">Café</span></div>
+  <div class="hdr-info">
+    <h1>Dashboard de Eventos</h1>
+    <p>Visión general · Facturación · Cobros</p>
+  </div>
+  <div class="hdr-act">
+    <button class="btn btn-sec" id="btn-carpeta" onclick="elegirCarpeta()">📁 Carpeta</button>
+    <button class="btn btn-pr" onclick="window.open('seguimiento-eventos.html','_blank')">📋 Ir a Seguimiento</button>
+  </div>
+</header>
+
+<div class="main">
+  <div class="banner" id="banner">
+    <div class="banner-text">Conecta la carpeta <b>Presupuestos</b> (la misma del Cotizador / Notas de Venta / Seguimiento) para ver los datos reales desde el Excel.</div>
+    <button class="btn btn-sec" style="background:var(--negro)" onclick="elegirCarpeta()">📁 Conectar carpeta</button>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="grid2">
+    <div class="panel">
+      <div class="panel-title">Facturación por mes</div>
+      <div id="byMonth"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Distribución por estado</div>
+      <div id="bySem"></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <div class="panel-title">Cobros pendientes (top 8)</div>
+      <div id="pendList"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Eventos por tipo</div>
+      <div id="byTipo"></div>
+      <div class="panel-title" style="margin-top:18px">Salas y Cancelados</div>
+      <div id="otrosStats"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let dirHandle=null;
+let eventos=[], salas=[], cancelados=[];
+
+async function persistirHandle(handle){
+  return new Promise(resolve=>{
+    const req=indexedDB.open('rr_nv_config',1);
+    req.onupgradeneeded=e=>e.target.result.createObjectStore('cfg');
+    req.onsuccess=e=>{
+      const tx=e.target.result.transaction('cfg','readwrite');
+      tx.objectStore('cfg').put(handle,'presupuestosDir');
+      tx.oncomplete=resolve; tx.onerror=resolve;
+    };
+    req.onerror=resolve;
+  });
+}
+async function restaurarHandle(){
+  return new Promise(resolve=>{
+    const req=indexedDB.open('rr_nv_config',1);
+    req.onupgradeneeded=e=>e.target.result.createObjectStore('cfg');
+    req.onsuccess=e=>{
+      try{
+        const tx=e.target.result.transaction('cfg','readonly');
+        const r=tx.objectStore('cfg').get('presupuestosDir');
+        r.onsuccess=async()=>{
+          if(r.result){
+            const perm=await r.result.queryPermission({mode:'readwrite'}).catch(()=>'denied');
+            if(perm==='granted') dirHandle=r.result;
+          }
+          resolve();
+        };
+        r.onerror=resolve;
+      }catch(e){ resolve(); }
+    };
+    req.onerror=resolve;
+  });
+}
+function mostrarErrorCarpeta(msg){
+  const b = document.getElementById('banner');
+  b.classList.remove('ok');
+  b.querySelector('.banner-text').innerHTML = `⚠ ${msg}`;
+}
+
+async function elegirCarpeta(){
+  if(!window.showDirectoryPicker){
+    mostrarErrorCarpeta('Este visor no soporta conectar carpetas (función no disponible en navegadores embebidos / vista previa interna de VS Code). Abre este archivo en una ventana real de <b>Chrome</b> o <b>Edge</b> — clic derecho sobre el archivo → "Abrir con" → Chrome/Edge.');
+    return;
+  }
+  try{
+    dirHandle=await window.showDirectoryPicker({mode:'readwrite',startIn:'documents'});
+    await persistirHandle(dirHandle);
+    await cargarDatos();
+  }catch(e){
+    if(e.name!=='AbortError') mostrarErrorCarpeta('No se pudo conectar la carpeta: ' + e.message);
+  }
+}
+
+async function cargarDatos(){
+  if(dirHandle){
+    try{
+      let perm=await dirHandle.queryPermission({mode:'readwrite'});
+      if(perm!=='granted') perm=await dirHandle.requestPermission({mode:'readwrite'});
+      if(perm==='granted'){
+        const fh=await dirHandle.getFileHandle('seguimiento_eventos.xlsx').catch(()=>null);
+        if(fh){
+          const file=await fh.getFile();
+          const buf=await file.arrayBuffer();
+          const wb=XLSX.read(buf,{type:'array'});
+          const wsEv=wb.Sheets['Eventos'];
+          eventos = wsEv ? XLSX.utils.sheet_to_json(wsEv,{defval:''}).filter(r=>r['Nº Nota Venta']).map(r=>({
+            notaVenta:r['Nº Nota Venta'], nombre:r['Nombre Evento'], cliente:r['Cliente'], fecha:r['Fecha Evento'],
+            tev:r['Tipo']||'corp', f50:r['Factura 50%'],p50:r['Pago 50%'],f100:r['Factura 100%'],p100:r['Pago 100%'],
+            fRec:r['Fact. Prov. Recibidas'],fPag:r['Fact. Prov. Pagadas'],
+            total:+r['Total']||0, pagado:+r['Pagado']||0, dif:+r['Diferencia']||0
+          })) : [];
+          const wsSa=wb.Sheets['Salas'];
+          salas = wsSa ? XLSX.utils.sheet_to_json(wsSa,{defval:''}) : [];
+          const wsCa=wb.Sheets['Cancelados'];
+          cancelados = wsCa ? XLSX.utils.sheet_to_json(wsCa,{defval:''}) : [];
+
+          document.getElementById('btn-carpeta').textContent='📁 '+dirHandle.name;
+          document.getElementById('banner').classList.add('ok');
+          document.getElementById('banner').querySelector('.banner-text').innerHTML=`Conectado a <b>${dirHandle.name}</b> · ${eventos.length} eventos con Nota de Venta`;
+          render(); return;
+        }
+      }
+    }catch(e){ console.warn(e); }
+  }
+  // Fallback: caché del navegador (mismo origen que Seguimiento)
+  try{
+    const cached=JSON.parse(localStorage.getItem('rr_ev2026_v4')||'null');
+    if(cached){
+      eventos=(cached.eventos||[]).filter(e=>e.notaVenta);
+      salas=cached.salas||[]; cancelados=cached.cancelados||[];
+    }
+  }catch(e){}
+  render();
+}
+
+function fmtM(n){ if(!n&&n!==0) return '—'; return '$'+Math.round(n).toLocaleString('es-CL'); }
+function calcE(e){ const n=[e.f50,e.p50,e.f100,e.p100,e.fRec,e.fPag].filter(x=>x==='si').length; return {n,max:6}; }
+function semInfo(n,max){
+  if(n===max&&max>0) return {cls:'s6',color:'#2E7D32',label:'Finalizado'};
+  const r=max?n/max:0;
+  if(r>=.66) return {cls:'s45',color:'#43A047',label:'Casi listo'};
+  if(r>=.33) return {cls:'s23',color:'#F9A825',label:'En proceso'};
+  if(n>=1) return {cls:'s1',color:'#E65100',label:'Iniciando'};
+  return {cls:'s0',color:'#CC1F1F',label:'Sin iniciar'};
+}
+
+function render(){
+  const totalFact = eventos.reduce((a,e)=>a+(e.total||0),0);
+  const totalCob = eventos.reduce((a,e)=>a+(e.pagado||0),0);
+  const totalPend = eventos.reduce((a,e)=>a+(e.dif||0),0);
+  const finalizados = eventos.filter(e=>{const s=calcE(e);return s.n===s.max}).length;
+  const pct = totalFact ? Math.round(totalCob/totalFact*100) : 0;
+
+  document.getElementById('cards').innerHTML = `
+    <div class="card"><div class="card-lbl">Eventos con NV</div><div class="card-val">${eventos.length}</div><div class="card-sub">${finalizados} finalizados</div></div>
+    <div class="card"><div class="card-lbl">Total facturado</div><div class="card-val">${fmtM(totalFact)}</div><div class="card-sub">Valor total contratado</div></div>
+    <div class="card"><div class="card-lbl">Cobrado</div><div class="card-val c-verde">${fmtM(totalCob)}</div><div class="card-sub">${pct}% del total</div></div>
+    <div class="card"><div class="card-lbl">Por cobrar</div><div class="card-val ${totalPend>0?'c-rojo':''}">${fmtM(totalPend)}</div><div class="card-sub">${eventos.filter(e=>e.dif>0).length} eventos con saldo</div></div>
+  `;
+
+  // By month
+  const meses = {};
+  eventos.forEach(e=>{
+    if(!e.fecha) return;
+    const d = new Date(e.fecha+'T00:00:00');
+    if(isNaN(d)) return;
+    const key = d.toLocaleDateString('es-CL',{month:'long',year:'numeric'});
+    meses[key] = (meses[key]||0) + (e.total||0);
+  });
+  const maxMes = Math.max(1, ...Object.values(meses));
+  const monthEntries = Object.entries(meses).sort((a,b)=>new Date('01 '+a[0])-new Date('01 '+b[0]));
+  document.getElementById('byMonth').innerHTML = monthEntries.length ? monthEntries.map(([m,v])=>`
+    <div class="bar-row">
+      <div class="bar-lbl">${m.split(' de ')[0]}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(v/maxMes*100)}%"></div></div>
+      <div class="bar-val">${fmtM(v)}</div>
+    </div>`).join('') : `<div class="empty">Sin datos de fecha</div>`;
+
+  // By semaphore
+  const semGroups = {};
+  eventos.forEach(e=>{
+    const s=calcE(e); const info=semInfo(s.n,s.max);
+    semGroups[info.label] = semGroups[info.label] || {count:0,color:info.color};
+    semGroups[info.label].count++;
+  });
+  const order=['Finalizado','Casi listo','En proceso','Iniciando','Sin iniciar'];
+  document.getElementById('bySem').innerHTML = eventos.length ? order.filter(o=>semGroups[o]).map(o=>`
+    <div class="sem-row">
+      <span class="sem-dot-big" style="background:${semGroups[o].color}"></span>
+      <span class="sem-name">${o}</span>
+      <span class="sem-count" style="color:${semGroups[o].color}">${semGroups[o].count}</span>
+    </div>`).join('') : `<div class="empty">Sin eventos registrados</div>`;
+
+  // Pending list
+  const pend = eventos.filter(e=>e.dif>0).sort((a,b)=>b.dif-a.dif).slice(0,8);
+  document.getElementById('pendList').innerHTML = pend.length ? pend.map(e=>`
+    <div class="pend-row">
+      <div><div class="pend-name">${e.nombre}</div><div class="pend-client">${e.cliente}</div></div>
+      <div class="pend-amt">${fmtM(e.dif)}</div>
+    </div>`).join('') : `<div class="empty">Sin cobros pendientes ✓</div>`;
+
+  // By tipo
+  const TIPOS={corp:'Corporativo',matr:'Matrimonio',foto:'Fotografía',otro:'Otro'};
+  const tipoCount={};
+  eventos.forEach(e=>{ const t=e.tev||'corp'; tipoCount[t]=(tipoCount[t]||0)+1; });
+  document.getElementById('byTipo').innerHTML = eventos.length ? Object.entries(tipoCount).map(([k,v])=>`
+    <span class="tipo-pill"><b>${v}</b> ${TIPOS[k]||k}</span>`).join('') : `<div class="empty">Sin datos</div>`;
+
+  // Salas / cancelados
+  const totalSalas = salas.reduce((a,r)=>a+(+r['Total']||0),0);
+  const totalCancelados = cancelados.reduce((a,r)=>a+(+r['Total']||0),0);
+  document.getElementById('otrosStats').innerHTML = `
+    <div class="pend-row"><div class="pend-name">Uso de salas</div><div class="pend-amt" style="color:var(--verde)">${salas.length} · ${fmtM(totalSalas)}</div></div>
+    <div class="pend-row"><div class="pend-name">Eventos cancelados</div><div class="pend-amt" style="color:var(--gris-t)">${cancelados.length} · ${fmtM(totalCancelados)}</div></div>
+  `;
+}
+
+(async function init(){
+  await restaurarHandle();
+  await cargarDatos();
+})();
+</script>
+</body>
+</html>

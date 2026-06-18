@@ -7,23 +7,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script src="gsheets.js"></script>
+<link rel="stylesheet" href="theme.css">
 <style>
-  :root {
-    --rojo: #CC1F1F;
-    --rojo-oscuro: #A01818;
-    --negro: #1A1A1A;
-    --gris: #F5F5F5;
-    --gris-medio: #E0E0E0;
-    --gris-texto: #666;
-    --blanco: #FFFFFF;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
   body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    background: var(--gris);
-    color: var(--negro);
     min-height: 100vh;
   }
 
@@ -716,6 +702,20 @@
 
 </main>
 
+<!-- MODAL VISTA PREVIA NV -->
+<div id="nv-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;align-items:center;justify-content:center;flex-direction:column">
+  <div style="background:#fff;width:92%;max-width:860px;max-height:92vh;display:flex;flex-direction:column;border-radius:3px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <div style="background:#1A1A1A;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <span style="color:#fff;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase">Nota de Venta generada — <span id="nv-preview-nv" style="color:#CC1F1F"></span></span>
+    </div>
+    <iframe id="nv-preview-iframe" style="flex:1;border:none;min-height:540px;width:100%"></iframe>
+    <div style="padding:14px 20px;background:#f4f4f4;border-top:1px solid #e0e0e0;display:flex;gap:10px;justify-content:flex-end;flex-shrink:0">
+      <button onclick="descargarNVPreview()" style="padding:9px 20px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;background:#1A1A1A;color:#fff;border:none;font-family:inherit">⬇ Descargar PDF</button>
+      <button onclick="location.href='seguimiento-eventos.html'" style="padding:9px 24px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;background:#CC1F1F;color:#fff;border:none;font-family:inherit">→ Ir a Eventos Activos</button>
+    </div>
+  </div>
+</div>
+
 <!-- Google API -->
 <script>
 // ─── STATE ────────────────────────────────────────────────────────────────────
@@ -745,7 +745,7 @@ async function escribirContadorNV(num) {
 // ─── GOOGLE SHEETS: HISTORIAL NV ─────────────────────────────────────────────
 async function agregarAlHistorialGS(nota) {
   if (!gsConnected()) return;
-  await gsAppend(`${TAB.NOTAS_VENTA}!A:R`, [[
+  await gsAppend(`${TAB.NOTAS_VENTA}!A:S`, [[
     nota.nv,
     nota.nCot || '',
     nota.fecha_emision,
@@ -761,7 +761,8 @@ async function agregarAlHistorialGS(nota) {
     nota.evento || '',
     nota.fecha_evento || '',
     String(nota.personas || ''),
-    nota.subtotal, nota.iva, nota.total
+    nota.subtotal, nota.iva, nota.total,
+    JSON.stringify(nota.secciones || [])
   ]]);
 }
 
@@ -810,9 +811,7 @@ async function agregarEventoSeguimiento(nota) {
       '',
       '', '', '', '', '', '',
       nota.total, 0, nota.total,
-      fechaISO
-        ? `Creado desde ${nota.nv}`
-        : `Creado desde ${nota.nv} · revisar fecha`
+      ''
     ]]);
     // Marcar presupuesto como convertido si tiene referencia
     if (nota.nCot && gsConnected()) {
@@ -1104,6 +1103,18 @@ async function getNextNV() {
 
 // ─── GENERAR NOTA ──────────────────────────────────────────────────────────────
 async function generarNota() {
+  // Anti-duplicado: bloquear si ya existe NV para esta cotización
+  if (parsedData?.nCot && gsConnected()) {
+    try {
+      const chk = await gsGet(`${TAB.NOTAS_VENTA}!B2:B`);
+      const existentes = (chk.values || []).map(r => r[0]).filter(Boolean);
+      if (existentes.includes(parsedData.nCot)) {
+        alert(`La cotización ${parsedData.nCot} ya tiene una Nota de Venta emitida.\nRevisa el inicio de eventos para verla.`);
+        return;
+      }
+    } catch(e) { /* continuar si falla la verificación */ }
+  }
+
   const requeridos = ['f-nombre-contacto','f-empresa-contacto','f-razon-social','f-rut','f-fecha-evento'];
   for (const id of requeridos) {
     if (!document.getElementById(id)?.value.trim()) {
@@ -1174,16 +1185,12 @@ async function generarNota() {
     await gsDriveUpload(pdfBlob, pdfFilename, 'Notas de Venta Rita Roux');
   }
 
-  const successEl = document.getElementById('success-nv');
-  successEl.textContent = nota.nv;
-  const banner = successEl.closest('.success-banner');
-  if (banner) {
-    const msg = eventoAgregado ? ' Evento creado en Seguimiento.' : '';
-    banner.innerHTML = `✓ <strong>${nota.nv}</strong> generada${gsConnected() ? ' y guardada.' : ' (sin conexión).'}${msg}`;
-  }
-  goStep(3);
+  // Mostrar modal vista previa en lugar de step 3
+  const url = URL.createObjectURL(pdfBlob);
+  document.getElementById('nv-preview-iframe').src = url;
+  document.getElementById('nv-preview-nv').textContent = nota.nv;
+  document.getElementById('nv-modal').style.display = 'flex';
   renderHistoricoLocal();
-  renderHistoricoLocal2();
 }
 
 // ─── GENERAR PDF ───────────────────────────────────────────────────────────────
@@ -1435,13 +1442,17 @@ function renderTablaHistorico(data) {
 }
 
 // ─── DESCARGA / RESET ──────────────────────────────────────────────────────────
-function descargarPDF() {
-  if (!pdfBlob) return;
+function descargarNVPreview() {
+  if (!pdfBlob || !currentNV) return;
   const url = URL.createObjectURL(pdfBlob);
   const a = document.createElement('a');
   a.href = url;
   a.download = `${currentNV}.pdf`;
   a.click();
+}
+
+function descargarPDF() {
+  descargarNVPreview();
 }
 
 function nuevaNota() {

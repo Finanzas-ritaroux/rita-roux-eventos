@@ -7,14 +7,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script src="gsheets.js"></script>
+<link rel="stylesheet" href="theme.css">
 <style>
-:root{
-  --rojo:#CC1F1F;--rojo-osc:#A01818;--rojo-cl:#FFF5F5;
-  --negro:#1A1A1A;--gris:#F4F4F4;--gris-m:#E0E0E0;--gris-t:#777;
-  --blanco:#FFFFFF;--verde:#2E7D32;--verde-cl:#E8F5E9;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:var(--gris);color:var(--negro);min-height:100vh}
+body{min-height:100vh}
 header{background:var(--negro);display:flex;align-items:stretch;position:sticky;top:0;z-index:100}
 .hdr-logo{background:var(--rojo);padding:14px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:110px}
 .hdr-logo .lt{color:var(--negro);font-size:18px;font-weight:900;letter-spacing:3px;font-style:italic;text-transform:uppercase;line-height:1}

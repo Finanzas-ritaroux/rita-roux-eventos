@@ -1,0 +1,46 @@
+/* ════════════════════════════════════════════════════════
+   Rita Roux Eventos — Paleta de marca compartida
+   Editar estos valores actualiza el color en todas las páginas
+   (cotizador, histórico, notas de venta, seguimiento, dashboard)
+   ════════════════════════════════════════════════════════ */
+:root {
+  --rojo:       #CC1F1F;
+  --rojo-osc:   #A01818;
+  --rojo-cl:    #FFF5F5;
+  --rojo-borde: #F0C0C0;
+
+  --negro:      #1A1A1A;
+  --gris:       #F4F4F4;
+  --gris-m:     #E0E0E0;
+  --gris-t:     #777777;
+  --blanco:     #FFFFFF;
+
+  --azul:       #1565C0;
+  --azul-cl:    #E8F0FD;
+  --verde:      #2E7D32;
+  --verde-bg:   #E8F5E9;
+
+  /* Semáforo de avance (seguimiento / dashboard) */
+  --s6:  #2E7D32;
+  --s45: #43A047;
+  --s23: #F9A825;
+  --s1:  #E65100;
+  --s0:  #CC1F1F;
+
+  /* Alias — nombres largos usados en cotizador.html y notas de venta */
+  --rojo-oscuro: var(--rojo-osc);
+  --rojo-claro:  var(--rojo-cl);
+  --gris-medio:  var(--gris-m);
+  --gris-texto:  var(--gris-t);
+  --verde-claro: var(--verde-bg);
+  --verde-cl:    var(--verde-bg);
+  --azul-claro:  var(--azul-cl);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background: var(--gris);
+  color: var(--negro);
+}

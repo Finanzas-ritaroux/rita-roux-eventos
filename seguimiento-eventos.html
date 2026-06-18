@@ -4,19 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rita Roux · Seguimiento de Eventos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script src="gsheets.js"></script>
+<link rel="stylesheet" href="theme.css">
 <style>
-:root{
-  --rojo:#CC1F1F;--rojo-osc:#A01818;--rojo-cl:#FFF5F5;
-  --negro:#1A1A1A;--gris:#F4F4F4;--gris-m:#E0E0E0;--gris-t:#777;
-  --blanco:#FFFFFF;
-  --verde:#2E7D32;--verde-bg:#E8F5E9;
-  --s6:#2E7D32;--s45:#43A047;--s23:#F9A825;--s1:#E65100;--s0:#CC1F1F;
-  --hdr:52px;
-}
-*{box-sizing:border-box;margin:0;padding:0}
+:root{ --hdr:52px; }
 html,body{height:100%;overflow:hidden}
-body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:var(--gris);color:var(--negro)}
 
 /* ── HEADER ─────────────────────────────────────────── */
 header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretch;position:relative;z-index:100;flex-shrink:0}
@@ -451,7 +445,7 @@ function renderTblActivos(){
   });
   if(!lista.length){
     el.innerHTML=`<div class="empty"><div class="empty-ico">🧾</div><p>No hay eventos activos.</p>
-      <button class="btn btn-pr" style="margin-top:14px" onclick="window.open('rita-roux-notas-venta.html','_blank')">+ Emitir Nota de Venta</button>
+      <button class="btn btn-pr" style="margin-top:14px" onclick="location.href='rita-roux-notas-venta.html'">+ Emitir Nota de Venta</button>
     </div>`; return;
   }
   el.innerHTML=`<div class="tbl"><table>
@@ -464,7 +458,7 @@ function renderTblActivos(){
       return`<tr class="${selId===e.id?'sel':''}" onclick="selEv('${e.id}')">
         <td><span style="font-weight:600">${e.nombre}</span><br><span style="font-size:10px;color:var(--gris-t)">${e.cliente}</span></td>
         <td>${tipoBdg}</td>
-        <td><span class="nv-tag">${e.notaVenta||'—'}</span></td>
+        <td><span class="nv-tag">${e.notaVenta||'—'}</span>${e.notaVenta?`<button onclick="event.stopPropagation();descargarNVPDF('${e.notaVenta}')" title="Descargar NV" style="margin-left:4px;padding:1px 6px;font-size:10px;background:var(--gris);border:1px solid var(--gris-m);border-radius:2px;cursor:pointer;color:var(--negro)">⬇</button>`:''}</td>
         <td>${fmtFecha(e.fecha)}</td>
         <td>${semH(n,max)}</td>
         <td><div class="pips">${pipH(e)}</div></td>
@@ -616,13 +610,16 @@ function renderDetail(id){
   const pct=max?Math.round(n/max*100):0;
   const color=semColor(n,max);
   const np=nextPaso(e);
-  const isFin=n===max&&max>0;
-
   const rp=document.getElementById('rp');
+
+  const tipoBdg=e.tipo==='sala'
+    ?`<span class="tipo-badge" style="background:#E8F0FD;color:#1565C0">Sala</span>`
+    :`<span class="tipo-badge" style="background:#F3E5F5;color:#6A1B9A">Evento</span>`;
+
   let html=`
     <div class="det-header">
       <div class="det-name">${e.nombre||'(sin nombre)'}</div>
-      <div class="det-client">${e.cliente||''} ${e.notaVenta?`· <span class="nv-tag" style="background:rgba(255,255,255,.15);color:#fff">${e.notaVenta}</span>`:''}</div>
+      <div class="det-client">${e.cliente||''}</div>
     </div>
     <div style="position:sticky;top:0;background:var(--blanco);z-index:1;border-bottom:1px solid var(--gris-m);padding:10px 16px">
       <div class="status-bar">
@@ -631,98 +628,85 @@ function renderDetail(id){
         <button class="rp-close" onclick="closeDetail()">×</button>
       </div>
     </div>
-    <div class="det-body">`;
+    <div class="det-body">
 
-  if(np&&!isFin){
-    html+=`<div class="next-action">
-      <div class="na-label">→ Siguiente paso</div>
-      <div class="na-text">${np.label}</div>
-      <div class="na-who">${np.sub} · Responsable: <b>${np.persona}</b></div>
-    </div>`;
-  } else if(isFin){
-    html+=`<div class="next-action" style="background:#E8F5E9;border-left-color:var(--verde)">
-      <div class="na-label" style="color:var(--verde)">✓ Completado</div>
-      <div class="na-text" style="color:var(--verde)">Evento finalizado</div>
-      <div class="na-who">Todos los pasos completados</div>
-    </div>`;
-  }
+    <!-- Datos (sólo lectura) -->
+    <div class="det-section">
+      <div class="det-sec-title">Información</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--gris-m)">
+        <span style="font-size:10px;color:var(--gris-t)">Tipo</span>${tipoBdg}
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0">
+        <span style="font-size:10px;color:var(--gris-t)">N° Nota de Venta</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="nv-tag">${e.notaVenta||'—'}</span>
+          ${e.notaVenta?`<button onclick="descargarNVPDF('${e.notaVenta}')" title="Descargar PDF" style="padding:2px 8px;font-size:10px;background:var(--gris);border:1px solid var(--gris-m);border-radius:2px;cursor:pointer">⬇</button>`:''}
+        </div>
+      </div>
+    </div>
 
-  html+=`<div class="det-section"><div class="det-sec-title">Datos del evento</div>
-    <div class="det-field"><label>Nombre</label><input type="text" id="d-nombre" value="${e.nombre||''}"></div>
-    <div class="row2">
-      <div class="det-field"><label>Cliente</label><input type="text" id="d-cliente" value="${e.cliente||''}"></div>
-      <div class="det-field"><label>Fecha</label><input type="date" id="d-fecha" value="${e.fecha||''}"></div>
-    </div>`;
+    <!-- Montos (sólo lectura) -->
+    <div class="det-section">
+      <div class="det-sec-title">Montos</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+        <div style="text-align:center;background:var(--gris);padding:9px 6px;border-radius:3px">
+          <div style="font-size:8px;color:var(--gris-t);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Total</div>
+          <div style="font-size:13px;font-weight:700">${fmtM(e.total)}</div>
+        </div>
+        <div style="text-align:center;background:#E8F5E9;padding:9px 6px;border-radius:3px">
+          <div style="font-size:8px;color:var(--verde);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Depositado</div>
+          <div style="font-size:13px;font-weight:700;color:var(--verde)">${fmtM(e.pagado||0)}</div>
+        </div>
+        <div style="text-align:center;background:${(e.dif||0)>0?'#FFF5F5':'#E8F5E9'};padding:9px 6px;border-radius:3px">
+          <div style="font-size:8px;color:${(e.dif||0)>0?'var(--rojo)':'var(--verde)'};text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Saldo</div>
+          <div style="font-size:13px;font-weight:700;color:${(e.dif||0)>0?'var(--rojo)':'var(--verde)'}">${(e.dif||0)>0?fmtM(e.dif):'✓ 0'}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Semáforo: estado + avance de facturación -->
+    <div class="det-section">
+      <div class="det-sec-title">Semáforo</div>
+      <select id="d-estado" style="width:100%;padding:8px 10px;border:1px solid var(--gris-m);font-family:inherit;font-size:12px;border-radius:2px;outline:none;margin-bottom:10px">
+        <option value="activo" ${e.estado==='activo'?'selected':''}>🟡 Activo</option>
+        <option value="finalizado" ${e.estado==='finalizado'?'selected':''}>🟢 Finalizado</option>
+        <option value="cancelado" ${e.estado==='cancelado'?'selected':''}>🔴 Cancelado</option>
+      </select>`;
 
   if(e.tipo==='evento'){
-    html+=`<div class="det-field"><label>Nº Nota de Venta</label><input type="text" id="d-nv" value="${e.notaVenta||''}" placeholder="NV-2026-001"></div>
-    <div class="det-field"><label>Monto total</label><input type="number" id="d-total" value="${e.total||''}"></div>`;
-  } else if(e.tipo==='sala'){
-    html+=`<div class="det-field"><label>Monto total</label><input type="number" id="d-total" value="${e.total||''}"></div>`;
-  } else {
-    html+=`<div class="det-field"><label>Presupuesto</label><input type="number" id="d-total" value="${e.total||''}"></div>`;
-  }
-  html+=`</div>`;
-
-  if(e.tipo==='evento'){
-    html+=`<div class="det-section"><div class="det-sec-title">Facturación y cobros</div>
-      <label class="oc-toggle" style="margin-bottom:10px"><input type="checkbox" id="d-oc" ${e.oc==='si'?'checked':''}><span>OC recibida del cliente</span></label>`;
+    html+=`<div style="font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gris-t);margin-bottom:6px">Avance de facturación</div>`;
     PASOS.forEach((p,i)=>{
       const done=e[p.key]==='si';
       const isNext=!done&&np&&np.key===p.key;
-      const cls=done?'wf-done':isNext?'wf-next':'wf-wait';
-      html+=`<div class="wf-step ${cls}" onclick="togglePaso('${p.key}')">
-        <div class="wf-num">${done?'✓':i+1}</div>
-        <div class="wf-info"><div class="wf-label">${p.label}</div><div class="wf-sub">${isNext?'← PENDIENTE · '+p.sub:done?'Completado':p.persona}</div></div>
-        <span class="wf-icon">${done?'✅':isNext?'⏳':'○'}</span>
-      </div>`;
+      html+=`<label style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--gris-m);cursor:pointer">
+        <input type="checkbox" id="d-${p.key}" ${done?'checked':''} onchange="togglePasoChk('${p.key}',this.checked)" style="cursor:pointer;width:14px;height:14px;flex-shrink:0">
+        <span style="flex:1;font-size:11px">${p.label}</span>
+        <span style="font-size:9px;color:var(--gris-t)">${p.persona}</span>
+      </label>`;
     });
-    html+=`</div>
-    <div class="det-section"><div class="det-sec-title">Montos (CLP)</div>
-      <div class="row2">
-        <div class="det-field"><label>Cobrado</label><input type="number" id="d-pag" value="${e.pagado||0}" oninput="autoDif()"></div>
-        <div class="det-field"><label>Diferencia</label><input type="number" id="d-dif" value="${e.dif||0}" readonly style="background:var(--gris);color:var(--gris-t)"></div>
-      </div>
-    </div>`;
-  } else {
-    html+=`<div class="det-section"><div class="det-sec-title">Estado de cobro</div>
-      ${[{key:'oc',label:'Acuerdo / contrato firmado'},{key:'p50',label:'Pago 50% recibido'},{key:'p100',label:'Pago 100% recibido'}].map(p=>`
-        <label class="oc-toggle" style="margin-bottom:6px"><input type="checkbox" id="d-${p.key}" ${e[p.key]==='si'?'checked':''}><span>${p.label}</span></label>`).join('')}
-      <div class="row2" style="margin-top:8px">
-        <div class="det-field"><label>Cobrado</label><input type="number" id="d-pag" value="${e.pagado||0}" oninput="autoDif()"></div>
-        <div class="det-field"><label>Diferencia</label><input type="number" id="d-dif" value="${e.dif||0}" readonly style="background:var(--gris)"></div>
-      </div>
-    </div>`;
   }
+  html+=`</div>
 
-  html+=`<div class="det-section"><div class="det-sec-title">Comentarios</div>
-    <div class="det-field"><textarea id="d-com" rows="3">${e.comentarios||''}</textarea></div>
-  </div></div>`;
+    <!-- Fecha del evento -->
+    <div class="det-section">
+      <div class="det-sec-title">Fecha del evento</div>
+      <div class="det-field"><input type="date" id="d-fecha" value="${e.fecha||''}"></div>
+    </div>
 
-  let estadoBtns = '';
-  if(e.estado==='activo'){
-    estadoBtns=`<button class="btn btn-ok" style="font-size:9px" onclick="cambiarEstado('${e.id}','finalizado')">✓ Finalizar</button>
-                <button class="btn" style="font-size:9px;background:#E65100;color:#fff" onclick="cambiarEstado('${e.id}','cancelado')">Cancelar evento</button>`;
-  } else {
-    estadoBtns=`<button class="btn btn-gh" style="font-size:9px" onclick="cambiarEstado('${e.id}','activo')">↩ Reactivar</button>`;
-  }
+    <!-- Comentarios -->
+    <div class="det-section">
+      <div class="det-sec-title">Comentarios</div>
+      <div class="det-field"><textarea id="d-com" rows="3" placeholder="Notas internas...">${e.comentarios||''}</textarea></div>
+    </div>
+    </div>`;
+
   html+=`<div class="det-footer">
     <button class="btn btn-del" onclick="delEv('${e.id}')">Eliminar</button>
-    ${estadoBtns}
     <button class="btn btn-gh" onclick="closeDetail()">Cancelar</button>
     <button class="btn btn-pr" onclick="saveDetail('${e.id}')">Guardar</button>
   </div>`;
 
   rp.innerHTML=html;
-  const tot=document.getElementById('d-total');
-  if(tot) tot.addEventListener('input', autoDif);
-}
-
-function autoDif(){
-  const t=parseFloat(document.getElementById('d-total')?.value)||0;
-  const p=parseFloat(document.getElementById('d-pag')?.value)||0;
-  const d=document.getElementById('d-dif');
-  if(d) d.value=Math.max(0,t-p);
 }
 
 function togglePaso(key){
@@ -732,25 +716,35 @@ function togglePaso(key){
   scheduleSave(); renderMain();
 }
 
+function togglePasoChk(key, checked){
+  const e=db.find(x=>x.id===selId);
+  if(!e) return;
+  e[key]=checked?'si':'';
+  scheduleSave();
+  // Actualiza progreso en el panel sin cerrar el detalle
+  const{n,max}=calcE(e);
+  const pct=max?Math.round(n/max*100):0;
+  const color=semColor(n,max);
+  const pctEl=document.querySelector('.status-pct');
+  const fillEl=document.querySelector('.status-fill');
+  const semEl=document.querySelector('.status-info .sem');
+  if(pctEl) pctEl.style.color=color, pctEl.textContent=pct+'%';
+  if(fillEl) fillEl.style.width=pct+'%', fillEl.style.background=color;
+  if(semEl){ const tmp=document.createElement('span'); tmp.innerHTML=semH(n,max); semEl.replaceWith(tmp.firstChild); }
+  renderTblActivos();
+}
+
 function saveDetail(id){
   const e=db.find(x=>x.id===id);
   if(!e) return;
-  e.nombre=document.getElementById('d-nombre')?.value||e.nombre;
-  e.cliente=document.getElementById('d-cliente')?.value||e.cliente;
-  e.fecha=document.getElementById('d-fecha')?.value||e.fecha;
-  e.total=parseFloat(document.getElementById('d-total')?.value)||e.total;
-  e.comentarios=document.getElementById('d-com')?.value||'';
+  e.estado     = document.getElementById('d-estado')?.value || e.estado;
+  e.fecha      = document.getElementById('d-fecha')?.value  || '';
+  e.comentarios= document.getElementById('d-com')?.value    || '';
   if(e.tipo==='evento'){
-    e.notaVenta=document.getElementById('d-nv')?.value||'';
-    e.oc=document.getElementById('d-oc')?.checked?'si':'';
-    e.pagado=parseFloat(document.getElementById('d-pag')?.value)||0;
-    e.dif=parseFloat(document.getElementById('d-dif')?.value)||0;
-  } else {
-    e.oc=document.getElementById('d-oc')?.checked?'si':'';
-    e.p50=document.getElementById('d-p50')?.checked?'si':'';
-    e.p100=document.getElementById('d-p100')?.checked?'si':'';
-    e.pagado=parseFloat(document.getElementById('d-pag')?.value)||0;
-    e.dif=parseFloat(document.getElementById('d-dif')?.value)||0;
+    PASOS.forEach(p=>{
+      const chk=document.getElementById('d-'+p.key);
+      if(chk) e[p.key]=chk.checked?'si':'';
+    });
   }
   scheduleSave(); renderMain();
 }
@@ -787,7 +781,175 @@ function openNew(){
   scheduleSave(); selId=nuevo.id;
   if(currentTab!=='ac') setTab('ac', document.querySelector('.tbtn'));
   else renderMain();
-  setTimeout(()=>document.getElementById('d-nombre')?.focus(), 100);
+  setTimeout(()=>document.getElementById('d-fecha')?.focus(), 100);
+}
+
+// ═══════════════════════════════════════════════════════
+// PDF NOTA DE VENTA
+// ═══════════════════════════════════════════════════════
+
+async function descargarNVPDF(nvNum){
+  if(!gsConnected()){
+    alert('Debes estar conectado a Google Sheets para descargar la NV.');
+    return;
+  }
+  try{
+    const res=await gsGet(`${TAB.NOTAS_VENTA}!A2:S`);
+    const rows=res.values||[];
+    const row=rows.find(r=>r[0]===nvNum);
+    if(!row){ alert('No se encontró la Nota de Venta '+nvNum+' en el registro.'); return; }
+    const nota={
+      nv:       row[0]||'',
+      nCot:     row[1]||'',
+      fecha:    row[2]||'',
+      nombre:   row[3]||'',
+      empresa:  row[4]||'',
+      telefono: row[5]||'',
+      mail:     row[6]||'',
+      razonSocial:row[7]||'',
+      rut:      row[8]||'',
+      giro:     row[9]||'',
+      direccion:row[10]||'',
+      mailFact: row[11]||'',
+      evento:   row[12]||'',
+      fechaEvento:row[13]||'',
+      personas: row[14]||'',
+      subtotal: +row[15]||0,
+      iva:      +row[16]||0,
+      total:    +row[17]||0,
+      secciones:[]
+    };
+    try{ nota.secciones=JSON.parse(row[18]||'[]'); }catch(e){ nota.secciones=[]; }
+    const blob=generarPDFNV(nota);
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`NV_RitaRoux_${nota.nv.replace(/[^a-zA-Z0-9-]/g,'_')}.pdf`;
+    a.click();
+  }catch(err){
+    console.error(err);
+    alert('Error al generar el PDF: '+err.message);
+  }
+}
+
+function generarPDFNV(nota){
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210, M=14;
+  let y=0;
+
+  // Cabecera roja
+  doc.setFillColor(204,31,31);
+  doc.rect(0,0,W,28,'F');
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(20); doc.setTextColor(255,255,255);
+  doc.text('RITA ROUX',M,11);
+  doc.setFontSize(7); doc.setFont('helvetica','normal');
+  doc.setTextColor(255,200,200);
+  doc.text('CAFÉ · EVENTOS',M,15.5);
+  doc.setFontSize(16); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
+  doc.text('NOTA DE VENTA',W-M,10,'right');
+  doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.text(nota.nv,W-M,16,'right');
+  doc.setFontSize(8);
+  doc.text(nota.fecha,W-M,21,'right');
+
+  y=34;
+
+  // Bloque cliente
+  doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(119,119,119);
+  doc.text('DATOS DEL CLIENTE',M,y); y+=5;
+  doc.setDrawColor(224,224,224); doc.line(M,y,W-M,y); y+=4;
+
+  const col1=M, col2=W/2+2;
+  const filas=[
+    ['Nombre / Contacto', nota.nombre||nota.razonSocial, 'Razón Social', nota.razonSocial],
+    ['Empresa',           nota.empresa,                   'RUT',          nota.rut],
+    ['Teléfono',         nota.telefono,                  'Giro',         nota.giro],
+    ['Mail contacto',    nota.mail,                      'Dirección',    nota.direccion],
+  ];
+  filas.forEach(([l1,v1,l2,v2])=>{
+    doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(119,119,119);
+    doc.text(l1,col1,y); doc.text(l2,col2,y);
+    doc.setFont('helvetica','normal'); doc.setTextColor(26,26,26);
+    doc.text(String(v1||'—').slice(0,40),col1,y+4);
+    doc.text(String(v2||'—').slice(0,40),col2,y+4);
+    y+=10;
+  });
+
+  // Evento
+  y+=2;
+  doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(119,119,119);
+  doc.text('DATOS DEL EVENTO',M,y); y+=4;
+  doc.setDrawColor(224,224,224); doc.line(M,y,W-M,y); y+=4;
+  doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(119,119,119);
+  doc.text('Evento',col1,y); doc.text('Fecha del evento',col2,y);
+  doc.setFont('helvetica','normal'); doc.setTextColor(26,26,26);
+  doc.text(String(nota.evento||'—').slice(0,50),col1,y+4);
+  const fEv=nota.fechaEvento?new Date(nota.fechaEvento+'T00:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'}):'—';
+  doc.text(fEv+(nota.personas?'  ·  '+nota.personas+' personas':''),col2,y+4);
+  y+=13;
+
+  // Servicios
+  doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(119,119,119);
+  doc.text('DETALLE DE SERVICIOS',M,y); y+=4;
+
+  const secciones=nota.secciones||[];
+  if(secciones.length){
+    secciones.forEach(sec=>{
+      const items=(sec.items||[]).filter(i=>i.desc||(+i.vNeto||0)>0||(+i.vUnit||0)>0);
+      if(!items.length) return;
+      doc.autoTable({
+        startY:y,
+        head:[[
+          {content:(sec.nombre||sec.name||'Servicios'),colSpan:4,styles:{fillColor:[26,26,26],textColor:255,fontStyle:'bold',fontSize:8}}
+        ],
+        ['Descripción','Cant.','Precio Unit.','Total']],
+        body:items.map(i=>[
+          i.desc||'',
+          i.qty||i.horas||'1',
+          (i.unitPrice||i.vUnit)>0?'$'+Math.round(i.unitPrice||i.vUnit||0).toLocaleString('es-CL'):'',
+          '$'+Math.round(i.vNeto!=null?i.vNeto:((i.qty||1)*(i.unitPrice||i.vUnit||0))).toLocaleString('es-CL')
+        ]),
+        margin:{left:M,right:M},
+        styles:{fontSize:8,cellPadding:2.5,textColor:[26,26,26]},
+        headStyles:{fillColor:[26,26,26],textColor:255,fontStyle:'bold',fontSize:7.5},
+        columnStyles:{0:{cellWidth:'auto'},1:{cellWidth:14,halign:'center'},2:{cellWidth:28,halign:'right'},3:{cellWidth:28,halign:'right'}},
+        alternateRowStyles:{fillColor:[248,248,248]},
+        theme:'plain'
+      });
+      y=doc.lastAutoTable.finalY+4;
+    });
+  } else {
+    doc.setFontSize(8); doc.setFont('helvetica','italic'); doc.setTextColor(180,180,180);
+    doc.text('Detalle de servicios no disponible.',M,y+5);
+    y+=12;
+  }
+
+  // Totales
+  y+=2;
+  const totW=80;
+  const tx=W-M-totW;
+  doc.setDrawColor(224,224,224); doc.line(tx,y,W-M,y); y+=5;
+  const addTot=(lbl,val,bold)=>{
+    doc.setFont('helvetica',bold?'bold':'normal');
+    doc.setFontSize(bold?10:9);
+    doc.setTextColor(bold?[26,26,26]:[80,80,80]);
+    doc.text(lbl,tx,y);
+    doc.text(val,W-M,y,'right');
+    y+=bold?7:5.5;
+  };
+  addTot('Subtotal (neto):','$'+Math.round(nota.subtotal||0).toLocaleString('es-CL'),false);
+  addTot('IVA (19%):','$'+Math.round(nota.iva||0).toLocaleString('es-CL'),false);
+  doc.setDrawColor(204,31,31); doc.line(tx,y,W-M,y); y+=4;
+  addTot('TOTAL:','$'+Math.round(nota.total||0).toLocaleString('es-CL'),true);
+
+  // Pie
+  y=doc.internal.pageSize.height-14;
+  doc.setDrawColor(224,224,224); doc.line(M,y,W-M,y);
+  doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(150,150,150);
+  doc.text('Rita Roux Café · Documento generado electrónicamente',W/2,y+5,'center');
+
+  return doc.output('blob');
 }
 
 // ═══════════════════════════════════════════════════════

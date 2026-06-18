@@ -7,15 +7,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script src="gsheets.js"></script>
+<link rel="stylesheet" href="theme.css">
 <style>
-:root {
-  --rojo: #CC1F1F; --rojo-oscuro: #A01818; --rojo-claro: #FFF5F5; --rojo-borde: #F0C0C0;
-  --negro: #1A1A1A; --gris: #F4F4F4; --gris-medio: #E0E0E0; --gris-texto: #777;
-  --blanco: #FFFFFF; --azul: #1565C0; --azul-claro: #E8F0FD; --verde: #2E7D32; --verde-claro: #E8F5E9;
-  --sidebar: 310px;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: var(--gris); color: var(--negro); min-height: 100vh; display: flex; flex-direction: column; }
+:root { --sidebar: 310px; }
+body { min-height: 100vh; display: flex; flex-direction: column; }
 
 /* ── HEADER ───────────────────────────────────────────── */
 header { background: var(--negro); display: flex; align-items: stretch; position: sticky; top: 0; z-index: 100; }
@@ -184,7 +179,6 @@ header { background: var(--negro); display: flex; align-items: stretch; position
     <button class="btn btn-secondary" onclick="location.href='historico-presupuestos.html'">Histórico Cotizaciones</button>
     <button class="btn btn-secondary" onclick="nuevaCotizacion()">↺ Nueva</button>
     <button class="btn btn-secondary" id="btn-google-cot" onclick="gsAuth()">☁ Google</button>
-    <button class="btn btn-secondary" onclick="copiarExcel()">⎘ Copiar</button>
   </div>
 </header>
 
@@ -1055,8 +1049,7 @@ function emitirNotaVenta() {
   };
 
   localStorage.setItem('rr_cotizacion_pendiente', JSON.stringify(data));
-  window.open('rita-roux-notas-venta.html', '_blank');
-  showToast('Abriendo Notas de Venta…');
+  location.href = 'rita-roux-notas-venta.html';
 }
 
 // ═══════════════════════════════════════════════════════

@@ -39,8 +39,12 @@ function gsInit(onAuth, options) {
   _gsLoadClient(() => {
     if (hasValidCache) {
       _gsScheduleRefresh();
-    } else {
+    } else if (localStorage.getItem('gs_was_connected')) {
+      // Ya se conectó antes en este navegador: vale la pena un intento silencioso.
       gs_client.requestAccessToken({ prompt: 'none' });
+    } else {
+      // Primera vez en este navegador: no disparar nada automático, solo el banner.
+      _gsShowAuthBanner();
     }
   });
 }
@@ -163,7 +167,7 @@ async function gsInitSheet() {
   const tabs = [
     { name: TAB.PRESUPUESTOS, hdr: ['Nº Cotización','Fecha','Cliente','Evento','Fecha Evento','Nº Personas','Subtotal','IVA','Total','Estado','Servicios'] },
     { name: TAB.NOTAS_VENTA,  hdr: ['Nº NV','Nº Cotización','Fecha Emisión','Nombre Contacto','Empresa','Teléfono','Mail Contacto','Razón Social','RUT','Giro','Dirección','Mail Facturación','Nombre Evento','Fecha Evento','Nº Personas','Subtotal','IVA','Total'] },
-    { name: TAB.SEG,          hdr: ['Estado','Tipo','Nº NV','Nombre','Cliente','Fecha','OC','Factura 50%','Pago 50%','Factura 100%','Pago 100%','Fact. Prov. Recibidas','Fact. Prov. Pagadas','Total','Pagado','Diferencia','Comentarios'] },
+    { name: TAB.SEG,          hdr: ['Estado','Tipo','Nº NV','Nombre','Cliente','Fecha','OC','Factura 50%','Pago 50%','Factura 100%','Pago 100%','Fact. Prov. Recibidas','Fact. Prov. Pagadas','Total','Pagado','Diferencia','Comentarios','Extras','Extras NV'] },
   ];
   for (const t of tabs) {
     try {
@@ -173,4 +177,27 @@ async function gsInitSheet() {
       }
     } catch(e) { /* tab may not exist yet */ }
   }
+}
+
+// ─── NUMERACIÓN COMPARTIDA DE NOTAS DE VENTA ───────────────────────────────
+// Usado tanto por rita-roux-notas-venta.html como por seguimiento-eventos.html
+// (2ª Nota de Venta de extras) para no duplicar números.
+async function gsNextNVNumber() {
+  const year = new Date().getFullYear();
+  try {
+    const res = await gsGet(`${TAB.CONTADOR}!A1:B2`);
+    if (res.values && res.values.length >= 2) {
+      const añoGuardado = parseInt(res.values[0][1]);
+      const num = parseInt(res.values[1][1]);
+      const base = (añoGuardado === year && !isNaN(num)) ? num : 0;
+      return `NV-${year}-${String(base + 1).padStart(3, '0')}`;
+    }
+  } catch(e) { /* fallback abajo */ }
+  return `NV-${year}-001`;
+}
+
+async function gsCommitNVNumber(nvStr) {
+  const year = new Date().getFullYear();
+  const num = parseInt(nvStr.split('-')[2]) || 1;
+  await gsUpdate(`${TAB.CONTADOR}!A1:B2`, [['Año', year], ['Número', num]]);
 }

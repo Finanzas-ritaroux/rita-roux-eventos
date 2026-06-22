@@ -66,6 +66,25 @@ header{background:var(--negro);display:flex;align-items:stretch;position:sticky;
 .pend-amt{font-size:13px;font-weight:700;color:var(--rojo)}
 
 .empty{text-align:center;padding:30px;color:var(--gris-t);font-size:12px}
+
+/* ── RESPONSIVE (móvil / tablet) ─────────────────────── */
+@media (max-width: 760px){
+  header{flex-wrap:wrap;height:auto;position:static}
+  .hdr-logo{padding:10px 16px;min-width:0}
+  .hdr-info{padding:8px 12px}
+  .hdr-act{width:100%;padding:8px 12px 10px;flex-wrap:wrap;row-gap:8px}
+  .hdr-act .btn{flex:0 0 auto;padding:6px 10px;font-size:9px}
+
+  .main{padding:14px}
+  .banner{flex-wrap:wrap}
+  .cards{grid-template-columns:repeat(2,1fr);gap:10px}
+  .card{padding:14px}
+  .card-val{font-size:24px}
+  .grid2{grid-template-columns:1fr}
+}
+@media (max-width: 460px){
+  .cards{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>

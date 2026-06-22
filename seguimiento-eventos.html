@@ -60,6 +60,26 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
 .fsel{padding:7px 8px;border:1px solid var(--gris-m);font-family:inherit;font-size:11px;border-radius:2px;outline:none;background:var(--blanco);color:var(--negro);cursor:pointer}
 .fsel:focus{border-color:var(--rojo)}
 
+/* ── CALENDARIO ──────────────────────────────────────── */
+.cal-wrap{background:var(--blanco);border:1px solid var(--gris-m);border-radius:3px;margin-bottom:16px;overflow:hidden}
+.cal-hdr{display:flex;align-items:center;gap:6px;padding:9px 14px;border-bottom:1px solid var(--gris-m)}
+.cal-title{flex:1;text-align:center;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);background:var(--negro)}
+.cal-dow span{color:var(--blanco);font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;text-align:center;padding:6px 0}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+.cal-day{min-height:62px;border-right:1px solid var(--gris-m);border-bottom:1px solid var(--gris-m);padding:4px;position:relative}
+.cal-day:nth-child(7n){border-right:none}
+.cal-day.out{background:var(--gris)}
+.cal-day.out .cal-num{color:var(--gris-m)}
+.cal-day.today{background:var(--rojo-cl)}
+.cal-num{font-size:10px;font-weight:700;color:var(--gris-t);margin-bottom:3px}
+.cal-day.today .cal-num{color:var(--rojo)}
+.cal-evt{display:block;font-size:9px;background:var(--negro);color:#fff;border-radius:2px;padding:1px 4px;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .1s}
+.cal-evt:hover{opacity:.75}
+.cal-evt.fin{background:var(--verde)}
+.cal-evt.resv{background:var(--azul)}
+.cal-evt-more{display:block;font-size:8px;color:var(--gris-t);cursor:pointer}
+
 /* ── EVENTS TABLE ────────────────────────────────────── */
 .tbl{background:var(--blanco);border:1px solid var(--gris-m);border-radius:3px;overflow:hidden}
 .tbl table{width:100%;border-collapse:collapse}
@@ -185,6 +205,30 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
 .tipo-matr{background:#FCE4EC;color:#c62828}
 .tipo-foto{background:#E8F5E9;color:#2E7D32}
 .tipo-otro{background:var(--gris-m);color:var(--gris-t)}
+
+/* ── RESPONSIVE (móvil / tablet) ─────────────────────── */
+@media (max-width: 760px){
+  html,body{height:auto;overflow:visible}
+  header{flex-wrap:wrap;height:auto}
+  .hdr-logo{padding:10px 16px;min-width:0}
+  .hdr-info{padding:8px 12px}
+  .hdr-act{width:100%;padding:8px 12px 10px;flex-wrap:wrap;row-gap:8px}
+  .hdr-act .btn{flex:0 0 auto;padding:6px 10px;font-size:9px}
+
+  .app{flex-direction:column;height:auto;overflow:visible}
+  .main{overflow-y:visible}
+  .main-inner{padding:14px}
+  .rp{width:100%;border-left:none;border-top:1px solid var(--gris-m);max-height:none}
+
+  .toolbar .srch{min-width:100%}
+  .fsel{flex:1}
+
+  .tbl{overflow-x:auto}
+  .tbl table{min-width:620px}
+
+  .det-body{padding:12px 14px}
+  .row2{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -214,6 +258,21 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
 
   <div class="main">
     <div class="main-inner">
+
+      <!-- CALENDARIO DE EVENTOS CONFIRMADOS -->
+      <div class="cal-wrap">
+        <div class="cal-hdr">
+          <button class="btn btn-gh" style="font-size:9px;padding:5px 10px" onclick="calPrev()">‹</button>
+          <span class="cal-title" id="cal-title"></span>
+          <button class="btn btn-gh" style="font-size:9px;padding:5px 10px" onclick="calNext()">›</button>
+          <button class="btn btn-gh" style="font-size:9px;padding:5px 10px;margin-left:6px" onclick="calHoy()">Hoy</button>
+          <button class="btn btn-sec" style="font-size:9px;padding:5px 10px;margin-left:auto;background:var(--azul);color:#fff;border-color:var(--azul)" onclick="abrirResvModal()">🍽 + Reserva (Justo)</button>
+        </div>
+        <div class="cal-dow">
+          <span>Dom</span><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
 
       <div class="tab-nav">
         <button class="tbtn act" onclick="setTab('ac',this)">Activos <span class="tbadge" id="b-ac">0</span></button>
@@ -253,6 +312,27 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
   <div class="rp" id="rp"></div>
 </div>
 
+<!-- MODAL RESERVA DE MESA (Justo) -->
+<div id="resv-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9997;align-items:center;justify-content:center">
+  <div style="background:#fff;width:90%;max-width:360px;border-radius:4px;overflow:hidden">
+    <div style="background:var(--negro);color:#fff;padding:12px 16px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center">
+      <span>🍽 Reserva de mesa (Justo)</span>
+      <button onclick="cerrarResvModal()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div class="det-field"><label>Fecha</label><input type="date" id="rv-fecha"></div>
+      <div class="det-field"><label>Nombre / Cliente</label><input type="text" id="rv-nombre" placeholder="Ej: Familia Pérez"></div>
+      <div class="det-field"><label>Nº Personas</label><input type="number" id="rv-personas" placeholder="0"></div>
+      <div class="det-field"><label>Comentarios</label><textarea id="rv-com" rows="2" placeholder="Notas de la reserva en Justo…"></textarea></div>
+    </div>
+    <div style="padding:12px 16px;background:var(--gris);display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-del" id="rv-del-btn" style="display:none" onclick="eliminarReserva()">Eliminar</button>
+      <button class="btn btn-gh" onclick="cerrarResvModal()">Cancelar</button>
+      <button class="btn btn-pr" onclick="guardarReservaModal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════
 // CONSTANTS
@@ -286,6 +366,81 @@ let currentTab='ac', selId=null;
 try{ const cached=JSON.parse(localStorage.getItem(KEY)||'null'); if(Array.isArray(cached)) db=cached; }catch(e){}
 
 function saveCache(){ localStorage.setItem(KEY, JSON.stringify(db)); }
+
+// ─── RESERVAS DE MESA (Justo) — solo visibles en el calendario, sin NV ni facturación ───
+const KEY_RESV = 'rr_reservas_justo_v1';
+let reservas = [];
+try{ const cachedR=JSON.parse(localStorage.getItem(KEY_RESV)||'null'); if(Array.isArray(cachedR)) reservas=cachedR; }catch(e){}
+
+function saveCacheReservas(){ localStorage.setItem(KEY_RESV, JSON.stringify(reservas)); }
+
+async function cargarReservasGS(){
+  if(!gsConnected()) return false;
+  try{
+    const res = await gsGet(`${TAB.RESERVAS}!A2:D`);
+    reservas = (res.values||[]).map(r=>({
+      id: uid(), fecha:r[0]||'', nombre:r[1]||'', personas:r[2]||'', comentarios:r[3]||''
+    }));
+    saveCacheReservas();
+    return true;
+  }catch(e){ console.warn('Error leyendo reservas:', e); return false; }
+}
+
+let saveResvTimer=null;
+function scheduleSaveReservas(){
+  saveCacheReservas();
+  clearTimeout(saveResvTimer);
+  saveResvTimer=setTimeout(guardarReservasGS, 1200);
+}
+
+async function guardarReservasGS(){
+  if(!gsConnected()) return;
+  try{
+    const rows = reservas.map(r=>[r.fecha, r.nombre, r.personas, r.comentarios]);
+    await gsClear(`${TAB.RESERVAS}!A2:D`);
+    if(rows.length) await gsAppend(`${TAB.RESERVAS}!A2:D`, rows);
+  }catch(e){ console.warn('Error guardando reservas:', e); }
+}
+
+let resvEditId=null;
+function abrirResvModal(id){
+  resvEditId=id||null;
+  const r = id ? reservas.find(x=>x.id===id) : null;
+  document.getElementById('rv-fecha').value     = r?.fecha||'';
+  document.getElementById('rv-nombre').value    = r?.nombre||'';
+  document.getElementById('rv-personas').value  = r?.personas||'';
+  document.getElementById('rv-com').value       = r?.comentarios||'';
+  document.getElementById('rv-del-btn').style.display = r ? '' : 'none';
+  document.getElementById('resv-modal').style.display='flex';
+}
+function cerrarResvModal(){ document.getElementById('resv-modal').style.display='none'; resvEditId=null; }
+
+function guardarReservaModal(){
+  const fecha=document.getElementById('rv-fecha').value;
+  const nombre=document.getElementById('rv-nombre').value.trim();
+  const personas=document.getElementById('rv-personas').value;
+  const comentarios=document.getElementById('rv-com').value;
+  if(!fecha||!nombre){ alert('Completa al menos la fecha y el nombre.'); return; }
+  if(resvEditId){
+    const r=reservas.find(x=>x.id===resvEditId);
+    if(r){ r.fecha=fecha; r.nombre=nombre; r.personas=personas; r.comentarios=comentarios; }
+  } else {
+    reservas.push({ id:uid(), fecha, nombre, personas, comentarios });
+  }
+  scheduleSaveReservas();
+  cerrarResvModal();
+  renderCalendario();
+}
+
+function eliminarReserva(){
+  if(!resvEditId) return;
+  if(!confirm('¿Eliminar esta reserva?')) return;
+  const i=reservas.findIndex(x=>x.id===resvEditId);
+  if(i>=0) reservas.splice(i,1);
+  scheduleSaveReservas();
+  cerrarResvModal();
+  renderCalendario();
+}
 
 function actualizarGSBar(){
   const bar = document.getElementById('folderBar');
@@ -436,6 +591,62 @@ function matchF(e){
 }
 
 // ═══════════════════════════════════════════════════════
+// CALENDARIO DE EVENTOS CONFIRMADOS
+// ═══════════════════════════════════════════════════════
+
+let calMes  = new Date().getMonth();
+let calAnio = new Date().getFullYear();
+const MESES_CAL = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+function calPrev(){ calMes--; if(calMes<0){ calMes=11; calAnio--; } renderCalendario(); }
+function calNext(){ calMes++; if(calMes>11){ calMes=0; calAnio++; } renderCalendario(); }
+function calHoy(){ const t=new Date(); calMes=t.getMonth(); calAnio=t.getFullYear(); renderCalendario(); }
+
+function renderCalendario(){
+  const grid=document.getElementById('cal-grid');
+  const title=document.getElementById('cal-title');
+  if(!grid||!title) return;
+  title.textContent = `${MESES_CAL[calMes]} ${calAnio}`;
+
+  // Eventos confirmados (no cancelados) + reservas de mesa (Justo), por fecha
+  const porDia = {};
+  db.filter(e=>e.estado!=='cancelado' && e.fecha).forEach(e=>{
+    (porDia[e.fecha] = porDia[e.fecha] || []).push({...e, __tipo:'evento'});
+  });
+  reservas.filter(r=>r.fecha).forEach(r=>{
+    (porDia[r.fecha] = porDia[r.fecha] || []).push({...r, __tipo:'reserva'});
+  });
+
+  const primerDia = new Date(calAnio, calMes, 1);
+  const inicioGrid = new Date(primerDia);
+  inicioGrid.setDate(1 - primerDia.getDay());
+
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  let html='';
+  for(let i=0;i<42;i++){
+    const d=new Date(inicioGrid);
+    d.setDate(inicioGrid.getDate()+i);
+    const iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const esOut=d.getMonth()!==calMes;
+    const esHoy=d.getTime()===hoy.getTime();
+    const evs=porDia[iso]||[];
+    html+=`<div class="cal-day ${esOut?'out':''} ${esHoy?'today':''}">
+      <div class="cal-num">${d.getDate()}</div>
+      ${evs.slice(0,3).map(e=>{
+        if(e.__tipo==='reserva'){
+          return `<span class="cal-evt resv" title="Reserva Justo: ${escHtmlCal(e.nombre)}${e.personas?' · '+e.personas+' pers.':''}" onclick="abrirResvModal('${e.id}')">🍽 ${escHtmlCal(e.nombre)||'(reserva)'}</span>`;
+        }
+        return `<span class="cal-evt ${e.estado==='finalizado'?'fin':''}" title="${escHtmlCal(e.nombre)} · ${escHtmlCal(e.cliente)}" onclick="selEv('${e.id}')">${escHtmlCal(e.nombre)||'(sin nombre)'}</span>`;
+      }).join('')}
+      ${evs.length>3?`<span class="cal-evt-more">+${evs.length-3} más</span>`:''}
+    </div>`;
+  }
+  grid.innerHTML=html;
+}
+
+function escHtmlCal(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ═══════════════════════════════════════════════════════
 // RENDER TABLES
 // ═══════════════════════════════════════════════════════
 
@@ -504,6 +715,7 @@ function renderTblCancelados(){
 }
 
 function renderMain(){
+  renderCalendario();
   if(currentTab==='ac') renderTblActivos();
   else if(currentTab==='fi') renderTblFinalizados();
   else renderTblCancelados();
@@ -606,7 +818,10 @@ function renderAlertas(){
 // RIGHT PANEL — DETAIL
 // ═══════════════════════════════════════════════════════
 
-function selEv(id){ selId=id; renderMain(); }
+function selEv(id){
+  selId=id; renderMain();
+  if(window.innerWidth<=760) document.getElementById('rp').scrollIntoView({behavior:'smooth',block:'start'});
+}
 
 function renderDetail(id){
   const e=db.find(x=>x.id===id);
@@ -1161,7 +1376,9 @@ function generarPDFNV(nota){
   gsInit(async () => {
     actualizarGSBar();
     const ok = await cargarDesdeGS();
+    await cargarReservasGS();
     if(ok) renderMain();
+    else renderCalendario();
   }, { requireAuth: true });
   renderMain();
 })();

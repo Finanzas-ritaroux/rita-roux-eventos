@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Manual de Uso — Sistema de Eventos Rita Roux</title>
+<style>
+  :root{
+    --rojo:#CC1F1F; --rojo-osc:#A01818; --rojo-cl:#FFF5F5; --rojo-borde:#F0C0C0;
+    --negro:#1A1A1A; --gris:#F4F4F4; --gris-m:#E0E0E0; --gris-t:#666666;
+    --verde:#2E7D32; --azul:#1565C0; --naranja:#E65100;
+  }
+  *{box-sizing:border-box}
+  body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:var(--negro);font-size:12px;line-height:1.55;margin:0}
+  @page{ size:A4; margin:18mm 16mm 16mm 16mm; }
+
+  /* ---------- COVER ---------- */
+  .cover{height:255mm;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;page-break-after:always;position:relative}
+  .cover .bar{position:absolute;top:0;left:-16mm;right:-16mm;height:10mm;background:var(--rojo)}
+  .cover .brand{font-size:15px;letter-spacing:4px;font-weight:900;font-style:italic;text-transform:uppercase;color:var(--rojo);margin-bottom:6px}
+  .cover h1{font-size:30px;font-weight:800;margin:0 0 8px;line-height:1.15}
+  .cover h2{font-size:15px;font-weight:400;color:var(--gris-t);margin:0 0 30px}
+  .cover .meta{font-size:11px;color:var(--gris-t);border-top:1px solid var(--gris-m);padding-top:10px;width:100%;max-width:420px}
+  .cover .meta div{margin-bottom:4px}
+  .cover .roles{display:flex;gap:14px;margin-top:26px}
+  .role-card{border:1px solid var(--gris-m);border-radius:4px;padding:12px 16px;width:200px}
+  .role-card .tag{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--rojo);font-weight:700;margin-bottom:4px}
+  .role-card .who{font-size:13px;font-weight:700;margin-bottom:3px}
+  .role-card .desc{font-size:10.5px;color:var(--gris-t)}
+
+  /* ---------- TOC ---------- */
+  .toc{page-break-after:always}
+  .toc h1{font-size:20px;border-bottom:3px solid var(--rojo);padding-bottom:8px;margin-bottom:16px}
+  .toc ol{list-style:none;margin:0;padding:0;counter-reset:toc}
+  .toc li{counter-increment:toc;padding:7px 0;border-bottom:1px dotted var(--gris-m);font-size:12.5px;display:flex}
+  .toc li::before{content:counter(toc)".";color:var(--rojo);font-weight:700;width:24px;flex-shrink:0}
+  .toc a{color:var(--negro);text-decoration:none}
+  .toc a:hover{color:var(--rojo)}
+
+  /* ---------- SECTIONS ---------- */
+  section{page-break-before:always;padding-top:2mm}
+  section:first-of-type{page-break-before:auto}
+  h1{font-size:19px;color:var(--negro);border-bottom:3px solid var(--rojo);padding-bottom:7px;margin:0 0 14px}
+  h1 .num{color:var(--rojo);margin-right:6px}
+  h2{font-size:14px;color:var(--negro);margin:20px 0 8px;padding:6px 10px;background:var(--gris);border-left:4px solid var(--rojo)}
+  h3{font-size:12.5px;color:var(--rojo-osc);margin:14px 0 6px}
+  p{margin:6px 0}
+  ol.steps{margin:8px 0 14px;padding-left:0;list-style:none;counter-reset:step}
+  ol.steps>li{counter-increment:step;margin:0 0 9px;padding-left:30px;position:relative}
+  ol.steps>li::before{content:counter(step);position:absolute;left:0;top:0;width:20px;height:20px;border-radius:50%;background:var(--rojo);color:#fff;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  ul.bullets{margin:6px 0 14px;padding-left:18px}
+  ul.bullets li{margin-bottom:5px}
+  .btn{display:inline-block;background:var(--negro);color:#fff;font-size:10.5px;font-weight:700;letter-spacing:.3px;padding:2px 8px;border-radius:3px;font-family:monospace}
+  .btn.pr{background:var(--rojo)}
+  .btn.ok{background:var(--verde)}
+  .field{display:inline-block;background:#fff;border:1px solid var(--gris-m);font-size:10.5px;font-family:monospace;padding:1px 7px;border-radius:3px}
+  .file{font-family:monospace;font-size:10.5px;background:var(--gris);padding:1px 6px;border-radius:3px}
+
+  table{width:100%;border-collapse:collapse;margin:8px 0 16px;font-size:11px}
+  table th{background:var(--negro);color:#fff;padding:6px 8px;text-align:left;font-size:9.5px;letter-spacing:.5px;text-transform:uppercase}
+  table td{padding:6px 8px;border-bottom:1px solid var(--gris-m);vertical-align:top}
+  table tr:nth-child(even) td{background:#fafafa}
+
+  .box{border-radius:4px;padding:10px 14px;margin:12px 0;font-size:11px;border-left:4px solid}
+  .box.tip{background:#F0F7FF;border-color:var(--azul)}
+  .box.warn{background:#FFF8E1;border-color:#F9A825}
+  .box.danger{background:var(--rojo-cl);border-color:var(--rojo)}
+  .box.info{background:var(--gris);border-color:var(--gris-t)}
+  .box b.lbl{display:block;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
+  .box.tip b.lbl{color:var(--azul)} .box.warn b.lbl{color:#a66000} .box.danger b.lbl{color:var(--rojo)} .box.info b.lbl{color:var(--gris-t)}
+
+  .sem{display:inline-flex;align-items:center;gap:5px;font-weight:600;font-size:11px}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+
+  .flowmap{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+  .fbox{flex:1;min-width:140px;border:1.5px solid var(--negro);border-radius:4px;padding:9px 10px;font-size:10.5px;text-align:center}
+  .fbox .t{font-weight:700;font-size:11px;margin-bottom:2px}
+  .fbox .s{color:var(--gris-t);font-size:9.5px}
+  .farrow{display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--rojo);font-weight:900}
+
+  .swim{font-size:10.5px}
+  .swim td b{color:var(--rojo-osc)}
+
+  footer.pagefoot{font-size:8.5px;color:var(--gris-t);text-align:center;margin-top:18px}
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<div class="cover">
+  <div class="bar"></div>
+  <div class="brand">Rita&nbsp;Roux</div>
+  <h1>Manual de Uso<br>Sistema de Eventos</h1>
+  <h2>Cotizaciones · Notas de Venta · Seguimiento · Dashboard</h2>
+
+  <div class="roles">
+    <div class="role-card">
+      <div class="tag">Rol 1</div>
+      <div class="who">Productora de Eventos</div>
+      <div class="desc">Skill_ProductoraEventos — negocia, cotiza y coordina la producción del evento (rol de Teresa Díaz).</div>
+    </div>
+    <div class="role-card">
+      <div class="tag">Rol 2</div>
+      <div class="who">Administrador (Finanzas)</div>
+      <div class="desc">Skill_Administrador — recibe la Nota de Venta, factura, cobra y revisa el Dashboard (rol de Gerardo Butrón).</div>
+    </div>
+  </div>
+
+  <div class="meta">
+    <div><b>Empresa:</b> Inversiones Verónica Méndez Risopátrón E.I.R.L. · RUT 76.208.211-K</div>
+    <div><b>Sistema:</b> carpeta <span class="file">Nota de Ventas/</span> — 6 páginas web + conector Google Sheets</div>
+    <div><b>Versión del manual:</b> 19 de junio de 2026</div>
+  </div>
+</div>
+
+<!-- ============ TOC ============ -->
+<div class="toc">
+<h1>Índice</h1>
+<ol>
+<li><a href="#s1">Introducción y roles</a></li>
+<li><a href="#s2">Antes de empezar: conectar Google Sheets</a></li>
+<li><a href="#s3">Mapa del sistema — las 6 pantallas</a></li>
+<li><a href="#s4">Paso a paso — Crear una Cotización</a></li>
+<li><a href="#s5">Paso a paso — Histórico de Cotizaciones</a></li>
+<li><a href="#s6">Paso a paso — Emitir una Nota de Venta</a></li>
+<li><a href="#s7">Paso a paso — Seguimiento de Eventos</a></li>
+<li><a href="#s8">Paso a paso — Actualizar un evento existente</a></li>
+<li><a href="#s9">Paso a paso — Extras y 2ª Nota de Venta</a></li>
+<li><a href="#s10">Paso a paso — Dashboard de Eventos</a></li>
+<li><a href="#s11">El flujo de negocio completo</a></li>
+<li><a href="#s12">Glosario</a></li>
+<li><a href="#s13">Buenas prácticas y advertencias</a></li>
+<li><a href="#s14">Preguntas frecuentes</a></li>
+</ol>
+</div>
+
+<!-- ============ 1. INTRODUCCIÓN ============ -->
+<section id="s1">
+<h1><span class="num">1.</span>Introducción y roles</h1>
+<p>Este manual explica, pantalla por pantalla, cómo usar el sistema web de gestión de eventos de Rita Roux ubicado en la carpeta <span class="file">Nota de Ventas/</span>. El sistema cubre todo el ciclo comercial: desde armar una cotización hasta cobrar el último pago de un evento.</p>
+
+<p>Está pensado para dos roles que trabajan en conjunto sobre las mismas pantallas:</p>
+
+<table>
+<tr><th>Rol</th><th>Persona habitual</th><th>Qué hace en el sistema</th></tr>
+<tr>
+  <td><b>Productora de Eventos</b><br><span style="color:var(--gris-t);font-size:9.5px">Skill_ProductoraEventos</span></td>
+  <td>Teresa Díaz</td>
+  <td>Negocia con el cliente, crea la <b>Cotización</b>, coordina al equipo y registra el avance de proveedores en <b>Seguimiento de Eventos</b>.</td>
+</tr>
+<tr>
+  <td><b>Administrador (Finanzas)</b><br><span style="color:var(--gris-t);font-size:9.5px">Skill_Administrador</span></td>
+  <td>Gerardo Butrón</td>
+  <td>Recibe la cotización aprobada, emite la <b>Nota de Venta</b>, factura, registra los pagos en <b>Seguimiento</b> y revisa el <b>Dashboard</b>.</td>
+</tr>
+</table>
+
+<div class="box info">
+<b class="lbl">Importante</b>
+El sistema <u>no tiene login ni permisos diferenciados</u>: cualquier persona que abra las páginas puede ver y editar cualquier cotización, Nota de Venta o evento. La división de roles de esta tabla es organizacional (un acuerdo de trabajo del equipo), no una restricción técnica del programa.
+</div>
+</section>
+
+<!-- ============ 2. CONECTAR GOOGLE ============ -->
+<section id="s2">
+<h1><span class="num">2.</span>Antes de empezar: conectar Google Sheets</h1>
+<p>Todas las pantallas tienen un botón <span class="btn">☁ Google</span> / <span class="btn">Conectar Google</span> en la parte superior. Esto conecta el navegador con una planilla de Google Sheets compartida que funciona como base de datos central del sistema.</p>
+
+<ol class="steps">
+<li>Haz clic en <span class="btn">☁ Google</span> o <span class="btn">Conectar Google</span>.</li>
+<li>Inicia sesión con la cuenta de Google autorizada de Rita Roux cuando se solicite.</li>
+<li>Verás cambiar el aviso superior de <span class="sem"><span class="dot" style="background:#999"></span>"⚪ No conectado"</span> a <span class="sem"><span class="dot" style="background:var(--verde)"></span>"🟢 Conectado a Google Sheets"</span>.</li>
+</ol>
+
+<div class="box danger">
+<b class="lbl">Por qué es obligatorio, no opcional</b>
+Si <u>no</u> conectas Google, todo lo que hagas (cotizaciones, Notas de Venta, cambios de estado) se guarda <b>solo en el navegador de ese computador</b> (memoria local). La otra persona del equipo, en otro computador, no lo verá. Para que Productora y Administrador vean la misma información, ambos deben trabajar siempre conectados a Google.
+</div>
+
+<p>Una vez conectado, la sesión queda recordada y se renueva sola; normalmente solo se vuelve a pedir conectar si pasaron muchos días sin usar el sistema o si se borraron los datos del navegador.</p>
+</section>
+
+<!-- ============ 3. MAPA DEL SISTEMA ============ -->
+<section id="s3">
+<h1><span class="num">3.</span>Mapa del sistema — las 6 pantallas</h1>
+<p>El sistema está formado por 6 páginas web que se abren en el navegador (doble clic sobre el archivo, o desde los botones de navegación de cada pantalla) y comparten una misma planilla de Google Sheets con 4 pestañas: <span class="file">Presupuestos</span>, <span class="file">NotasVenta</span>, <span class="file">Seguimiento</span> y <span class="file">Contador</span>.</p>
+
+<table>
+<tr><th>Archivo</th><th>Nombre en pantalla</th><th>Para qué sirve</th></tr>
+<tr><td><span class="file">cotizador-rita-roux.html</span></td><td>Cotizador de Eventos</td><td>Armar presupuestos y exportarlos en PDF</td></tr>
+<tr><td><span class="file">historico-presupuestos.html</span></td><td>Histórico de Cotizaciones</td><td>Ver todas las cotizaciones hechas y enviarlas a Nota de Venta</td></tr>
+<tr><td><span class="file">rita-roux-notas-venta.html</span></td><td>Notas de Venta</td><td>Emitir el documento oficial de cierre comercial</td></tr>
+<tr><td><span class="file">seguimiento-eventos.html</span></td><td>Seguimiento de Eventos</td><td>Pantalla "Inicio": estado, cobros y pendientes de cada evento</td></tr>
+<tr><td><span class="file">dashboard.html</span></td><td>Dashboard de Eventos</td><td>Resumen gerencial: facturación, cobros y avance general</td></tr>
+<tr><td><span class="file">flujo-eventos-rita-roux.html</span></td><td>Flujo de Gestión de Eventos</td><td>Página de referencia que explica el proceso comercial completo (ver sección 11)</td></tr>
+</table>
+
+<p>Cómo se conectan entre sí (navegación real con botones, no solo teoría):</p>
+
+<div class="flowmap">
+  <div class="fbox"><div class="t">Cotizador</div><div class="s">crea cotización → PDF</div></div>
+  <div class="farrow">→</div>
+  <div class="fbox"><div class="t">Histórico</div><div class="s">"Emitir NV →"</div></div>
+  <div class="farrow">→</div>
+  <div class="fbox"><div class="t">Notas de Venta</div><div class="s">genera NV → PDF + Drive</div></div>
+  <div class="farrow">→</div>
+  <div class="fbox"><div class="t">Seguimiento</div><div class="s">evento creado solo, cobros</div></div>
+  <div class="farrow">→</div>
+  <div class="fbox"><div class="t">Dashboard</div><div class="s">vista gerencial</div></div>
+</div>
+
+<p>El botón <span class="btn">Inicio</span> que aparece en todas las pantallas siempre vuelve a <b>Seguimiento de Eventos</b>, que funciona como pantalla central del sistema.</p>
+</section>
+
+<!-- ============ 4. COTIZADOR ============ -->
+<section id="s4">
+<h1><span class="num">4.</span>Paso a paso — Crear una Cotización</h1>
+<p><b>Pantalla:</b> Cotizador de Eventos (<span class="file">cotizador-rita-roux.html</span>) · <b>Responsable habitual:</b> Productora de Eventos</p>
+
+<ol class="steps">
+<li>Abre el Cotizador. Si vienes de otra pantalla, usa el botón <span class="btn pr">+ Nueva Cotización</span>. Conecta Google si aún no lo has hecho (sección 2).</li>
+<li>Completa los datos generales en la fila superior: <span class="field">Cliente / Empresa</span>, <span class="field">Tipo de Evento</span> (ej. Matrimonio, Aniversario empresa), <span class="field">Fecha del Evento</span> y <span class="field">Nº Personas</span>. Se guardan solos mientras escribes.</li>
+<li>Usa el <b>catálogo lateral</b> para agregar servicios. Tiene 8 pestañas: Locaciones, Catering, Flores, Audio, Mobiliario, Carpas, Fijos y Personal. Haz clic en el botón <span class="btn">+</span> junto a cada servicio que necesites; se agrega automáticamente a la sección correspondiente (por ejemplo "ARRIENDO LOCAL" o "CATERING") con su precio recomendado.</li>
+<li>¿El servicio no está en el catálogo? Al final de cada pestaña hay un campo de <b>"Ítem personalizado"</b>: escribe el nombre y presiona <span class="btn">+</span>. Se agrega con precio $0 para que lo edites manualmente.</li>
+<li>En la tabla de cada sección, ajusta <span class="field">Cantidad</span> (o Nº Horas / Nº Personas, según la sección) y <span class="field">Valor Unitario</span>. El <b>Valor Neto</b> de la fila se calcula solo (Cantidad × Valor Unitario).</li>
+<li>Una etiqueta <span class="field">rec</span> indica que el precio sigue siendo el recomendado del catálogo; cambia a <span class="field">≠rec</span> en rojo si lo editaste.</li>
+<li>Para quitar una línea, usa el botón <span class="btn">×</span> de esa fila. Para agregar una fila vacía, usa <span class="btn">+ Ítem</span> en el encabezado de la sección.</li>
+<li>Si necesitas una categoría que no existe (ej. "EXTRAS DE ÚLTIMA HORA"), haz clic en <span class="btn">+ Agregar sección adicional</span> y escribe el nombre. Para eliminar una sección completa usa <span class="btn">✕ Quitar</span> (pide confirmación).</li>
+<li>Revisa el cuadro de <b>Totales</b> a la derecha: Subtotal (Neto), IVA (19%) y TOTAL se recalculan automáticamente con cada cambio.</li>
+<li>Cuando esté todo listo, haz clic en <span class="btn pr">👁 Vista Previa y Guardar</span>. Se abre una ventana con el PDF de la cotización ya formateado con el diseño de Rita Roux.</li>
+<li>Revisa el PDF. Si falta corregir algo, presiona <span class="btn">← Volver a editar</span>. Si está correcto, presiona <span class="btn pr">✓ Confirmar y Descargar</span>.</li>
+</ol>
+
+<p>Al confirmar, el sistema hace automáticamente:</p>
+<ul class="bullets">
+<li>Genera un número correlativo de cotización: <span class="field">COT-2026-001</span>, <span class="field">COT-2026-002</span>, etc.</li>
+<li>Descarga el PDF al computador con el nombre <span class="field">Cotizacion_RitaRoux_{cliente}_{fecha}.pdf</span>.</li>
+<li>Guarda el registro en la hoja <span class="file">Presupuestos</span> de Google Sheets (y una copia local de respaldo).</li>
+<li>Te lleva automáticamente a la pantalla <b>Histórico de Cotizaciones</b>.</li>
+</ul>
+
+<div class="box warn">
+<b class="lbl">No existe función "editar"</b>
+Una cotización ya confirmada no se puede modificar desde la pantalla. Si hay un error, la forma correcta de corregirlo es crear una cotización nueva con <span class="btn">↺ Nueva</span>.
+</div>
+</section>
+
+<!-- ============ 5. HISTÓRICO ============ -->
+<section id="s5">
+<h1><span class="num">5.</span>Paso a paso — Histórico de Cotizaciones</h1>
+<p><b>Pantalla:</b> Histórico de Cotizaciones (<span class="file">historico-presupuestos.html</span>) · <b>Para:</b> ambos roles</p>
+
+<ol class="steps">
+<li>Accede desde el botón <span class="btn">Histórico Cotizaciones</span> presente en todas las pantallas.</li>
+<li>Conecta Google (banner superior) para ver <b>todas</b> las cotizaciones de la empresa; sin conexión solo verás las creadas en ese mismo navegador.</li>
+<li>Usa el buscador <span class="field">Buscar por cliente o evento…</span> para filtrar la tabla.</li>
+<li>La tabla muestra: Nº Cotización, Fecha, Cliente, Evento, Fecha del Evento, Nº Personas y Total.</li>
+<li>Para volver a descargar el PDF de una cotización antigua, usa el botón <span class="btn">⬇</span> de su fila.</li>
+<li>Para convertir una cotización aprobada por el cliente en una Nota de Venta oficial, haz clic en <span class="btn pr">Emitir NV →</span> de esa fila. Esto te lleva directo al <b>Paso 2</b> de Notas de Venta con todos los datos de la cotización ya cargados.</li>
+</ol>
+
+<div class="box tip">
+<b class="lbl">Tip</b>
+Esta es la forma más rápida de pasar de cotización a Nota de Venta: no es necesario volver a escribir el desglose de servicios, ya viaja precargado.
+</div>
+</section>
+
+<!-- ============ 6. NOTAS DE VENTA ============ -->
+<section id="s6">
+<h1><span class="num">6.</span>Paso a paso — Emitir una Nota de Venta</h1>
+<p><b>Pantalla:</b> Notas de Venta (<span class="file">rita-roux-notas-venta.html</span>) · <b>Responsable habitual:</b> Administrador (Finanzas)</p>
+<p>Esta pantalla funciona en <b>3 pasos</b> indicados arriba: <i>1. Seleccionar Presupuesto → 2. Completar Datos → 3. Nota Generada</i>.</p>
+
+<h2>Paso 1 — Seleccionar Presupuesto</h2>
+<ol class="steps">
+<li>Si llegaste con el botón <span class="btn pr">Emitir NV →</span> desde el Histórico, este paso se salta solo y avanzas directo al Paso 2.</li>
+<li>Si entras directo a esta pantalla, verás la tabla <b>"Seleccionar Presupuesto Aprobado"</b> con las cotizaciones pendientes (las que aún no tienen Nota de Venta) leídas en vivo desde Google Sheets: Nº Cotización, Fecha, Cliente, Evento y Total.</li>
+<li>Haz clic en <span class="btn pr">Seleccionar →</span> en la fila del cliente correspondiente para avanzar al Paso 2 con sus datos precargados.</li>
+<li>Debajo encontrarás la tarjeta <b>"Historial de Notas de Venta"</b>, con todas las NV ya emitidas (las más recientes primero).</li>
+</ol>
+
+<h2>Paso 2 — Completar Datos</h2>
+<p>Arriba del formulario se muestra, sin poder editarse, el bloque <b>Empresa Emisora</b>: Inversiones Verónica Méndez Risopátrón E.I.R.L., RUT 76.208.211-K, Mac Iver 484 Oficina 105, finanzas@ritaroux.cl, Banco Santander Cta. 90557599.</p>
+
+<h3>Datos Nota de Venta</h3>
+<ul class="bullets">
+<li><span class="field">Nº Nota de Venta</span>: se genera solo (formato <span class="field">NV-2026-001</span>), no se edita.</li>
+<li><span class="field">Nº Cotización</span>: heredado automáticamente de la cotización seleccionada.</li>
+<li><span class="field">Fecha de Emisión</span>: viene con la fecha de hoy, se puede cambiar.</li>
+</ul>
+
+<h3>Datos del Contacto</h3>
+<ul class="bullets">
+<li><span class="field">Nombre del Contacto</span>* y <span class="field">Empresa / Organización</span>* — obligatorios.</li>
+<li><span class="field">Teléfono</span> y <span class="field">Mail de Contacto</span> — opcionales.</li>
+</ul>
+
+<h3>Datos de Facturación</h3>
+<ul class="bullets">
+<li><span class="field">Razón Social</span>* y <span class="field">RUT Empresa</span>* — obligatorios. Al escribir el RUT, el sistema lo formatea solo (puntos y guion) y valida el dígito verificador chileno; si está mal, marca el campo en rojo con el mensaje "RUT inválido".</li>
+<li><span class="field">Giro</span> y <span class="field">Dirección</span> — opcionales.</li>
+<li><span class="field">Mail de Facturación</span> — opcional, pero si se completa debe tener formato de correo válido.</li>
+</ul>
+
+<h3>Datos del Evento</h3>
+<ul class="bullets">
+<li><span class="field">Nombre del Evento</span>, <span class="field">Tipo de Evento</span> (Corporativo / Matrimonio / Fotografía / Otro), <span class="field">Fecha del Evento</span>* (obligatoria) y <span class="field">Nº de Personas</span>.</li>
+</ul>
+
+<h3>Detalle de Servicios</h3>
+<p>Tabla heredada de la cotización (Descripción, Nº Horas, Valor Unitario, Valor Neto). Se puede seguir ajustando aquí antes de emitir el documento final; eliminar una línea con <span class="btn">×</span>. Los Totales (Subtotal, IVA 19%, Total) se recalculan solos.</p>
+
+<ol class="steps">
+<li>Revisa que los 5 campos obligatorios estén completos: Nombre del Contacto, Empresa, Razón Social, RUT y Fecha del Evento.</li>
+<li>Haz clic en <span class="btn pr">Generar Nota de Venta →</span>.</li>
+</ol>
+
+<div class="box danger">
+<b class="lbl">Validación anti-duplicados</b>
+Si la cotización seleccionada ya tiene una Nota de Venta emitida, el sistema lo detecta y bloquea la operación con un aviso. Cada cotización solo puede convertirse en una Nota de Venta una vez (sin contar las "2ª Notas de Venta" de extras, ver sección 9).
+</div>
+
+<h2>Paso 3 — Nota Generada</h2>
+<p>Al generar la Nota de Venta, el sistema hace automáticamente:</p>
+<ul class="bullets">
+<li>Crea el PDF oficial de la Nota de Venta con el diseño de Rita Roux.</li>
+<li>Sube el PDF a Google Drive, a la carpeta <b>"Notas de Venta Rita Roux"</b>.</li>
+<li>Guarda el registro completo en la hoja <span class="file">NotasVenta</span> de Google Sheets.</li>
+<li>Marca la cotización original como <span class="field">convertido</span> (deja de aparecer en el Paso 1 de esta pantalla).</li>
+<li>Crea automáticamente un evento nuevo en <b>Seguimiento de Eventos</b>, con estado "activo", listo para registrar pagos y avance.</li>
+</ul>
+<p>En la ventana de vista previa puedes usar <span class="btn pr">⬇ Descargar PDF</span> o <span class="btn pr">→ Ir a Eventos Activos</span> (te lleva directo a Seguimiento). El botón <span class="btn">Nueva Nota de Venta</span> reinicia el flujo desde el Paso 1.</p>
+
+<div class="box warn">
+<b class="lbl">No se puede editar ni eliminar</b>
+Una vez generada, la Nota de Venta no tiene botón de edición ni de borrado en pantalla. Si hay un error de datos, debe corregirse manualmente en la hoja de Google <span class="file">NotasVenta</span> (y en el PDF/Drive) — coordínalo con quien administra la planilla.
+</div>
+</section>
+
+<!-- ============ 7. SEGUIMIENTO ============ -->
+<section id="s7">
+<h1><span class="num">7.</span>Paso a paso — Seguimiento de Eventos</h1>
+<p><b>Pantalla:</b> Seguimiento de Eventos (<span class="file">seguimiento-eventos.html</span>) — es la pantalla <b>"Inicio"</b> del sistema · <b>Para:</b> ambos roles, uso diario</p>
+
+<h2>Pantalla principal</h2>
+<ul class="bullets">
+<li><b>3 pestañas</b> con contador: <span class="btn">Activos</span>, <span class="btn">Finalizados</span>, <span class="btn">Cancelados</span>.</li>
+<li><b>Buscador</b>: "Buscar evento o cliente…", filtra al instante.</li>
+<li><b>Filtro de estado</b>: Todos los estados / Finalizado / Casi listo / En proceso / Iniciando / Sin iniciar.</li>
+<li><b>Filtro de mes</b>: por mes de la fecha del evento. Botón <span class="btn">✕</span> limpia todos los filtros.</li>
+<li><b>+ Nuevo</b>: crea un evento en blanco directamente en Seguimiento, sin pasar por Cotizador ni Notas de Venta (útil para reservas rápidas que no requieren cotización formal).</li>
+</ul>
+
+<p>La tabla de <b>Activos</b> muestra por evento: Nombre/Cliente, Tipo, Nº de Nota de Venta (con botón <span class="btn">⬇</span> para volver a descargar su PDF), Fecha (con aviso "HOY", "en Xd" o "hace Xd"), Estado (semáforo), Progreso (6 puntos, uno por cada paso de facturación) y monto <b>$ Pendiente</b> (en rojo si falta cobrar, ✓ si está pagado).</p>
+
+<h2>El semáforo de avance</h2>
+<table>
+<tr><th>Color</th><th>Estado</th><th>Significa</th></tr>
+<tr><td><span class="dot" style="background:#CC1F1F"></span></td><td>Sin iniciar</td><td>Ningún paso de facturación completado (0/6)</td></tr>
+<tr><td><span class="dot" style="background:#E65100"></span></td><td>Iniciando</td><td>Al menos 1 paso completado, menos del 33%</td></tr>
+<tr><td><span class="dot" style="background:#F9A825"></span></td><td>En proceso</td><td>Entre 33% y 65% de los pasos completados</td></tr>
+<tr><td><span class="dot" style="background:#43A047"></span></td><td>Casi listo</td><td>66% o más de los pasos completados</td></tr>
+<tr><td><span class="dot" style="background:#2E7D32"></span></td><td>Finalizado</td><td>Los 6 pasos completados (100%)</td></tr>
+</table>
+
+<h2>Panel de Alertas (cuando no hay un evento seleccionado)</h2>
+<p>El panel derecho muestra automáticamente:</p>
+<ul class="bullets">
+<li><b>📅 Próximos eventos (14 días)</b> — eventos sin terminar de facturar que ocurren pronto.</li>
+<li><b>💰 Cobros pendientes</b> — eventos cuya fecha ya pasó y aún tienen saldo por cobrar.</li>
+<li><b>⚙️ Siguiente acción requerida</b> — para cada evento en curso, qué paso sigue y quién es responsable (Gerardo o Teresa).</li>
+<li><b>🔴 Sin acción inicial</b> — eventos donde todavía no se ha marcado ningún paso.</li>
+</ul>
+<p>Haz clic en cualquier tarjeta de alerta para abrir el detalle de ese evento.</p>
+</section>
+
+<!-- ============ 8. ACTUALIZAR EVENTO ============ -->
+<section id="s8">
+<h1><span class="num">8.</span>Paso a paso — Actualizar un evento existente</h1>
+<p><b>Pantalla:</b> Seguimiento de Eventos · panel de detalle (lado derecho)</p>
+
+<ol class="steps">
+<li>En "Seguimiento de Eventos", ubica el evento (pestaña Activos, buscador o filtros) y haz clic en su fila. Se abre el <b>panel de detalle</b> a la derecha.</li>
+<li>Arriba verás el % de avance con su color y, debajo, secciones de información de solo lectura: <b>Tipo</b> de evento y <b>Nº de Nota de Venta</b> (con descarga de PDF), y el <b>Detalle de la Nota de Venta</b> (cliente e ítems, cargado automáticamente desde Google Sheets).</li>
+<li><b>Montos:</b> el campo <span class="field">Depositado</span> es editable — actualízalo cada vez que llegue un pago, con el <u>monto acumulado</u> recibido hasta la fecha (no el abono individual). El <b>Saldo pendiente</b> se recalcula solo (Saldo total − Depositado) y se pone en verde con ✓ cuando llega a $0.</li>
+<li><b>Semáforo:</b> cambia el menú <span class="field">Estado</span> entre 🟡 Activo, 🟢 Finalizado o 🔴 Cancelado según corresponda.</li>
+<li>Marca las casillas de <b>Avance de facturación</b> a medida que ocurren, en este orden sugerido:
+  <table style="margin-top:6px">
+  <tr><th>#</th><th>Paso</th><th>Responsable</th></tr>
+  <tr><td>1</td><td>Factura 50%</td><td>Gerardo</td></tr>
+  <tr><td>2</td><td>Pago 50%</td><td>Gerardo</td></tr>
+  <tr><td>3</td><td>Factura saldo final</td><td>Gerardo</td></tr>
+  <tr><td>4</td><td>Pago saldo final</td><td>Gerardo</td></tr>
+  <tr><td>5</td><td>Fact. proveedores recibidas</td><td>Teresa</td></tr>
+  <tr><td>6</td><td>Proveedores pagados</td><td>Gerardo</td></tr>
+  </table>
+</li>
+<li>Si cambia la fecha del evento, actualízala en <b>"Fecha del evento"</b>.</li>
+<li>Agrega cualquier nota relevante en <b>"Comentarios"</b> (notas internas, no van en ningún PDF).</li>
+<li>Haz clic en <span class="btn pr">Guardar</span> para confirmar los cambios de estado, fecha, comentarios y casillas.</li>
+</ol>
+
+<div class="box tip">
+<b class="lbl">Guardado automático</b>
+Las casillas de facturación y el campo "Depositado" se guardan solos al tocarlos (con una breve demora de sincronización con Google). El botón "Guardar" asegura además que Estado, Fecha y Comentarios queden sincronizados.
+</div>
+
+<div class="box danger">
+<b class="lbl">Eliminar es definitivo</b>
+El botón <span class="btn">Eliminar</span> del panel de detalle borra el registro del evento sin posibilidad de recuperarlo. Úsalo solo para registros creados por error. <span class="btn">Cancelar</span> simplemente cierra el panel.
+</div>
+</section>
+
+<!-- ============ 9. EXTRAS / 2ª NV ============ -->
+<section id="s9">
+<h1><span class="num">9.</span>Paso a paso — Extras y 2ª Nota de Venta</h1>
+<p>Cuando durante la producción del evento se agrega un servicio que no estaba en la cotización original (por ejemplo, horas extra de barra o mobiliario adicional), no se modifica la Nota de Venta ya emitida: se cobra aparte con una <b>segunda Nota de Venta</b> solo por esos ítems.</p>
+
+<ol class="steps">
+<li>Abre el detalle del evento en Seguimiento de Eventos.</li>
+<li>En la sección <b>"Extras (2ª Nota de Venta)"</b>, completa <span class="field">Descripción</span>, <span class="field">Cantidad</span> y <span class="field">Precio</span>, y presiona <span class="btn">+</span>. Repite por cada ítem adicional.</li>
+<li>Puedes quitar un extra agregado por error con el botón <span class="btn">×</span> de su línea.</li>
+<li>Cuando estén todos los extras cargados, haz clic en <span class="btn pr">→ Generar 2ª Nota de Venta</span> (solo se activa si hay al menos un extra) y confirma el monto total que se mostrará.</li>
+</ol>
+
+<p>El sistema genera un nuevo número de NV correlativo, crea su PDF, lo registra en la hoja <span class="file">NotasVenta</span> y descarga el archivo automáticamente. El evento conserva un historial de "NV adicionales emitidas" y la lista de extras se vacía para el siguiente cobro.</p>
+
+<div class="box warn">
+<b class="lbl">Requiere Google conectado</b>
+Generar una 2ª Nota de Venta exige estar conectado a Google Sheets; si no, el sistema avisa y no continúa.
+</div>
+</section>
+
+<!-- ============ 10. DASHBOARD ============ -->
+<section id="s10">
+<h1><span class="num">10.</span>Paso a paso — Dashboard de Eventos</h1>
+<p><b>Pantalla:</b> Dashboard de Eventos (<span class="file">dashboard.html</span>) · <b>Responsable habitual:</b> Administrador (Finanzas), revisión semanal</p>
+
+<ol class="steps">
+<li>Accede con el botón <span class="btn">📊 Dashboard</span> desde Seguimiento de Eventos. El botón <span class="btn pr">Inicio</span> regresa a Seguimiento.</li>
+<li>Conecta Google si aparece el aviso "Conecta con Google para ver los datos reales".</li>
+</ol>
+
+<p>El Dashboard muestra, siempre basado en los eventos <b>activos</b> (salvo donde se indique):</p>
+
+<table>
+<tr><th>Tarjeta / panel</th><th>Qué muestra</th></tr>
+<tr><td><b>Eventos activos</b></td><td>Cantidad de eventos en curso + cuántos están finalizados</td></tr>
+<tr><td><b>Total facturado</b></td><td>Suma del valor contratado de todos los eventos</td></tr>
+<tr><td><b>Cobrado</b></td><td>Suma de lo efectivamente pagado (en verde) + % sobre el total facturado</td></tr>
+<tr><td><b>Por cobrar</b></td><td>Saldo pendiente total (en rojo si hay) + cantidad de eventos con deuda</td></tr>
+<tr><td><b>Facturación por mes</b></td><td>Barras con el monto contratado de eventos activos, agrupado por mes del evento</td></tr>
+<tr><td><b>Distribución por estado</b></td><td>Cuántos eventos activos hay en cada color del semáforo</td></tr>
+<tr><td><b>Eventos por tipo</b></td><td>Conteo por Corporativo / Matrimonio / Fotografía / Otro</td></tr>
+<tr><td><b>Finalizados vs Cancelados</b></td><td>Cantidad y monto histórico de cada uno</td></tr>
+</table>
+
+<p>El Dashboard no tiene filtros propios ni botones de edición — es de solo lectura. Cualquier corrección de datos se hace desde Seguimiento de Eventos (sección 8).</p>
+</section>
+
+<!-- ============ 11. FLUJO DE NEGOCIO ============ -->
+<section id="s11">
+<h1><span class="num">11.</span>El flujo de negocio completo</h1>
+<p>Así se conecta todo lo anterior dentro del proceso comercial real de Rita Roux Eventos:</p>
+
+<div class="flowmap">
+  <div class="fbox"><div class="t">Cliente interesado</div><div class="s">Instagram, WhatsApp, email, referido</div></div>
+  <div class="farrow">→</div>
+  <div class="fbox"><div class="t">Teresa negocia</div><div class="s">Cotizador → PDF de propuesta</div></div>
+  <div class="farrow">→</div>
+  <div class="fbox"><div class="t">Cierre comercial</div><div class="s">Nota de Venta</div></div>
+  <div class="farrow">→</div>
+  <div class="fbox"><div class="t">Gerardo factura y cobra</div><div class="s">Seguimiento + Dashboard</div></div>
+  <div class="farrow">→</div>
+  <div class="fbox"><div class="t">Evento + cierre</div><div class="s">Extras, saldo final, archivo</div></div>
+</div>
+
+<p>Desde el momento en que se emite la <b>Nota de Venta</b>, la responsabilidad pasa de Teresa (negociación y producción) a Gerardo (relación financiera con el cliente, facturación SII con IVA 19% y cobro de los pagos acordados).</p>
+
+<h2>Sobre el archivo "Flujo de Gestión de Eventos"</h2>
+<p>El archivo <span class="file">flujo-eventos-rita-roux.html</span> es una página de <b>referencia y diagrama</b>, no una pantalla operativa: no tiene botones que lleven a las otras 5 páginas. Describe el proceso ideal completo en 5 etapas (Cotización, Presupuesto, Nota de Venta, Evento por hacerse, Evento finalizado) y propone automatizaciones futuras con herramientas externas (WhatsApp Business + ManyChat, Typeform, Airtable, Make/Zapier, Notion).</p>
+
+<div class="box info">
+<b class="lbl">Qué existe hoy vs. qué es roadmap futuro</b>
+De toda esa hoja de ruta, lo que <u>ya está construido y en uso</u> son exactamente dos piezas: el <b>Cotizador</b> (Etapa 2 — "Documento ✓ ya existe") y el <b>generador de Notas de Venta</b> (Etapa 3 — "Documento ✓ ya existe" y "CRM ✓ ya existe"). El resto (auto-respuestas de IA, CRM en Airtable, recordatorios automáticos por WhatsApp, encuestas de satisfacción, etc.) son ideas propuestas para el futuro y <b>no están activas</b> en el sistema actual.
+</div>
+</section>
+
+<!-- ============ 12. GLOSARIO ============ -->
+<section id="s12">
+<h1><span class="num">12.</span>Glosario</h1>
+<table>
+<tr><th>Término</th><th>Significado</th></tr>
+<tr><td><b>NV</b></td><td>Nota de Venta — documento oficial de cierre comercial (formato NV-2026-001)</td></tr>
+<tr><td><b>COT</b></td><td>Número de cotización (formato COT-2026-001)</td></tr>
+<tr><td><b>OC</b></td><td>Orden de Compra — usada por empresas que pagan 30-60 días después de la factura</td></tr>
+<tr><td><b>IVA</b></td><td>Impuesto al Valor Agregado, 19% en Chile</td></tr>
+<tr><td><b>rec / ≠rec</b></td><td>Indica si el precio de un ítem sigue siendo el recomendado del catálogo o fue editado</td></tr>
+<tr><td><b>Estado del evento</b></td><td>Activo / Finalizado / Cancelado — distinto del semáforo de avance</td></tr>
+<tr><td><b>Semáforo</b></td><td>Avance de facturación: Sin iniciar → Iniciando → En proceso → Casi listo → Finalizado</td></tr>
+<tr><td><b>Tipo "Sala"</b></td><td>Variante simplificada (OC, Pago 50%, Pago 100%) que aparece solo si fue cargada manualmente en la planilla de Google; el botón "+ Nuevo" de Seguimiento siempre crea tipo "Evento"</td></tr>
+<tr><td><b>Depositado</b></td><td>Monto acumulado recibido del cliente hasta la fecha (no el último abono individual)</td></tr>
+</table>
+</section>
+
+<!-- ============ 13. BUENAS PRÁCTICAS ============ -->
+<section id="s13">
+<h1><span class="num">13.</span>Buenas prácticas y advertencias</h1>
+<ul class="bullets">
+<li><b>Conéctate a Google siempre</b> al empezar a trabajar — de lo contrario tus cambios solo existen en tu navegador y la otra persona no los verá (sección 2).</li>
+<li><b>Evita editar el mismo evento al mismo tiempo</b> desde dos computadores: el sistema no combina cambios simultáneos, gana el último que presiona "Guardar".</li>
+<li><b>Revisa el RUT y el correo de facturación</b> antes de presionar "Generar Nota de Venta →" — una vez emitida, no se puede editar desde la pantalla.</li>
+<li><b>Revisa el Dashboard semanalmente</b> (Administrador) para detectar cobros atrasados a tiempo.</li>
+<li><b>Antes de "Eliminar" un evento</b> en Seguimiento, confirma que no tenga pagos pendientes de registrar: es una acción irreversible.</li>
+<li><b>Usa "Extras"</b> para cualquier cobro adicional posterior a la Nota de Venta original, en vez de intentar modificarla.</li>
+</ul>
+</section>
+
+<!-- ============ 14. FAQ ============ -->
+<section id="s14">
+<h1><span class="num">14.</span>Preguntas frecuentes</h1>
+
+<h3>"Dice 'No conectado a Google Sheets'"</h3>
+<p>Haz clic en <span class="btn">Conectar Google</span> / <span class="btn">☁ Google</span> e inicia sesión con la cuenta autorizada de Rita Roux.</p>
+
+<h3>"No aparece mi cotización en el Paso 1 de Notas de Venta"</h3>
+<p>Revisa que Google esté conectado. Si la cotización ya fue convertida antes (estado "convertido"), deja de aparecer en la lista a propósito — búscala en el Historial de Notas de Venta de esa misma pantalla.</p>
+
+<h3>"El RUT me marca error"</h3>
+<p>Escribe solo los números seguidos del dígito verificador (o la letra K); el sistema agrega los puntos y el guion automáticamente y valida que el dígito verificador sea correcto.</p>
+
+<h3>"Generé una Nota de Venta con un dato mal escrito"</h3>
+<p>No se puede editar desde la pantalla. Corrígelo manualmente en la hoja de Google <span class="file">NotasVenta</span> (y regenera el PDF si es necesario), o coordínalo con el Administrador.</p>
+
+<h3>"¿Cómo registro un pago parcial?"</h3>
+<p>En el panel de detalle del evento (Seguimiento de Eventos), actualiza el campo <span class="field">Depositado</span> con el monto acumulado recibido hasta la fecha.</p>
+
+<h3>"¿Cómo cobro algo adicional que no estaba en la cotización original?"</h3>
+<p>Usa la sección "Extras" en el panel de detalle del evento y genera una 2ª Nota de Venta (sección 9).</p>
+
+<h3>"¿Quién debe marcar cada casilla del semáforo de facturación?"</h3>
+<p>El sistema lo indica junto a cada paso: Gerardo es responsable de las facturas y pagos del cliente y de pagar a proveedores; Teresa es responsable de recopilar las facturas de los proveedores.</p>
+
+</section>
+
+</body>
+</html>

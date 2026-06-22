@@ -11,6 +11,7 @@ const TAB = {
   NOTAS_VENTA  : 'NotasVenta',
   CONTADOR     : 'Contador',
   SEG          : 'Seguimiento',
+  RESERVAS     : 'Reservas',
 };
 
 let gs_token  = null;
@@ -93,7 +94,7 @@ function _gsShowAuthBanner() {
   if (document.getElementById('_gs_banner')) return;
   const el = document.createElement('div');
   el.id = '_gs_banner';
-  el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#CC1F1F;color:#fff;display:flex;align-items:center;justify-content:center;gap:14px;padding:9px 16px;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;font-size:12px;font-weight:600;letter-spacing:.3px';
+  el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#CC1F1F;color:#fff;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;row-gap:4px;gap:10px;padding:8px 12px;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;font-size:12px;font-weight:600;letter-spacing:.3px;text-align:center;box-sizing:border-box';
   el.innerHTML = `<span>Sesión expirada —</span>
     <button onclick="gsAuth()" style="padding:5px 16px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:#fff;color:#CC1F1F;border:none;cursor:pointer;font-family:inherit;border-radius:2px">Reconectar →</button>`;
   document.body.insertBefore(el, document.body.firstChild);
@@ -168,6 +169,7 @@ async function gsInitSheet() {
     { name: TAB.PRESUPUESTOS, hdr: ['Nº Cotización','Fecha','Cliente','Evento','Fecha Evento','Nº Personas','Subtotal','IVA','Total','Estado','Servicios'] },
     { name: TAB.NOTAS_VENTA,  hdr: ['Nº NV','Nº Cotización','Fecha Emisión','Nombre Contacto','Empresa','Teléfono','Mail Contacto','Razón Social','RUT','Giro','Dirección','Mail Facturación','Nombre Evento','Fecha Evento','Nº Personas','Subtotal','IVA','Total'] },
     { name: TAB.SEG,          hdr: ['Estado','Tipo','Nº NV','Nombre','Cliente','Fecha','OC','Factura 50%','Pago 50%','Factura 100%','Pago 100%','Fact. Prov. Recibidas','Fact. Prov. Pagadas','Total','Pagado','Diferencia','Comentarios','Extras','Extras NV'] },
+    { name: TAB.RESERVAS,     hdr: ['Fecha','Nombre / Cliente','Nº Personas','Comentarios'] },
   ];
   for (const t of tabs) {
     try {

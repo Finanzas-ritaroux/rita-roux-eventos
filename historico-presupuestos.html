@@ -52,6 +52,23 @@ header{background:var(--negro);display:flex;align-items:stretch;position:sticky;
 .empty{text-align:center;padding:60px 20px;color:var(--gris-t)}
 .empty .ico{font-size:36px;margin-bottom:10px}
 .cot-tag{font-family:monospace;font-size:11px;background:var(--gris);padding:2px 6px;border-radius:2px;color:var(--negro);font-weight:600}
+
+/* ── RESPONSIVE (móvil / tablet) ─────────────────────── */
+@media (max-width: 760px){
+  header{flex-wrap:wrap;height:auto;position:static}
+  .hdr-logo{padding:10px 16px;min-width:0}
+  .hdr-info{padding:8px 12px}
+  .hdr-act{width:100%;padding:8px 12px 10px;flex-wrap:wrap;row-gap:8px}
+  .hdr-act .btn{flex:0 0 auto;padding:6px 10px;font-size:9px}
+
+  .main{padding:14px}
+  .banner{flex-wrap:wrap}
+  .sum-c{min-width:120px;padding:10px 14px}
+  .sum-v{font-size:18px}
+
+  .tbl{overflow-x:auto}
+  .tbl table{min-width:680px}
+}
 </style>
 </head>
 <body>

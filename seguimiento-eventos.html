@@ -1281,14 +1281,27 @@ async function descargarNVPDF(nvNum){
 // ═══════════════════════════════════════════════════════
 // LISTA DE COMPRAS (por evento)
 // ═══════════════════════════════════════════════════════
-// TODO: cuando se entregue el listado real de ingredientes/proveedores/costos
-// por producto, poblar RECETAS así:
-//   RECETAS['nombre normalizado del producto'] = ['Harina','Huevos','Leche',...];
-// Mientras esté vacío para un producto, se usan placeholders "Ingrediente 1/2/3".
-const RECETAS = {};
+// Los ingredientes por servicio se editan en "Editar Servicios" (catálogo en
+// Google Sheets). Mientras un servicio no tenga ingredientes definidos ahí,
+// se usan placeholders "Ingrediente 1/2/3".
+let RECETAS = {};
 const N_INGREDIENTES_PLACEHOLDER = 3;
 
 function _normProd(s){ return String(s||'').trim().toLowerCase(); }
+
+async function cargarRecetasGS(){
+  if(!gsConnected()) return;
+  try{
+    const rows=await gsCargarCatalogo();
+    if(!rows) return;
+    const catalogo=gsFilasACatalogo(rows);
+    const recetas={};
+    catalogo.forEach(cat=>(cat.items||[]).forEach(it=>{
+      if(it.ingredientes && it.ingredientes.length) recetas[_normProd(it.name)]=it.ingredientes;
+    }));
+    RECETAS=recetas;
+  }catch(e){ console.warn('Error cargando recetas del catálogo:', e); }
+}
 
 function obtenerIngredientesProducto(desc){
   const key=_normProd(desc);
@@ -1501,6 +1514,7 @@ function generarPDFNV(nota){
     actualizarGSBar();
     const ok = await cargarDesdeGS();
     await cargarReservasGS();
+    await cargarRecetasGS();
     if(ok) renderMain();
     else renderCalendario();
   }, { requireAuth: true });

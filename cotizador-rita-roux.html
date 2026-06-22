@@ -294,112 +294,11 @@ header { background: var(--negro); display: flex; align-items: stretch; position
 
 <script>
 // ═══════════════════════════════════════════════════════
-// CATÁLOGO COMPLETO — precios recomendados basados en historial
+// CATÁLOGO DE SERVICIOS — editable desde "Editar Servicios".
+// Mientras no haya conexión a Google, se usa el respaldo local (gsSeedToCatalogo);
+// al conectar, se sincroniza con la hoja "Catalogo" (ver gsCargarCatalogo en gsheets.js).
 // ═══════════════════════════════════════════════════════
-const CATALOG_CATS = [
-  {
-    id: 'locaciones', label: '🏛 Locaciones', section: 'ARRIENDO LOCAL', qtyLabel: 'Nº horas',
-    items: [
-      { name: 'La Pérgola',           rec: 300000, unit: 'hora' },
-      { name: 'Salón Victoriano',     rec: 100000, unit: 'hora' },
-      { name: 'Parque Principal',     rec: 380000, unit: 'hora' },
-      { name: 'Ginko',                rec: 280000, unit: 'hora' },
-      { name: 'Invernadero',          rec: 200000, unit: 'hora' },
-      { name: 'La Carpa de Rita',     rec: 500000, unit: 'hora' },
-      { name: 'Sala de Yoga',         rec: 150000, unit: 'hora' },
-      { name: 'Cochera',              rec: 500000, unit: 'flat' },
-      { name: 'Montaje / Desmontaje', rec: 100000, unit: 'hora' },
-    ]
-  },
-  {
-    id: 'catering', label: '🍽 Catering', section: 'CATERING', qtyLabel: 'Nº personas',
-    items: [
-      // Desayunos
-      { name: 'Desayuno Rita',                          rec: 20000,  unit: 'persona', group: 'Desayunos' },
-      { name: 'Desayuno Rita Gozadora',                 rec: 28000,  unit: 'persona', group: 'Desayunos' },
-      { name: 'Desayuno a la Carta',                    rec: 25000,  unit: 'persona', group: 'Desayunos' },
-      // Brunch
-      { name: 'Brunch del Parque',                      rec: 35500,  unit: 'persona', group: 'Brunch' },
-      { name: 'Brunch Royale',                          rec: 35000,  unit: 'persona', group: 'Brunch' },
-      // Almuerzos
-      { name: 'Almuerzo del Parque',                    rec: 40000,  unit: 'persona', group: 'Almuerzos' },
-      { name: 'Almuerzo a la Carta',                    rec: 30000,  unit: 'persona', group: 'Almuerzos' },
-      { name: 'Lunch Club',                             rec: 28000,  unit: 'persona', group: 'Almuerzos' },
-      // Coffee
-      { name: 'Coffee Break',                           rec: 12000,  unit: 'persona', group: 'Coffee' },
-      { name: 'Coffee de Bienvenida',                   rec: 15000,  unit: 'persona', group: 'Coffee' },
-      { name: 'Estación Café (permanente)',              rec: 150000, unit: 'flat',    group: 'Coffee' },
-      // Té
-      { name: 'Hora del Té',                            rec: 25000,  unit: 'persona', group: 'Otros' },
-      // Cócteles
-      { name: 'Cóctel Roux (4 bocados)',                rec: 40000,  unit: 'persona', group: 'Cócteles' },
-      { name: 'Cóctel Roux (8 sal. + 4 dul.)',          rec: 60000,  unit: 'persona', group: 'Cócteles' },
-      { name: 'Cóctel Sri Lanka (10 sal. + 5 dul.)',    rec: 68000,  unit: 'persona', group: 'Cócteles' },
-      { name: 'Cóctel 15 bocados',                      rec: 68000,  unit: 'persona', group: 'Cócteles' },
-      // Extras flat
-      { name: 'Fee Banquetería',                        rec: 350000, unit: 'flat',    group: 'Extras' },
-      { name: 'Fee Catering Externo',                   rec: 150000, unit: 'flat',    group: 'Extras' },
-      { name: 'Tabla de Quesos',                        rec: 150000, unit: 'flat',    group: 'Extras' },
-      { name: 'Descorche',                              rec: 10000,  unit: 'botella', group: 'Extras' },
-    ]
-  },
-  {
-    id: 'flores', label: '🌸 Flores', section: 'SERVICIOS GENERALES Y EQUIPO', qtyLabel: 'Cantidad',
-    items: [
-      { name: 'Flores Básicas',                           rec: 100000,  unit: 'flat' },
-      { name: 'Flores y Ambientación Esenciales',         rec: 200000,  unit: 'flat' },
-      { name: 'Flores Jardín en Flor',                    rec: 380000,  unit: 'flat' },
-      { name: 'Flores Jardín Soñado',                     rec: 500000,  unit: 'flat' },
-      { name: 'Escenografía Botánica',                    rec: 800000,  unit: 'flat' },
-    ]
-  },
-  {
-    id: 'audio', label: '🔊 Audio', section: 'SERVICIOS GENERALES Y EQUIPO', qtyLabel: 'Cantidad',
-    items: [
-      { name: 'Pantalla 55"',                  rec: 50000,  unit: 'flat' },
-      { name: 'Audio / Amplificación',         rec: 250000, unit: 'flat' },
-      { name: 'Audio música ambiente',         rec: 350000, unit: 'flat' },
-      { name: 'Pantalla 55" + Audio',          rec: 250000, unit: 'flat' },
-    ]
-  },
-  {
-    id: 'mobiliario', label: '🪑 Mobiliario', section: 'SERVICIOS GENERALES Y EQUIPO', qtyLabel: 'Cantidad',
-    items: [
-      { name: 'Sillas crossback (25 u.)',             rec: 170000, unit: 'flat' },
-      { name: 'Sillas crossback',                     rec: 260000, unit: 'flat' },
-      { name: 'Mesas redondas + sillas crossback',    rec: 380000, unit: 'flat' },
-      { name: 'Arriendo mobiliario completo',         rec: 450000, unit: 'flat' },
-      { name: 'Lounge 6 personas',                    rec: 180000, unit: 'hora' },
-      { name: 'Estufas (c/u)',                        rec: 65000,  unit: 'unidad' },
-      { name: 'Barras (c/u)',                         rec: 50000,  unit: 'unidad' },
-      { name: 'Lámparas de lágrima (10 u.)',          rec: 450000, unit: 'flat' },
-    ]
-  },
-  {
-    id: 'carpas', label: '⛺ Carpas', section: 'SERVICIOS GENERALES Y EQUIPO', qtyLabel: 'Cantidad',
-    items: [
-      { name: 'Carpa básica',                rec: 850000,  unit: 'flat' },
-      { name: 'Carpa Ginko ceremonial',      rec: 1800000, unit: 'flat' },
-      { name: 'Carpa Jardín Principal',      rec: 2200000, unit: 'flat' },
-    ]
-  },
-  {
-    id: 'fijos', label: '🧹 Fijos', section: 'SERVICIOS GENERALES Y EQUIPO', qtyLabel: 'Cantidad',
-    items: [
-      { name: 'Housekeeping (evento grande)', rec: 180000, unit: 'flat' },
-      { name: 'Housekeeping (mediano)',        rec: 100000, unit: 'flat' },
-      { name: 'Housekeeping (mínimo)',         rec: 50000,  unit: 'flat' },
-      { name: 'Servicio Mesera',               rec: 50000,  unit: 'flat' },
-    ]
-  },
-  {
-    id: 'personal', label: '👤 Personal', section: 'SERVICIOS GENERALES Y EQUIPO', qtyLabel: 'Cantidad',
-    items: [
-      { name: 'Bartender',  rec: 60000, unit: 'hora' },
-      { name: 'Mesero/a',   rec: 50000, unit: 'hora' },
-    ]
-  },
-];
+let CATALOG_CATS = gsSeedToCatalogo();
 
 // ═══════════════════════════════════════════════════════
 // STATE
@@ -1139,9 +1038,11 @@ window.onload = () => {
   localStorage.removeItem('rr_cotizador_meta');
   renderCatalog();
   renderQuote();
-  gsInit(() => {
+  gsInit(async () => {
     const btn = document.getElementById('btn-google-cot');
     if (btn) btn.textContent = '✓ Google';
+    const rows = await gsCargarCatalogo();
+    if (rows) { CATALOG_CATS = gsFilasACatalogo(rows); renderCatalog(); }
   }, { requireAuth: true });
 };
 </script>

@@ -12,7 +12,136 @@ const TAB = {
   CONTADOR     : 'Contador',
   SEG          : 'Seguimiento',
   RESERVAS     : 'Reservas',
+  CATALOGO     : 'Catalogo',
 };
+
+// ─── CATÁLOGO DE SERVICIOS (cotizador + editar-servicios + lista de compras) ───
+// Categorías fijas (estructura), los SERVICIOS dentro de cada una sí son editables.
+const CATALOGO_CATEGORIAS = [
+  { id:'locaciones', label:'🏛 Locaciones', section:'ARRIENDO LOCAL',               qtyLabel:'Nº horas' },
+  { id:'catering',   label:'🍽 Catering',   section:'CATERING',                     qtyLabel:'Nº personas' },
+  { id:'flores',     label:'🌸 Flores',     section:'SERVICIOS GENERALES Y EQUIPO', qtyLabel:'Cantidad' },
+  { id:'audio',      label:'🔊 Audio',      section:'SERVICIOS GENERALES Y EQUIPO', qtyLabel:'Cantidad' },
+  { id:'generales',  label:'🧰 Generales',  section:'SERVICIOS GENERALES Y EQUIPO', qtyLabel:'Cantidad' },
+];
+
+// Catálogo por defecto — se usa como respaldo sin conexión y para sembrar la hoja
+// "Catalogo" la primera vez que se conecta (incluye mobiliario+carpas+fijos+personal
+// ya unidos en "generales").
+const CATALOGO_SEED = [
+  { cat:'locaciones', name:'La Pérgola',                           rec:300000,  unit:'hora' },
+  { cat:'locaciones', name:'Salón Victoriano',                     rec:100000,  unit:'hora' },
+  { cat:'locaciones', name:'Parque Principal',                     rec:380000,  unit:'hora' },
+  { cat:'locaciones', name:'Ginko',                                rec:280000,  unit:'hora' },
+  { cat:'locaciones', name:'Invernadero',                          rec:200000,  unit:'hora' },
+  { cat:'locaciones', name:'La Carpa de Rita',                     rec:500000,  unit:'hora' },
+  { cat:'locaciones', name:'Sala de Yoga',                         rec:150000,  unit:'hora' },
+  { cat:'locaciones', name:'Cochera',                              rec:500000,  unit:'flat' },
+  { cat:'locaciones', name:'Montaje / Desmontaje',                 rec:100000,  unit:'hora' },
+
+  { cat:'catering', name:'Desayuno Rita',                          rec:20000,  unit:'persona', group:'Desayunos' },
+  { cat:'catering', name:'Desayuno Rita Gozadora',                 rec:28000,  unit:'persona', group:'Desayunos' },
+  { cat:'catering', name:'Desayuno a la Carta',                    rec:25000,  unit:'persona', group:'Desayunos' },
+  { cat:'catering', name:'Brunch del Parque',                      rec:35500,  unit:'persona', group:'Brunch' },
+  { cat:'catering', name:'Brunch Royale',                          rec:35000,  unit:'persona', group:'Brunch' },
+  { cat:'catering', name:'Almuerzo del Parque',                    rec:40000,  unit:'persona', group:'Almuerzos' },
+  { cat:'catering', name:'Almuerzo a la Carta',                    rec:30000,  unit:'persona', group:'Almuerzos' },
+  { cat:'catering', name:'Lunch Club',                             rec:28000,  unit:'persona', group:'Almuerzos' },
+  { cat:'catering', name:'Coffee Break',                           rec:12000,  unit:'persona', group:'Coffee' },
+  { cat:'catering', name:'Coffee de Bienvenida',                   rec:15000,  unit:'persona', group:'Coffee' },
+  { cat:'catering', name:'Estación Café (permanente)',             rec:150000, unit:'flat',    group:'Coffee' },
+  { cat:'catering', name:'Hora del Té',                            rec:25000,  unit:'persona', group:'Otros' },
+  { cat:'catering', name:'Cóctel Roux (4 bocados)',                rec:40000,  unit:'persona', group:'Cócteles' },
+  { cat:'catering', name:'Cóctel Roux (8 sal. + 4 dul.)',          rec:60000,  unit:'persona', group:'Cócteles' },
+  { cat:'catering', name:'Cóctel Sri Lanka (10 sal. + 5 dul.)',    rec:68000,  unit:'persona', group:'Cócteles' },
+  { cat:'catering', name:'Cóctel 15 bocados',                      rec:68000,  unit:'persona', group:'Cócteles' },
+  { cat:'catering', name:'Fee Banquetería',                        rec:350000, unit:'flat',    group:'Extras' },
+  { cat:'catering', name:'Fee Catering Externo',                   rec:150000, unit:'flat',    group:'Extras' },
+  { cat:'catering', name:'Tabla de Quesos',                        rec:150000, unit:'flat',    group:'Extras' },
+  { cat:'catering', name:'Descorche',                              rec:10000,  unit:'botella', group:'Extras' },
+
+  { cat:'flores', name:'Flores Básicas',                           rec:100000, unit:'flat' },
+  { cat:'flores', name:'Flores y Ambientación Esenciales',         rec:200000, unit:'flat' },
+  { cat:'flores', name:'Flores Jardín en Flor',                    rec:380000, unit:'flat' },
+  { cat:'flores', name:'Flores Jardín Soñado',                     rec:500000, unit:'flat' },
+  { cat:'flores', name:'Escenografía Botánica',                    rec:800000, unit:'flat' },
+
+  { cat:'audio', name:'Pantalla 55"',                              rec:50000,  unit:'flat' },
+  { cat:'audio', name:'Audio / Amplificación',                     rec:250000, unit:'flat' },
+  { cat:'audio', name:'Audio música ambiente',                     rec:350000, unit:'flat' },
+  { cat:'audio', name:'Pantalla 55" + Audio',                      rec:250000, unit:'flat' },
+
+  { cat:'generales', name:'Sillas crossback (25 u.)',              rec:170000,  unit:'flat' },
+  { cat:'generales', name:'Sillas crossback',                      rec:260000,  unit:'flat' },
+  { cat:'generales', name:'Mesas redondas + sillas crossback',     rec:380000,  unit:'flat' },
+  { cat:'generales', name:'Arriendo mobiliario completo',          rec:450000,  unit:'flat' },
+  { cat:'generales', name:'Lounge 6 personas',                     rec:180000,  unit:'hora' },
+  { cat:'generales', name:'Estufas (c/u)',                         rec:65000,   unit:'unidad' },
+  { cat:'generales', name:'Barras (c/u)',                          rec:50000,   unit:'unidad' },
+  { cat:'generales', name:'Lámparas de lágrima (10 u.)',           rec:450000,  unit:'flat' },
+  { cat:'generales', name:'Carpa básica',                          rec:850000,  unit:'flat' },
+  { cat:'generales', name:'Carpa Ginko ceremonial',                rec:1800000, unit:'flat' },
+  { cat:'generales', name:'Carpa Jardín Principal',                rec:2200000, unit:'flat' },
+  { cat:'generales', name:'Housekeeping (evento grande)',          rec:180000,  unit:'flat' },
+  { cat:'generales', name:'Housekeeping (mediano)',                rec:100000,  unit:'flat' },
+  { cat:'generales', name:'Housekeeping (mínimo)',                 rec:50000,   unit:'flat' },
+  { cat:'generales', name:'Servicio Mesera',                       rec:50000,   unit:'flat' },
+  { cat:'generales', name:'Bartender',                             rec:60000,   unit:'hora' },
+  { cat:'generales', name:'Mesero/a',                              rec:50000,   unit:'hora' },
+];
+
+// Filas planas (Sheets) → estructura anidada por categoría
+function gsFilasACatalogo(rows) {
+  const porCat = {};
+  (rows||[]).forEach(r => {
+    const catId = r[0] || 'generales';
+    let ingredientes=[]; try{ ingredientes=JSON.parse(r[5]||'[]'); }catch(e){}
+    const item = { name:r[1]||'', rec:+r[2]||0, unit:r[3]||'flat', group:r[4]||'', ingredientes };
+    (porCat[catId] = porCat[catId] || []).push(item);
+  });
+  return CATALOGO_CATEGORIAS.map(c => ({ ...c, items: porCat[c.id]||[] }));
+}
+
+// Estructura anidada → filas planas (para guardar)
+function gsCatalogoAFilas(catalogo) {
+  const rows = [];
+  (catalogo||[]).forEach(cat => {
+    (cat.items||[]).forEach(it => {
+      rows.push([cat.id, it.name||'', it.rec||0, it.unit||'flat', it.group||'', JSON.stringify(it.ingredientes||[])]);
+    });
+  });
+  return rows;
+}
+
+// Catálogo por defecto (sin Sheets) — usa el mismo parser para garantizar la misma forma
+function gsSeedToCatalogo() {
+  const rows = CATALOGO_SEED.map(s => [s.cat, s.name, s.rec, s.unit, s.group||'', '[]']);
+  return gsFilasACatalogo(rows);
+}
+
+// Lee el catálogo desde la hoja "Catalogo"; si está vacía, la siembra con CATALOGO_SEED.
+async function gsCargarCatalogo() {
+  if (!gsConnected()) return null;
+  try {
+    const res = await gsGet(`${TAB.CATALOGO}!A2:F`);
+    let rows = res.values || [];
+    if (!rows.length) {
+      const seedRows = CATALOGO_SEED.map(s => [s.cat, s.name, s.rec, s.unit, s.group||'', '[]']);
+      await gsAppend(`${TAB.CATALOGO}!A2:F`, seedRows);
+      rows = seedRows;
+    }
+    return rows;
+  } catch(e) { console.warn('Error cargando catálogo:', e); return null; }
+}
+
+async function gsGuardarCatalogo(catalogo) {
+  if (!gsConnected()) return;
+  try {
+    const rows = gsCatalogoAFilas(catalogo);
+    await gsClear(`${TAB.CATALOGO}!A2:F`);
+    if (rows.length) await gsAppend(`${TAB.CATALOGO}!A2:F`, rows);
+  } catch(e) { console.warn('Error guardando catálogo:', e); }
+}
 
 let gs_token  = null;
 let gs_client = null;
@@ -170,6 +299,7 @@ async function gsInitSheet() {
     { name: TAB.NOTAS_VENTA,  hdr: ['Nº NV','Nº Cotización','Fecha Emisión','Nombre Contacto','Empresa','Teléfono','Mail Contacto','Razón Social','RUT','Giro','Dirección','Mail Facturación','Nombre Evento','Fecha Evento','Nº Personas','Subtotal','IVA','Total'] },
     { name: TAB.SEG,          hdr: ['Estado','Tipo','Nº NV','Nombre','Cliente','Fecha','OC','Factura 50%','Pago 50%','Factura 100%','Pago 100%','Fact. Prov. Recibidas','Fact. Prov. Pagadas','Total','Pagado','Diferencia','Comentarios','Extras','Extras NV','Compras'] },
     { name: TAB.RESERVAS,     hdr: ['Fecha','Nombre / Cliente','Nº Personas','Comentarios'] },
+    { name: TAB.CATALOGO,     hdr: ['Categoría','Nombre Servicio','Precio Recomendado','Unidad','Grupo','Ingredientes'] },
   ];
   for (const t of tabs) {
     try {

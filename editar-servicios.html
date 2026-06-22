@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rita Roux · Editar Servicios</title>
+<script src="gsheets.js"></script>
+<link rel="stylesheet" href="theme.css">
+<style>
+body{min-height:100vh}
+header{background:var(--negro);display:flex;align-items:stretch;position:sticky;top:0;z-index:100}
+.hdr-logo{background:var(--rojo);padding:14px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:110px}
+.hdr-logo .lt{color:var(--negro);font-size:18px;font-weight:900;letter-spacing:3px;font-style:italic;text-transform:uppercase;line-height:1}
+.hdr-logo .ls{color:var(--negro);font-size:7px;letter-spacing:3px;text-transform:uppercase;margin-top:3px;opacity:.65}
+.hdr-info{padding:14px 22px;display:flex;flex-direction:column;justify-content:center;flex:1}
+.hdr-info h1{color:var(--blanco);font-size:15px;font-weight:300;letter-spacing:2px;text-transform:uppercase}
+.hdr-info p{color:var(--rojo);font-size:10px;letter-spacing:1px;margin-top:2px}
+.hdr-act{display:flex;align-items:center;gap:8px;padding:0 22px}
+.btn{padding:8px 16px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:none;font-family:inherit;border-radius:2px;transition:all .15s}
+.btn-sec{background:transparent;color:var(--blanco);border:1.5px solid rgba(255,255,255,.3)}.btn-sec:hover{border-color:var(--blanco)}
+.btn-pr{background:var(--rojo);color:var(--blanco)}.btn-pr:hover{background:var(--rojo-osc)}
+.btn-gh{background:transparent;color:var(--gris-t);border:1.5px solid var(--gris-m)}.btn-gh:hover{border-color:var(--negro);color:var(--negro)}
+.btn-del{background:#7f0000;color:var(--blanco)}.btn-del:hover{background:#4a0000}
+
+.main{max-width:1100px;margin:0 auto;padding:22px 24px}
+
+.banner{background:var(--blanco);border:1px solid var(--gris-m);border-radius:4px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:14px}
+.banner.ok{border-color:var(--verde);background:var(--verde-bg)}
+.banner-text{flex:1;font-size:12px;color:var(--gris-t)}
+.banner.ok .banner-text{color:var(--verde)}
+
+.cat-tabs-bar{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.cat-tab-btn{padding:9px 16px;font-size:11px;font-weight:700;letter-spacing:.5px;cursor:pointer;background:var(--blanco);border:1px solid var(--gris-m);border-radius:20px;color:var(--gris-t);transition:all .15s;font-family:inherit}
+.cat-tab-btn:hover{border-color:var(--rojo);color:var(--rojo)}
+.cat-tab-btn.act{background:var(--negro);border-color:var(--negro);color:var(--blanco)}
+.cat-tab-btn .cnt{display:inline-block;background:rgba(255,255,255,.2);padding:1px 6px;border-radius:10px;margin-left:5px;font-size:9px}
+.cat-tab-btn:not(.act) .cnt{background:var(--gris-m)}
+
+.cat-section{background:var(--blanco);border:1px solid var(--gris-m);border-radius:4px;overflow:hidden}
+.cat-section-hdr{padding:14px 18px;border-bottom:1px solid var(--gris-m);display:flex;align-items:center;justify-content:space-between}
+.cat-section-hdr h2{font-size:13px;font-weight:700;letter-spacing:1px}
+.cat-section-hdr span{font-size:10px;color:var(--gris-t)}
+
+.tbl table{width:100%;border-collapse:collapse}
+.tbl th{background:var(--gris);color:var(--gris-t);padding:8px 12px;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;text-align:left;font-weight:700;white-space:nowrap;border-bottom:1px solid var(--gris-m)}
+.tbl td{padding:6px 10px;font-size:12px;border-bottom:1px solid var(--gris-m);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl input,.tbl select{width:100%;padding:6px 8px;border:1px solid transparent;font-family:inherit;font-size:12px;border-radius:2px;outline:none;background:transparent}
+.tbl input:hover,.tbl select:hover{border-color:var(--gris-m)}
+.tbl input:focus,.tbl select:focus{border-color:var(--rojo);background:var(--blanco)}
+.tbl td.precio input{text-align:right}
+.tbl td.acciones{white-space:nowrap;text-align:right}
+.tbl td.acciones .btn{padding:5px 10px;font-size:9px;margin-left:4px}
+
+.empty-row td{padding:30px;text-align:center;color:var(--gris-t);font-style:italic}
+
+.add-row{display:flex;gap:8px;padding:14px 18px;background:var(--gris);align-items:center;flex-wrap:wrap}
+.add-row input,.add-row select{padding:8px 10px;border:1px solid var(--gris-m);font-family:inherit;font-size:12px;border-radius:2px;outline:none;background:var(--blanco)}
+.add-row input:focus,.add-row select:focus{border-color:var(--rojo)}
+#add-nombre{flex:2;min-width:160px}
+#add-grupo{flex:1;min-width:100px}
+#add-precio{width:110px}
+#add-unidad{width:100px}
+
+.ing-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--gris-m);font-size:12px}
+.ing-row:last-child{border-bottom:none}
+.ing-row button{background:none;border:none;color:var(--gris-t);cursor:pointer;font-size:15px;padding:0 4px}
+.ing-row button:hover{color:var(--rojo)}
+
+/* ── RESPONSIVE (móvil / tablet) ─────────────────────── */
+@media (max-width: 760px){
+  header{flex-wrap:wrap;height:auto;position:static}
+  .hdr-logo{padding:10px 16px;min-width:0}
+  .hdr-info{padding:8px 12px}
+  .hdr-act{width:100%;padding:8px 12px 10px;flex-wrap:wrap;row-gap:8px}
+  .hdr-act .btn{flex:0 0 auto;padding:6px 10px;font-size:9px}
+
+  .main{padding:14px}
+  .tbl{overflow-x:auto}
+  .tbl table{min-width:560px}
+  .add-row{flex-direction:column;align-items:stretch}
+  .add-row input,.add-row select{width:100%}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-logo"><span class="lt">Rita</span><span class="lt">Roux</span><span class="ls">Café</span></div>
+  <div class="hdr-info">
+    <h1>Editar Servicios</h1>
+    <p>Catálogo usado en cotizaciones · ingredientes para lista de compras</p>
+  </div>
+  <div class="hdr-act">
+    <button class="btn btn-sec" onclick="location.href='seguimiento-eventos.html'">Inicio</button>
+    <button class="btn btn-sec" onclick="location.href='historico-presupuestos.html'">Histórico Cotizaciones</button>
+    <button class="btn btn-sec" id="btn-google-edsv" onclick="gsAuth()">☁ Google</button>
+  </div>
+</header>
+
+<div class="main">
+  <div class="banner" id="banner">
+    <div class="banner-text">Conecta con Google para editar el catálogo real. Mientras tanto se muestra el catálogo de respaldo (solo lectura no se guardará).</div>
+    <button class="btn btn-sec" style="background:var(--negro)" onclick="gsAuth()">☁ Conectar Google</button>
+  </div>
+
+  <div class="cat-tabs-bar" id="cat-tabs-bar"></div>
+
+  <div class="cat-section">
+    <div class="cat-section-hdr">
+      <h2 id="cat-section-title"></h2>
+      <span id="cat-section-sub">Sección PDF: —</span>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr>
+          <th style="width:32%">Servicio</th>
+          <th style="width:16%">Grupo</th>
+          <th style="width:14%">Precio</th>
+          <th style="width:12%">Unidad</th>
+          <th style="width:16%">Ingredientes</th>
+          <th style="width:10%"></th>
+        </tr></thead>
+        <tbody id="servicios-tbody"></tbody>
+      </table>
+    </div>
+    <div class="add-row">
+      <input id="add-nombre" placeholder="Nombre del nuevo servicio">
+      <input id="add-grupo" placeholder="Grupo (opcional)">
+      <input id="add-precio" type="number" placeholder="Precio">
+      <select id="add-unidad">
+        <option value="flat">flat</option>
+        <option value="hora">hora</option>
+        <option value="persona">persona</option>
+        <option value="unidad">unidad</option>
+        <option value="botella">botella</option>
+      </select>
+      <button class="btn btn-pr" onclick="agregarServicio()">+ Agregar servicio</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL INGREDIENTES -->
+<div id="ing-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9996;align-items:center;justify-content:center">
+  <div style="background:#fff;width:92%;max-width:380px;max-height:80vh;display:flex;flex-direction:column;border-radius:4px;overflow:hidden">
+    <div style="background:var(--negro);color:#fff;padding:12px 16px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+      <span id="ing-titulo">🧂 Ingredientes</span>
+      <button onclick="cerrarIngredientesModal()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div id="ing-body" style="padding:14px 16px;overflow-y:auto;flex:1"></div>
+    <div style="padding:12px 16px;background:var(--gris);display:flex;gap:6px;flex-shrink:0;border-top:1px solid var(--gris-m)">
+      <input id="ing-nuevo" placeholder="Nuevo ingrediente…" onkeydown="if(event.key==='Enter')agregarIngrediente()" style="flex:1;padding:7px 9px;border:1px solid var(--gris-m);font-family:inherit;font-size:12px;border-radius:2px;outline:none">
+      <button class="btn btn-pr" onclick="agregarIngrediente()">+</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let catalogo = [];
+let activeCat = 'locaciones';
+let ingEditIdx = null;
+
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+async function cargarCatalogo(){
+  if (gsConnected()) {
+    const rows = await gsCargarCatalogo();
+    catalogo = rows ? gsFilasACatalogo(rows) : gsSeedToCatalogo();
+    const b = document.getElementById('banner');
+    b.classList.add('ok');
+    b.querySelector('.banner-text').textContent = 'Conectado a Google Sheets · los cambios se guardan automáticamente.';
+    document.getElementById('btn-google-edsv').textContent = '✓ Google';
+  } else {
+    catalogo = gsSeedToCatalogo();
+  }
+  renderTabs();
+  renderServicios();
+}
+
+function renderTabs(){
+  const el = document.getElementById('cat-tabs-bar');
+  el.innerHTML = catalogo.map(c => `
+    <button class="cat-tab-btn ${c.id===activeCat?'act':''}" onclick="seleccionarCat('${c.id}')">
+      ${c.label}<span class="cnt">${c.items.length}</span>
+    </button>`).join('');
+}
+
+function seleccionarCat(id){
+  activeCat = id;
+  renderTabs();
+  renderServicios();
+}
+
+function renderServicios(){
+  const cat = catalogo.find(c => c.id === activeCat);
+  if (!cat) return;
+  document.getElementById('cat-section-title').textContent = cat.label;
+  document.getElementById('cat-section-sub').textContent = 'Sección PDF: ' + cat.section;
+
+  const tbody = document.getElementById('servicios-tbody');
+  if (!cat.items.length) {
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="6">Sin servicios en esta categoría todavía. Agrega el primero abajo.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = cat.items.map((it, i) => `
+    <tr>
+      <td><input value="${escHtml(it.name)}" onchange="editarServicio(${i},'name',this.value)"></td>
+      <td><input value="${escHtml(it.group||'')}" placeholder="—" onchange="editarServicio(${i},'group',this.value)"></td>
+      <td class="precio"><input type="number" value="${it.rec||0}" onchange="editarServicio(${i},'rec',this.value)"></td>
+      <td>
+        <select onchange="editarServicio(${i},'unit',this.value)">
+          ${['flat','hora','persona','unidad','botella'].map(u=>`<option value="${u}" ${it.unit===u?'selected':''}>${u}</option>`).join('')}
+        </select>
+      </td>
+      <td><button class="btn btn-gh" style="font-size:9px;padding:6px 8px;width:100%" onclick="abrirIngredientesModal(${i})">🧂 ${(it.ingredientes||[]).length}</button></td>
+      <td class="acciones"><button class="btn btn-del" onclick="eliminarServicio(${i})">Eliminar</button></td>
+    </tr>`).join('');
+}
+
+function editarServicio(idx, field, value){
+  const cat = catalogo.find(c => c.id === activeCat);
+  const it = cat?.items[idx];
+  if (!it) return;
+  it[field] = field === 'rec' ? (parseFloat(value)||0) : value;
+  scheduleSaveCatalogo();
+}
+
+function eliminarServicio(idx){
+  const cat = catalogo.find(c => c.id === activeCat);
+  if (!cat || !confirm('¿Eliminar este servicio del catálogo? Ya no aparecerá en el cotizador.')) return;
+  cat.items.splice(idx, 1);
+  scheduleSaveCatalogo();
+  renderTabs();
+  renderServicios();
+}
+
+function agregarServicio(){
+  const nombre = document.getElementById('add-nombre').value.trim();
+  const grupo  = document.getElementById('add-grupo').value.trim();
+  const precio = parseFloat(document.getElementById('add-precio').value) || 0;
+  const unidad = document.getElementById('add-unidad').value;
+  if (!nombre) { alert('Ingresa un nombre para el servicio.'); return; }
+  const cat = catalogo.find(c => c.id === activeCat);
+  cat.items.push({ name: nombre, rec: precio, unit: unidad, group: grupo, ingredientes: [] });
+  document.getElementById('add-nombre').value = '';
+  document.getElementById('add-grupo').value  = '';
+  document.getElementById('add-precio').value = '';
+  scheduleSaveCatalogo();
+  renderTabs();
+  renderServicios();
+}
+
+let saveTimer = null;
+function scheduleSaveCatalogo(){
+  if (!gsConnected()) return; // sin conexión no hay dónde guardar — los cambios no persisten
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => gsGuardarCatalogo(catalogo), 1000);
+}
+
+// ── INGREDIENTES (alimentan también la Lista de Compras en Seguimiento) ──
+function abrirIngredientesModal(idx){
+  ingEditIdx = idx;
+  const cat = catalogo.find(c => c.id === activeCat);
+  const it = cat?.items[idx];
+  if (!it) return;
+  document.getElementById('ing-titulo').textContent = `🧂 Ingredientes — ${it.name}`;
+  document.getElementById('ing-nuevo').value = '';
+  renderIngredientesModalBody();
+  document.getElementById('ing-modal').style.display = 'flex';
+}
+
+function renderIngredientesModalBody(){
+  const cat = catalogo.find(c => c.id === activeCat);
+  const it = cat?.items[ingEditIdx];
+  if (!it) return;
+  const ingr = it.ingredientes || [];
+  document.getElementById('ing-body').innerHTML = ingr.length
+    ? ingr.map((ing, i) => `<div class="ing-row"><span>${escHtml(ing)}</span><button onclick="eliminarIngrediente(${i})">×</button></div>`).join('')
+    : `<div style="font-size:11px;color:var(--gris-t);font-style:italic">Sin ingredientes definidos todavía — mientras tanto, la lista de compras usará "Ingrediente 1, 2, 3" como placeholder para este servicio.</div>`;
+}
+
+function agregarIngrediente(){
+  const input = document.getElementById('ing-nuevo');
+  const val = input.value.trim();
+  if (!val) return;
+  const cat = catalogo.find(c => c.id === activeCat);
+  const it = cat?.items[ingEditIdx];
+  if (!it) return;
+  if (!it.ingredientes) it.ingredientes = [];
+  it.ingredientes.push(val);
+  input.value = '';
+  scheduleSaveCatalogo();
+  renderIngredientesModalBody();
+  renderServicios();
+}
+
+function eliminarIngrediente(i){
+  const cat = catalogo.find(c => c.id === activeCat);
+  const it = cat?.items[ingEditIdx];
+  if (!it || !it.ingredientes) return;
+  it.ingredientes.splice(i, 1);
+  scheduleSaveCatalogo();
+  renderIngredientesModalBody();
+  renderServicios();
+}
+
+function cerrarIngredientesModal(){
+  document.getElementById('ing-modal').style.display = 'none';
+  ingEditIdx = null;
+}
+
+// ── INIT ──────────────────────────────────────────────
+(function init(){
+  catalogo = gsSeedToCatalogo();
+  renderTabs();
+  renderServicios();
+  gsInit(cargarCatalogo, { requireAuth: true });
+})();
+</script>
+</body>
+</html>

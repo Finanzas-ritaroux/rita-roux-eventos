@@ -44,6 +44,9 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
 .main{flex:1;min-width:0;overflow-y:auto;display:flex;flex-direction:column}
 .main-inner{padding:18px 20px;flex:1}
 
+/* ── COLUMNA LATERAL (calendario arriba + panel abajo) ─ */
+.side-col{width:340px;flex-shrink:0;display:flex;flex-direction:column;border-left:1px solid var(--gris-m);overflow:hidden}
+
 /* ── TABS ────────────────────────────────────────────── */
 .tab-nav{display:flex;border-bottom:2px solid var(--gris-m);margin-bottom:14px}
 .tbtn{padding:9px 20px;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;background:none;border:none;color:var(--gris-t);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;font-family:inherit}
@@ -61,13 +64,13 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
 .fsel:focus{border-color:var(--rojo)}
 
 /* ── CALENDARIO ──────────────────────────────────────── */
-.cal-wrap{background:var(--blanco);border:1px solid var(--gris-m);border-radius:3px;margin-bottom:16px;overflow:hidden}
+.cal-wrap{background:var(--blanco);border-bottom:1px solid var(--gris-m);flex-shrink:0;overflow:hidden}
 .cal-hdr{display:flex;align-items:center;gap:6px;padding:9px 14px;border-bottom:1px solid var(--gris-m)}
 .cal-title{flex:1;text-align:center;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
 .cal-dow{display:grid;grid-template-columns:repeat(7,1fr);background:var(--negro)}
 .cal-dow span{color:var(--blanco);font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;text-align:center;padding:6px 0}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
-.cal-day{min-height:62px;border-right:1px solid var(--gris-m);border-bottom:1px solid var(--gris-m);padding:4px;position:relative}
+.cal-day{min-height:46px;border-right:1px solid var(--gris-m);border-bottom:1px solid var(--gris-m);padding:3px;position:relative}
 .cal-day:nth-child(7n){border-right:none}
 .cal-day.out{background:var(--gris)}
 .cal-day.out .cal-num{color:var(--gris-m)}
@@ -129,7 +132,7 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
 .fin-body{display:none;margin-top:6px}.fin-body.open{display:block}
 
 /* ── RIGHT PANEL ─────────────────────────────────────── */
-.rp{width:340px;flex-shrink:0;background:var(--blanco);border-left:1px solid var(--gris-m);overflow-y:auto;display:flex;flex-direction:column}
+.rp{flex:1;min-height:0;background:var(--blanco);overflow-y:auto;display:flex;flex-direction:column}
 .rp-header{padding:14px 16px;border-bottom:1px solid var(--gris-m);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--blanco);position:sticky;top:0;z-index:1}
 .rp-title{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--gris-t)}
 .rp-close{background:none;border:none;cursor:pointer;color:var(--gris-t);font-size:18px;line-height:1;padding:0}.rp-close:hover{color:var(--negro)}
@@ -216,9 +219,14 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
   .hdr-act .btn{flex:0 0 auto;padding:6px 10px;font-size:9px}
 
   .app{flex-direction:column;height:auto;overflow:visible}
-  .main{overflow-y:visible}
+  .main{overflow-y:visible;order:2}
   .main-inner{padding:14px}
-  .rp{width:100%;border-left:none;border-top:1px solid var(--gris-m);max-height:none}
+
+  /* En móvil, calendario y panel vuelven a apilarse en el orden original:
+     calendario arriba, lista de eventos al medio, panel/alertas abajo */
+  .side-col{display:contents}
+  .cal-wrap{order:1;border:1px solid var(--gris-m);border-radius:3px;margin:14px 14px 0}
+  .rp{order:3;width:100%;overflow-y:visible;max-height:none;border-top:1px solid var(--gris-m)}
 
   .toolbar .srch{min-width:100%}
   .fsel{flex:1}
@@ -259,21 +267,6 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
   <div class="main">
     <div class="main-inner">
 
-      <!-- CALENDARIO DE EVENTOS CONFIRMADOS -->
-      <div class="cal-wrap">
-        <div class="cal-hdr">
-          <button class="btn btn-gh" style="font-size:9px;padding:5px 10px" onclick="calPrev()">‹</button>
-          <span class="cal-title" id="cal-title"></span>
-          <button class="btn btn-gh" style="font-size:9px;padding:5px 10px" onclick="calNext()">›</button>
-          <button class="btn btn-gh" style="font-size:9px;padding:5px 10px;margin-left:6px" onclick="calHoy()">Hoy</button>
-          <button class="btn btn-sec" style="font-size:9px;padding:5px 10px;margin-left:auto;background:var(--azul);color:#fff;border-color:var(--azul)" onclick="abrirResvModal()">🍽 + Reserva (Justo)</button>
-        </div>
-        <div class="cal-dow">
-          <span>Dom</span><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span>
-        </div>
-        <div class="cal-grid" id="cal-grid"></div>
-      </div>
-
       <div class="tab-nav">
         <button class="tbtn act" onclick="setTab('ac',this)">Activos <span class="tbadge" id="b-ac">0</span></button>
         <button class="tbtn" onclick="setTab('fi',this)">Finalizados <span class="tbadge" id="b-fi">0</span></button>
@@ -309,7 +302,26 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
     </div>
   </div>
 
-  <div class="rp" id="rp"></div>
+  <div class="side-col">
+    <!-- CALENDARIO DE EVENTOS CONFIRMADOS -->
+    <div class="cal-wrap">
+      <div class="cal-hdr">
+        <button class="btn btn-gh" style="font-size:9px;padding:5px 10px" onclick="calPrev()">‹</button>
+        <span class="cal-title" id="cal-title"></span>
+        <button class="btn btn-gh" style="font-size:9px;padding:5px 10px" onclick="calNext()">›</button>
+        <button class="btn btn-gh" style="font-size:9px;padding:5px 10px;margin-left:6px" onclick="calHoy()">Hoy</button>
+      </div>
+      <div class="cal-dow">
+        <span>Dom</span><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div style="padding:8px 10px;border-top:1px solid var(--gris-m)">
+        <button class="btn btn-sec" style="font-size:9px;padding:6px 10px;width:100%;background:var(--azul);color:#fff;border-color:var(--azul)" onclick="abrirResvModal()">🍽 + Reserva (Justo)</button>
+      </div>
+    </div>
+
+    <div class="rp" id="rp"></div>
+  </div>
 </div>
 
 <!-- MODAL RESERVA DE MESA (Justo) -->
@@ -330,6 +342,18 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
       <button class="btn btn-gh" onclick="cerrarResvModal()">Cancelar</button>
       <button class="btn btn-pr" onclick="guardarReservaModal()">Guardar</button>
     </div>
+  </div>
+</div>
+
+<!-- MODAL LISTA DE COMPRAS -->
+<div id="compras-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9996;align-items:center;justify-content:center">
+  <div style="background:#fff;width:92%;max-width:420px;max-height:85vh;display:flex;flex-direction:column;border-radius:4px;overflow:hidden">
+    <div style="background:var(--negro);color:#fff;padding:12px 16px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+      <span id="compras-titulo">🛒 Lista de Compras</span>
+      <button onclick="cerrarComprasModal()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div id="compras-body" style="padding:14px 16px;overflow-y:auto;flex:1"></div>
+    <div id="compras-progreso" style="padding:10px 16px;background:var(--gris);font-size:10px;color:var(--gris-t);flex-shrink:0;border-top:1px solid var(--gris-m)"></div>
   </div>
 </div>
 
@@ -452,10 +476,11 @@ function actualizarGSBar(){
 async function cargarDesdeGS(){
   if(!gsConnected()) return false;
   try{
-    const res = await gsGet(`${TAB.SEG}!A2:S`);
+    const res = await gsGet(`${TAB.SEG}!A2:T`);
     db = (res.values||[]).map(r=>{
       let extras=[];    try{ extras=JSON.parse(r[17]||'[]'); }catch(e){}
       let extrasNVs=[]; try{ extrasNVs=JSON.parse(r[18]||'[]'); }catch(e){}
+      let compras={};   try{ compras=JSON.parse(r[19]||'{}'); }catch(e){}
       return {
         id: uid(),
         estado:     r[0]||'activo',
@@ -475,7 +500,7 @@ async function cargarDesdeGS(){
         pagado:     +r[14]||0,
         dif:        +r[15]||0,
         comentarios:r[16]||'',
-        extras, extrasNVs
+        extras, extrasNVs, compras
       };
     });
     saveCache();
@@ -497,10 +522,10 @@ async function guardarEnGS(){
       e.estado, e.tipo, e.notaVenta, e.nombre, e.cliente, e.fecha,
       e.oc, e.f50, e.p50, e.f100, e.p100, e.fRec, e.fPag,
       e.total, e.pagado, e.dif, e.comentarios,
-      JSON.stringify(e.extras||[]), JSON.stringify(e.extrasNVs||[])
+      JSON.stringify(e.extras||[]), JSON.stringify(e.extrasNVs||[]), JSON.stringify(e.compras||{})
     ]);
-    await gsClear(`${TAB.SEG}!A2:S`);
-    if(rows.length) await gsAppend(`${TAB.SEG}!A2:S`, rows);
+    await gsClear(`${TAB.SEG}!A2:T`);
+    if(rows.length) await gsAppend(`${TAB.SEG}!A2:T`, rows);
   }catch(e){ console.warn('Error guardando en Google Sheets:', e); }
 }
 
@@ -870,6 +895,7 @@ function renderDetail(id){
     <div class="det-section">
       <div class="det-sec-title">Detalle de la Nota de Venta</div>
       <div id="nv-detail-body" style="font-size:11px;color:var(--gris-t)">Cargando…</div>
+      <button class="btn btn-sec" style="width:100%;margin-top:8px;background:var(--negro);color:#fff;font-size:10px;padding:8px" onclick="abrirListaCompras('${e.id}')">🛒 Lista de Compras</button>
     </div>
 
     <!-- Montos -->
@@ -1018,7 +1044,7 @@ function openNew(){
     notaVenta:'', nombre:'', cliente:'', fecha:'',
     oc:'', f50:'', p50:'', f100:'', p100:'', fRec:'', fPag:'',
     pagado:0, total:0, dif:0, comentarios:'',
-    extras:[], extrasNVs:[]
+    extras:[], extrasNVs:[], compras:{}
   };
   db.unshift(nuevo);
   scheduleSave(); selId=nuevo.id;
@@ -1244,6 +1270,98 @@ async function descargarNVPDF(nvNum){
     console.error(err);
     alert('Error al generar el PDF: '+err.message);
   }
+}
+
+// ═══════════════════════════════════════════════════════
+// LISTA DE COMPRAS (por evento)
+// ═══════════════════════════════════════════════════════
+// TODO: cuando se entregue el listado real de ingredientes/proveedores/costos
+// por producto, poblar RECETAS así:
+//   RECETAS['nombre normalizado del producto'] = ['Harina','Huevos','Leche',...];
+// Mientras esté vacío para un producto, se usan placeholders "Ingrediente 1/2/3".
+const RECETAS = {};
+const N_INGREDIENTES_PLACEHOLDER = 3;
+
+function _normProd(s){ return String(s||'').trim().toLowerCase(); }
+
+function obtenerIngredientesProducto(desc){
+  const key=_normProd(desc);
+  if(RECETAS[key] && RECETAS[key].length) return RECETAS[key];
+  return Array.from({length:N_INGREDIENTES_PLACEHOLDER}, (_,i)=>`Ingrediente ${i+1}`);
+}
+
+async function construirListaCompras(e){
+  let nota=_nvCache[e.notaVenta];
+  if(!nota && e.notaVenta && gsConnected()){
+    try{ const row=await buscarFilaNV(e.notaVenta); if(row){ nota=filaToNota(row); _nvCache[e.notaVenta]=nota; } }catch(err){}
+  }
+  const productos=[];
+  (nota?.secciones||[]).forEach(sec=>{
+    (sec.items||[]).forEach(i=>{ if(i.desc) productos.push(i.desc); });
+  });
+  (e.extras||[]).forEach(x=>{ if(x.desc) productos.push(x.desc); });
+  return productos.map(p=>({ producto:p, ingredientes: obtenerIngredientesProducto(p) }));
+}
+
+let comprasEventId=null;
+let _comprasListaActual=[];
+
+async function abrirListaCompras(id){
+  comprasEventId=id;
+  const e=db.find(x=>x.id===id);
+  if(!e) return;
+  document.getElementById('compras-titulo').textContent=`🛒 Lista de Compras — ${e.nombre||'(sin nombre)'}`;
+  document.getElementById('compras-body').innerHTML='<div style="font-size:11px;color:var(--gris-t)">Cargando…</div>';
+  document.getElementById('compras-progreso').textContent='';
+  document.getElementById('compras-modal').style.display='flex';
+  _comprasListaActual=await construirListaCompras(e);
+  renderListaComprasBody();
+}
+
+function renderListaComprasBody(){
+  const e=db.find(x=>x.id===comprasEventId);
+  if(!e) return;
+  if(!e.compras) e.compras={};
+  const lista=_comprasListaActual;
+  if(!lista.length){
+    document.getElementById('compras-body').innerHTML='<div style="font-size:11px;color:var(--gris-t);font-style:italic">No hay productos asociados a este evento todavía.</div>';
+    document.getElementById('compras-progreso').textContent='';
+    return;
+  }
+  let total=0, marcados=0;
+  const html=lista.map((grupo,gi)=>`<div style="margin-bottom:12px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gris-t);margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid var(--gris-m)">${escHtmlCal(grupo.producto)}</div>
+      ${grupo.ingredientes.map((ing,ii)=>{
+        const key=`${grupo.producto}__${ing}`;
+        const checked=!!e.compras[key];
+        total++; if(checked) marcados++;
+        return `<label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer">
+          <input type="checkbox" ${checked?'checked':''} onchange="toggleCompra(${gi},${ii},this.checked)" style="width:14px;height:14px;cursor:pointer;flex-shrink:0">
+          <span style="font-size:12px;${checked?'text-decoration:line-through;color:var(--gris-t)':''}">${escHtmlCal(ing)}</span>
+        </label>`;
+      }).join('')}
+    </div>`).join('');
+  document.getElementById('compras-body').innerHTML=html;
+  document.getElementById('compras-progreso').textContent=`${marcados} de ${total} comprados`;
+}
+
+function toggleCompra(gi, ii, checked){
+  const e=db.find(x=>x.id===comprasEventId);
+  if(!e) return;
+  const grupo=_comprasListaActual[gi];
+  if(!grupo) return;
+  const ing=grupo.ingredientes[ii];
+  const key=`${grupo.producto}__${ing}`;
+  if(!e.compras) e.compras={};
+  e.compras[key]=checked;
+  scheduleSave();
+  renderListaComprasBody();
+}
+
+function cerrarComprasModal(){
+  document.getElementById('compras-modal').style.display='none';
+  comprasEventId=null;
+  _comprasListaActual=[];
 }
 
 function generarPDFNV(nota){

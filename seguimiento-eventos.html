@@ -45,7 +45,7 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
 .main-inner{padding:18px 20px;flex:1}
 
 /* ── COLUMNA LATERAL (calendario arriba + panel abajo) ─ */
-.side-col{width:340px;flex-shrink:0;display:flex;flex-direction:column;border-left:1px solid var(--gris-m);overflow:hidden}
+.side-col{width:408px;flex-shrink:0;display:flex;flex-direction:column;border-left:1px solid var(--gris-m);overflow:hidden;position:relative}
 
 /* ── TABS ────────────────────────────────────────────── */
 .tab-nav{display:flex;border-bottom:2px solid var(--gris-m);margin-bottom:14px}
@@ -65,12 +65,12 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
 
 /* ── CALENDARIO ──────────────────────────────────────── */
 .cal-wrap{background:var(--blanco);border-bottom:1px solid var(--gris-m);flex-shrink:0;overflow:hidden}
-.cal-hdr{display:flex;align-items:center;gap:6px;padding:9px 14px;border-bottom:1px solid var(--gris-m)}
-.cal-title{flex:1;text-align:center;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.cal-hdr{display:flex;align-items:center;gap:6px;padding:10px 14px;border-bottom:1px solid var(--gris-m)}
+.cal-title{flex:1;text-align:center;font-size:12px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
 .cal-dow{display:grid;grid-template-columns:repeat(7,1fr);background:var(--negro)}
-.cal-dow span{color:var(--blanco);font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;text-align:center;padding:6px 0}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
-.cal-day{min-height:46px;border-right:1px solid var(--gris-m);border-bottom:1px solid var(--gris-m);padding:3px;position:relative}
+.cal-dow span{color:var(--blanco);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;text-align:center;padding:7px 0}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:1fr}
+.cal-day{height:64px;border-right:1px solid var(--gris-m);border-bottom:1px solid var(--gris-m);padding:3px;position:relative;overflow:hidden;box-sizing:border-box}
 .cal-day:nth-child(7n){border-right:none}
 .cal-day.out{background:var(--gris)}
 .cal-day.out .cal-num{color:var(--gris-m)}
@@ -82,6 +82,9 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
 .cal-evt.fin{background:var(--verde)}
 .cal-evt.resv{background:var(--azul)}
 .cal-evt-more{display:block;font-size:8px;color:var(--gris-t);cursor:pointer}
+
+/* ── PANEL DE EVENTO: cubre el calendario al seleccionar uno ── */
+.rp.overlay{position:absolute;inset:0;z-index:50;background:var(--blanco)}
 
 /* ── EVENTS TABLE ────────────────────────────────────── */
 .tbl{background:var(--blanco);border:1px solid var(--gris-m);border-radius:3px;overflow:hidden}
@@ -227,6 +230,8 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
   .side-col{display:contents}
   .cal-wrap{order:1;border:1px solid var(--gris-m);border-radius:3px;margin:14px 14px 0}
   .rp{order:3;width:100%;overflow-y:visible;max-height:none;border-top:1px solid var(--gris-m)}
+  .rp.overlay{position:static;inset:auto;z-index:auto}
+  .cal-day{height:48px}
 
   .toolbar .srch{min-width:100%}
   .fsel{flex:1}
@@ -312,12 +317,9 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
         <button class="btn btn-gh" style="font-size:9px;padding:5px 10px;margin-left:6px" onclick="calHoy()">Hoy</button>
       </div>
       <div class="cal-dow">
-        <span>Dom</span><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span>
+        <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
       </div>
       <div class="cal-grid" id="cal-grid"></div>
-      <div style="padding:8px 10px;border-top:1px solid var(--gris-m)">
-        <button class="btn btn-sec" style="font-size:9px;padding:6px 10px;width:100%;background:var(--azul);color:#fff;border-color:var(--azul)" onclick="abrirResvModal()">🍽 + Reserva (Justo)</button>
-      </div>
     </div>
 
     <div class="rp" id="rp"></div>
@@ -644,7 +646,9 @@ function renderCalendario(){
 
   const primerDia = new Date(calAnio, calMes, 1);
   const inicioGrid = new Date(primerDia);
-  inicioGrid.setDate(1 - primerDia.getDay());
+  const dow = primerDia.getDay(); // 0=Dom...6=Sáb
+  const offsetLunes = dow===0 ? 6 : dow-1; // días a retroceder hasta el lunes de esa semana
+  inicioGrid.setDate(1 - offsetLunes);
 
   const hoy = new Date(); hoy.setHours(0,0,0,0);
   let html='';
@@ -775,6 +779,7 @@ function clearF(){
 
 function renderAlertas(){
   const rp=document.getElementById('rp');
+  rp.classList.remove('overlay');
   const today=new Date(); today.setHours(0,0,0,0);
   const activos = db.filter(e=>e.estado==='activo');
 
@@ -857,6 +862,7 @@ function renderDetail(id){
   const color=semColor(n,max);
   const np=nextPaso(e);
   const rp=document.getElementById('rp');
+  rp.classList.add('overlay');
 
   const tipoBdg=e.tipo==='sala'
     ?`<span class="tipo-badge" style="background:#E8F0FD;color:#1565C0">Sala</span>`

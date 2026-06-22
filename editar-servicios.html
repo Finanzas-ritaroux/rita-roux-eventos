@@ -62,9 +62,12 @@ header{background:var(--negro);display:flex;align-items:stretch;position:sticky;
 #add-precio{width:110px}
 #add-unidad{width:100px}
 
-.ing-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--gris-m);font-size:12px}
+.ing-row{display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid var(--gris-m);font-size:12px}
 .ing-row:last-child{border-bottom:none}
-.ing-row button{background:none;border:none;color:var(--gris-t);cursor:pointer;font-size:15px;padding:0 4px}
+.ing-row .ing-nombre{flex:1}
+.ing-row input.ing-cant-input{width:80px;padding:4px 6px;border:1px solid var(--gris-m);font-family:inherit;font-size:11px;border-radius:2px;outline:none;text-align:right}
+.ing-row input.ing-cant-input:focus{border-color:var(--rojo)}
+.ing-row button{background:none;border:none;color:var(--gris-t);cursor:pointer;font-size:15px;padding:0 4px;flex-shrink:0}
 .ing-row button:hover{color:var(--rojo)}
 
 /* ── RESPONSIVE (móvil / tablet) ─────────────────────── */
@@ -149,7 +152,8 @@ header{background:var(--negro);display:flex;align-items:stretch;position:sticky;
     </div>
     <div id="ing-body" style="padding:14px 16px;overflow-y:auto;flex:1"></div>
     <div style="padding:12px 16px;background:var(--gris);display:flex;gap:6px;flex-shrink:0;border-top:1px solid var(--gris-m)">
-      <input id="ing-nuevo" placeholder="Nuevo ingrediente…" onkeydown="if(event.key==='Enter')agregarIngrediente()" style="flex:1;padding:7px 9px;border:1px solid var(--gris-m);font-family:inherit;font-size:12px;border-radius:2px;outline:none">
+      <input id="ing-nuevo" placeholder="Nuevo ingrediente…" onkeydown="if(event.key==='Enter')document.getElementById('ing-cant').focus()" style="flex:2;padding:7px 9px;border:1px solid var(--gris-m);font-family:inherit;font-size:12px;border-radius:2px;outline:none">
+      <input id="ing-cant" placeholder="Cantidad" onkeydown="if(event.key==='Enter')agregarIngrediente()" style="flex:1;padding:7px 9px;border:1px solid var(--gris-m);font-family:inherit;font-size:12px;border-radius:2px;outline:none">
       <button class="btn btn-pr" onclick="agregarIngrediente()">+</button>
     </div>
   </div>
@@ -275,23 +279,39 @@ function renderIngredientesModalBody(){
   if (!it) return;
   const ingr = it.ingredientes || [];
   document.getElementById('ing-body').innerHTML = ingr.length
-    ? ingr.map((ing, i) => `<div class="ing-row"><span>${escHtml(ing)}</span><button onclick="eliminarIngrediente(${i})">×</button></div>`).join('')
+    ? ingr.map((ing, i) => `<div class="ing-row">
+        <span class="ing-nombre">${escHtml(ing.nombre)}</span>
+        <input class="ing-cant-input" value="${escHtml(ing.cantidad||'')}" placeholder="Cant." onchange="editarCantidadIngrediente(${i},this.value)">
+        <button onclick="eliminarIngrediente(${i})">×</button>
+      </div>`).join('')
     : `<div style="font-size:11px;color:var(--gris-t);font-style:italic">Sin ingredientes definidos todavía — mientras tanto, la lista de compras usará "Ingrediente 1, 2, 3" como placeholder para este servicio.</div>`;
 }
 
 function agregarIngrediente(){
-  const input = document.getElementById('ing-nuevo');
-  const val = input.value.trim();
-  if (!val) return;
+  const nombreInput = document.getElementById('ing-nuevo');
+  const cantInput = document.getElementById('ing-cant');
+  const nombre = nombreInput.value.trim();
+  if (!nombre) return;
   const cat = catalogo.find(c => c.id === activeCat);
   const it = cat?.items[ingEditIdx];
   if (!it) return;
   if (!it.ingredientes) it.ingredientes = [];
-  it.ingredientes.push(val);
-  input.value = '';
+  it.ingredientes.push({ nombre, cantidad: cantInput.value.trim() });
+  nombreInput.value = '';
+  cantInput.value = '';
+  nombreInput.focus();
   scheduleSaveCatalogo();
   renderIngredientesModalBody();
   renderServicios();
+}
+
+function editarCantidadIngrediente(i, value){
+  const cat = catalogo.find(c => c.id === activeCat);
+  const it = cat?.items[ingEditIdx];
+  const ing = it?.ingredientes?.[i];
+  if (!ing) return;
+  ing.cantidad = value;
+  scheduleSaveCatalogo();
 }
 
 function eliminarIngrediente(i){

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rita Roux · Calendario Cocina</title>
+<script src="gsheets.js"></script>
+<link rel="stylesheet" href="theme.css">
+<style>
+body{min-height:100vh}
+header{background:var(--negro);display:flex;align-items:stretch}
+.hdr-logo{background:var(--rojo);padding:14px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:110px}
+.hdr-logo .lt{color:var(--negro);font-size:18px;font-weight:900;letter-spacing:3px;font-style:italic;text-transform:uppercase;line-height:1}
+.hdr-logo .ls{color:var(--negro);font-size:7px;letter-spacing:3px;text-transform:uppercase;margin-top:3px;opacity:.65}
+.hdr-info{padding:14px 22px;display:flex;flex-direction:column;justify-content:center;flex:1}
+.hdr-info h1{color:var(--blanco);font-size:16px;font-weight:300;letter-spacing:2px;text-transform:uppercase}
+.hdr-info p{color:var(--rojo);font-size:10px;letter-spacing:1px;margin-top:2px}
+
+.btn{padding:9px 18px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:none;font-family:inherit;border-radius:2px;transition:all .15s}
+.btn-pr{background:var(--rojo);color:var(--blanco)}.btn-pr:hover{background:var(--rojo-osc)}
+.btn-sec{background:transparent;color:var(--blanco);border:1.5px solid rgba(255,255,255,.3)}.btn-sec:hover{border-color:var(--blanco)}
+.btn-gh{background:transparent;color:var(--gris-t);border:1.5px solid var(--gris-m)}.btn-gh:hover{border-color:var(--negro);color:var(--negro)}
+.btn-del{background:#7f0000;color:var(--blanco)}.btn-del:hover{background:#4a0000}
+
+.banner{background:var(--blanco);border-bottom:1px solid var(--gris-m);padding:10px 22px;display:flex;align-items:center;gap:14px;font-size:12px;color:var(--gris-t)}
+.banner.ok{background:var(--verde-bg);color:var(--verde)}
+
+.main{max-width:760px;margin:0 auto;padding:24px 18px}
+
+.cal-wrap{background:var(--blanco);border:1px solid var(--gris-m);border-radius:5px;overflow:hidden}
+.cal-hdr{display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--gris-m)}
+.cal-title{flex:1;text-align:center;font-size:15px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);background:var(--negro)}
+.cal-dow span{color:var(--blanco);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;text-align:center;padding:9px 0}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:1fr}
+.cal-day{height:96px;border-right:1px solid var(--gris-m);border-bottom:1px solid var(--gris-m);padding:5px;position:relative;overflow:hidden;box-sizing:border-box}
+.cal-day:nth-child(7n){border-right:none}
+.cal-day.out{background:var(--gris)}
+.cal-day.out .cal-num{color:var(--gris-m)}
+.cal-day.today{background:var(--rojo-cl)}
+.cal-num{font-size:12px;font-weight:700;color:var(--gris-t);margin-bottom:4px}
+.cal-day.today .cal-num{color:var(--rojo)}
+.cal-evt{display:block;font-size:10.5px;background:var(--negro);color:#fff;border-radius:2px;padding:2px 5px;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .1s}
+.cal-evt:hover{opacity:.75}
+.cal-evt.fin{background:var(--verde)}
+.cal-evt.resv{background:var(--azul)}
+.cal-evt-more{display:block;font-size:9px;color:var(--gris-t);cursor:pointer}
+
+.cal-actions{padding:12px 18px;border-top:1px solid var(--gris-m);display:flex;justify-content:center}
+
+.leyenda{display:flex;gap:16px;justify-content:center;margin-top:14px;font-size:11px;color:var(--gris-t);flex-wrap:wrap}
+.leyenda span{display:inline-flex;align-items:center;gap:6px}
+.leyenda i{width:10px;height:10px;border-radius:2px;display:inline-block}
+
+@media (max-width:600px){
+  header{flex-wrap:wrap}
+  .hdr-logo{padding:10px 16px;min-width:0}
+  .hdr-info{padding:8px 12px}
+  .main{padding:14px 10px}
+  .cal-day{height:74px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-logo"><span class="lt">Rita</span><span class="lt">Roux</span><span class="ls">Café</span></div>
+  <div class="hdr-info">
+    <h1>Calendario de Cocina</h1>
+    <p>Eventos confirmados y reservas de mesa</p>
+  </div>
+</header>
+
+<div class="banner" id="banner">
+  <span id="gs-status">⚪ No conectado a Google — conecta para ver y agregar reservas.</span>
+  <button class="btn btn-gh" style="font-size:9px;padding:6px 12px;margin-left:auto" onclick="gsAuth()">Conectar Google</button>
+</div>
+
+<div class="main">
+  <div class="cal-wrap">
+    <div class="cal-hdr">
+      <button class="btn btn-gh" style="font-size:11px;padding:7px 14px" onclick="calPrev()">‹</button>
+      <span class="cal-title" id="cal-title"></span>
+      <button class="btn btn-gh" style="font-size:11px;padding:7px 14px" onclick="calNext()">›</button>
+      <button class="btn btn-gh" style="font-size:10px;padding:7px 12px" onclick="calHoy()">Hoy</button>
+    </div>
+    <div class="cal-dow">
+      <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+    </div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div class="cal-actions">
+      <button class="btn btn-pr" onclick="abrirResvModal()">🍽 + Agregar Reserva</button>
+    </div>
+  </div>
+
+  <div class="leyenda">
+    <span><i style="background:var(--negro)"></i> Evento confirmado</span>
+    <span><i style="background:var(--verde)"></i> Evento finalizado</span>
+    <span><i style="background:var(--azul)"></i> Reserva de mesa</span>
+  </div>
+</div>
+
+<!-- MODAL INFO EVENTO (solo lectura) -->
+<div id="evt-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9997;align-items:center;justify-content:center">
+  <div style="background:#fff;width:90%;max-width:360px;border-radius:4px;overflow:hidden">
+    <div style="background:var(--negro);color:#fff;padding:12px 16px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center">
+      <span>📅 Evento</span>
+      <button onclick="cerrarEvtModal()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div style="padding:18px 16px" id="evt-body"></div>
+  </div>
+</div>
+
+<!-- MODAL RESERVA DE MESA -->
+<div id="resv-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9997;align-items:center;justify-content:center">
+  <div style="background:#fff;width:90%;max-width:360px;border-radius:4px;overflow:hidden">
+    <div style="background:var(--negro);color:#fff;padding:12px 16px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center">
+      <span>🍽 Reserva de mesa</span>
+      <button onclick="cerrarResvModal()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div class="det-field"><label>Fecha</label><input type="date" id="rv-fecha"></div>
+      <div class="det-field"><label>Nombre / Cliente</label><input type="text" id="rv-nombre" placeholder="Ej: Familia Pérez"></div>
+      <div class="det-field"><label>Nº Personas</label><input type="number" id="rv-personas" placeholder="0"></div>
+      <div class="det-field"><label>Comentarios</label><textarea id="rv-com" rows="2" placeholder="Notas de la reserva…"></textarea></div>
+    </div>
+    <div style="padding:12px 16px;background:var(--gris);display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-del" id="rv-del-btn" style="display:none" onclick="eliminarReserva()">Eliminar</button>
+      <button class="btn btn-gh" onclick="cerrarResvModal()">Cancelar</button>
+      <button class="btn btn-pr" onclick="guardarReservaModal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.det-field label{display:block;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--gris-t);margin-bottom:4px}
+.det-field input,.det-field textarea{width:100%;padding:8px 9px;border:1px solid var(--gris-m);font-family:inherit;font-size:13px;color:var(--negro);background:var(--blanco);border-radius:2px;outline:none}
+.det-field input:focus,.det-field textarea:focus{border-color:var(--rojo)}
+.det-field textarea{resize:vertical}
+</style>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// DATOS — solo lectura para eventos, lectura/escritura para reservas
+// ═══════════════════════════════════════════════════════
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).substr(2,5) }
+function escHtmlCal(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtFechaLarga(s){
+  if(!s) return '—';
+  return new Date(s+'T00:00:00').toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+
+let eventos = [];
+let reservas = [];
+
+async function cargarEventos(){
+  if(!gsConnected()) return;
+  try{
+    const res = await gsGet(`${TAB.SEG}!A2:F`);
+    eventos = (res.values||[]).map(r=>({
+      estado: r[0]||'activo', tipo: r[1]||'evento', notaVenta: r[2]||'',
+      nombre: r[3]||'', cliente: r[4]||'', fecha: r[5]||''
+    }));
+  }catch(e){ console.warn('Error cargando eventos:', e); }
+}
+
+async function cargarReservasGS(){
+  if(!gsConnected()) return;
+  try{
+    const res = await gsGet(`${TAB.RESERVAS}!A2:D`);
+    reservas = (res.values||[]).map(r=>({
+      id: uid(), fecha:r[0]||'', nombre:r[1]||'', personas:r[2]||'', comentarios:r[3]||''
+    }));
+  }catch(e){ console.warn('Error cargando reservas:', e); }
+}
+
+let saveResvTimer=null;
+function scheduleSaveReservas(){
+  clearTimeout(saveResvTimer);
+  saveResvTimer=setTimeout(guardarReservasGS, 1000);
+}
+async function guardarReservasGS(){
+  if(!gsConnected()) return;
+  try{
+    const rows = reservas.map(r=>[r.fecha, r.nombre, r.personas, r.comentarios]);
+    await gsClear(`${TAB.RESERVAS}!A2:D`);
+    if(rows.length) await gsAppend(`${TAB.RESERVAS}!A2:D`, rows);
+  }catch(e){ console.warn('Error guardando reservas:', e); }
+}
+
+// ═══════════════════════════════════════════════════════
+// CALENDARIO
+// ═══════════════════════════════════════════════════════
+let calMes  = new Date().getMonth();
+let calAnio = new Date().getFullYear();
+const MESES_CAL = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+function calPrev(){ calMes--; if(calMes<0){ calMes=11; calAnio--; } renderCalendario(); }
+function calNext(){ calMes++; if(calMes>11){ calMes=0; calAnio++; } renderCalendario(); }
+function calHoy(){ const t=new Date(); calMes=t.getMonth(); calAnio=t.getFullYear(); renderCalendario(); }
+
+function renderCalendario(){
+  const grid=document.getElementById('cal-grid');
+  const title=document.getElementById('cal-title');
+  if(!grid||!title) return;
+  title.textContent = `${MESES_CAL[calMes]} ${calAnio}`;
+
+  const porDia = {};
+  eventos.forEach((e,i)=>{
+    if(e.estado==='cancelado' || !e.fecha) return;
+    (porDia[e.fecha] = porDia[e.fecha] || []).push({...e, __tipo:'evento', __idx:i});
+  });
+  reservas.forEach(r=>{
+    if(!r.fecha) return;
+    (porDia[r.fecha] = porDia[r.fecha] || []).push({...r, __tipo:'reserva'});
+  });
+
+  const primerDia = new Date(calAnio, calMes, 1);
+  const inicioGrid = new Date(primerDia);
+  const dow = primerDia.getDay();
+  const offsetLunes = dow===0 ? 6 : dow-1;
+  inicioGrid.setDate(1 - offsetLunes);
+
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  let html='';
+  for(let i=0;i<42;i++){
+    const d=new Date(inicioGrid);
+    d.setDate(inicioGrid.getDate()+i);
+    const iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const esOut=d.getMonth()!==calMes;
+    const esHoy=d.getTime()===hoy.getTime();
+    const evs=porDia[iso]||[];
+    html+=`<div class="cal-day ${esOut?'out':''} ${esHoy?'today':''}">
+      <div class="cal-num">${d.getDate()}</div>
+      ${evs.slice(0,3).map(e=>{
+        if(e.__tipo==='reserva'){
+          return `<span class="cal-evt resv" title="Reserva: ${escHtmlCal(e.nombre)}${e.personas?' · '+e.personas+' pers.':''}" onclick="abrirResvModal('${e.id}')">🍽 ${escHtmlCal(e.nombre)||'(reserva)'}</span>`;
+        }
+        return `<span class="cal-evt ${e.estado==='finalizado'?'fin':''}" title="${escHtmlCal(e.nombre)} · ${escHtmlCal(e.cliente)}" onclick="mostrarInfoEvento(${e.__idx})">${escHtmlCal(e.nombre)||'(sin nombre)'}</span>`;
+      }).join('')}
+      ${evs.length>3?`<span class="cal-evt-more">+${evs.length-3} más</span>`:''}
+    </div>`;
+  }
+  grid.innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════════════
+// MODAL INFO EVENTO (solo lectura)
+// ═══════════════════════════════════════════════════════
+function mostrarInfoEvento(idx){
+  const e=eventos[idx];
+  if(!e) return;
+  const tipoLbl = e.tipo==='sala' ? 'Sala' : 'Evento';
+  document.getElementById('evt-body').innerHTML = `
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px">${escHtmlCal(e.nombre)||'(sin nombre)'}</div>
+    <div style="font-size:12px;color:var(--gris-t);margin-bottom:10px">${escHtmlCal(e.cliente)||''}</div>
+    <div style="display:flex;flex-direction:column;gap:6px;font-size:12px">
+      <div><b>Tipo:</b> ${tipoLbl}</div>
+      <div><b>Fecha:</b> ${fmtFechaLarga(e.fecha)}</div>
+      <div><b>Estado:</b> ${e.estado==='finalizado'?'Finalizado':'Activo'}</div>
+      ${e.notaVenta?`<div><b>N° NV:</b> ${escHtmlCal(e.notaVenta)}</div>`:''}
+    </div>`;
+  document.getElementById('evt-modal').style.display='flex';
+}
+function cerrarEvtModal(){ document.getElementById('evt-modal').style.display='none'; }
+
+// ═══════════════════════════════════════════════════════
+// MODAL RESERVA (agregar / editar / eliminar)
+// ═══════════════════════════════════════════════════════
+let resvEditId=null;
+function abrirResvModal(id){
+  resvEditId=id||null;
+  const r = id ? reservas.find(x=>x.id===id) : null;
+  document.getElementById('rv-fecha').value    = r?.fecha||'';
+  document.getElementById('rv-nombre').value   = r?.nombre||'';
+  document.getElementById('rv-personas').value = r?.personas||'';
+  document.getElementById('rv-com').value      = r?.comentarios||'';
+  document.getElementById('rv-del-btn').style.display = r ? '' : 'none';
+  document.getElementById('resv-modal').style.display='flex';
+}
+function cerrarResvModal(){ document.getElementById('resv-modal').style.display='none'; resvEditId=null; }
+
+function guardarReservaModal(){
+  if(!gsConnected()){ alert('Conéctate a Google para guardar la reserva.'); return; }
+  const fecha=document.getElementById('rv-fecha').value;
+  const nombre=document.getElementById('rv-nombre').value.trim();
+  const personas=document.getElementById('rv-personas').value;
+  const comentarios=document.getElementById('rv-com').value;
+  if(!fecha||!nombre){ alert('Completa al menos la fecha y el nombre.'); return; }
+  if(resvEditId){
+    const r=reservas.find(x=>x.id===resvEditId);
+    if(r){ r.fecha=fecha; r.nombre=nombre; r.personas=personas; r.comentarios=comentarios; }
+  } else {
+    reservas.push({ id:uid(), fecha, nombre, personas, comentarios });
+  }
+  scheduleSaveReservas();
+  cerrarResvModal();
+  renderCalendario();
+}
+
+function eliminarReserva(){
+  if(!resvEditId) return;
+  if(!confirm('¿Eliminar esta reserva?')) return;
+  const i=reservas.findIndex(x=>x.id===resvEditId);
+  if(i>=0) reservas.splice(i,1);
+  scheduleSaveReservas();
+  cerrarResvModal();
+  renderCalendario();
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+function actualizarBanner(){
+  const b=document.getElementById('banner');
+  b.classList.add('ok');
+  document.getElementById('gs-status').textContent='🟢 Conectado · calendario y reservas sincronizados';
+  b.querySelector('button').textContent='Reconectar';
+  b.querySelector('button').onclick=gsAuth;
+}
+
+(async function init(){
+  renderCalendario();
+  gsInit(async () => {
+    actualizarBanner();
+    await cargarEventos();
+    await cargarReservasGS();
+    renderCalendario();
+  }, { requireAuth: true });
+})();
+</script>
+</body>
+</html>

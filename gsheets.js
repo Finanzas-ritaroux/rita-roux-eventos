@@ -13,6 +13,7 @@ const TAB = {
   SEG          : 'Seguimiento',
   RESERVAS     : 'Reservas',
   CATALOGO     : 'Catalogo',
+  CLIENTES     : 'HistoricoClientes',
 };
 
 // ─── CATÁLOGO DE SERVICIOS (cotizador + editar-servicios + lista de compras) ───
@@ -300,6 +301,7 @@ async function gsInitSheet() {
     { name: TAB.SEG,          hdr: ['Estado','Tipo','Nº NV','Nombre','Cliente','Fecha','OC','Factura 50%','Pago 50%','Factura 100%','Pago 100%','Fact. Prov. Recibidas','Fact. Prov. Pagadas','Total','Pagado','Diferencia','Comentarios','Extras','Extras NV','Compras'] },
     { name: TAB.RESERVAS,     hdr: ['Fecha','Nombre / Cliente','Nº Personas','Comentarios'] },
     { name: TAB.CATALOGO,     hdr: ['Categoría','Nombre Servicio','Precio Recomendado','Unidad','Grupo','Ingredientes'] },
+    { name: TAB.CLIENTES,     hdr: ['Fecha','Cliente','Evento','Calificación','Comentario','Nº NV'] },
   ];
   for (const t of tabs) {
     try {

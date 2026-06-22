@@ -127,7 +127,7 @@ header{background:var(--negro);display:flex;align-items:stretch}
     <div style="padding:12px 16px;background:var(--gris);display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-del" id="rv-del-btn" style="display:none" onclick="eliminarReserva()">Eliminar</button>
       <button class="btn btn-gh" onclick="cerrarResvModal()">Cancelar</button>
-      <button class="btn btn-pr" onclick="guardarReservaModal()">Guardar</button>
+      <button class="btn btn-pr" id="rv-save-btn" onclick="guardarReservaModal()">Guardar</button>
     </div>
   </div>
 </div>
@@ -174,18 +174,11 @@ async function cargarReservasGS(){
   }catch(e){ console.warn('Error cargando reservas:', e); }
 }
 
-let saveResvTimer=null;
-function scheduleSaveReservas(){
-  clearTimeout(saveResvTimer);
-  saveResvTimer=setTimeout(guardarReservasGS, 1000);
-}
 async function guardarReservasGS(){
   if(!gsConnected()) return;
-  try{
-    const rows = reservas.map(r=>[r.fecha, r.nombre, r.personas, r.comentarios]);
-    await gsClear(`${TAB.RESERVAS}!A2:D`);
-    if(rows.length) await gsAppend(`${TAB.RESERVAS}!A2:D`, rows);
-  }catch(e){ console.warn('Error guardando reservas:', e); }
+  const rows = reservas.map(r=>[r.fecha, r.nombre, r.personas, r.comentarios]);
+  await gsClear(`${TAB.RESERVAS}!A2:D`);
+  if(rows.length) await gsAppend(`${TAB.RESERVAS}!A2:D`, rows);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -280,32 +273,54 @@ function abrirResvModal(id){
 }
 function cerrarResvModal(){ document.getElementById('resv-modal').style.display='none'; resvEditId=null; }
 
-function guardarReservaModal(){
-  if(!gsConnected()){ alert('Conéctate a Google para guardar la reserva.'); return; }
+async function guardarReservaModal(){
+  if(!gsConnected()){ alert('Conéctate a Google para guardar la reserva — sin conexión no se puede guardar.'); return; }
+  if(!datosListos){ alert('Aún se está cargando la información. Espera unos segundos e intenta de nuevo.'); return; }
   const fecha=document.getElementById('rv-fecha').value;
   const nombre=document.getElementById('rv-nombre').value.trim();
   const personas=document.getElementById('rv-personas').value;
   const comentarios=document.getElementById('rv-com').value;
   if(!fecha||!nombre){ alert('Completa al menos la fecha y el nombre.'); return; }
+
+  const backup=JSON.parse(JSON.stringify(reservas));
   if(resvEditId){
     const r=reservas.find(x=>x.id===resvEditId);
     if(r){ r.fecha=fecha; r.nombre=nombre; r.personas=personas; r.comentarios=comentarios; }
   } else {
     reservas.push({ id:uid(), fecha, nombre, personas, comentarios });
   }
-  scheduleSaveReservas();
-  cerrarResvModal();
-  renderCalendario();
+
+  const btn=document.getElementById('rv-save-btn');
+  const txtOriginal=btn.textContent;
+  btn.disabled=true; btn.textContent='Guardando…';
+  try{
+    await guardarReservasGS();
+    cerrarResvModal();
+    renderCalendario();
+  }catch(err){
+    reservas=backup;
+    alert('No se pudo guardar la reserva. Revisa tu conexión a internet e intenta de nuevo.\n\n'+err.message);
+  }finally{
+    btn.disabled=false; btn.textContent=txtOriginal;
+  }
 }
 
-function eliminarReserva(){
+async function eliminarReserva(){
   if(!resvEditId) return;
+  if(!gsConnected()){ alert('Conéctate a Google para eliminar la reserva.'); return; }
+  if(!datosListos){ alert('Aún se está cargando la información. Espera unos segundos e intenta de nuevo.'); return; }
   if(!confirm('¿Eliminar esta reserva?')) return;
+  const backup=JSON.parse(JSON.stringify(reservas));
   const i=reservas.findIndex(x=>x.id===resvEditId);
   if(i>=0) reservas.splice(i,1);
-  scheduleSaveReservas();
-  cerrarResvModal();
-  renderCalendario();
+  try{
+    await guardarReservasGS();
+    cerrarResvModal();
+    renderCalendario();
+  }catch(err){
+    reservas=backup;
+    alert('No se pudo eliminar la reserva. Revisa tu conexión a internet e intenta de nuevo.\n\n'+err.message);
+  }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -319,12 +334,15 @@ function actualizarBanner(){
   b.querySelector('button').onclick=gsAuth;
 }
 
+let datosListos = false;
+
 (async function init(){
   renderCalendario();
   gsInit(async () => {
     actualizarBanner();
     await cargarEventos();
     await cargarReservasGS();
+    datosListos = true;
     renderCalendario();
   }, { requireAuth: true });
 })();

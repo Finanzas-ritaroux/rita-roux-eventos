@@ -171,9 +171,35 @@ header { background: var(--negro); display: flex; align-items: stretch; position
 
   .app { flex-direction: column; }
   .sidebar {
-    width: 100%; position: static; height: auto; max-height: 260px;
-    border-right: none; border-bottom: 1px solid var(--gris-medio);
+    width: 100%; position: static; height: auto; max-height: 480px;
+    border-right: none; border-bottom: 3px solid var(--negro);
   }
+  .sidebar-header { padding: 14px 16px; }
+
+  /* Catálogo en móvil: pestañas tipo pastilla (como en Editar Servicios) en vez
+     de la franja angosta con scroll horizontal, y filas más grandes para tocar */
+  .cat-tabs {
+    flex-wrap: wrap; gap: 6px; overflow-x: visible;
+    border-bottom: none; padding: 10px 14px;
+  }
+  .cat-tabs::-webkit-scrollbar { display: none; }
+  .cat-tab {
+    padding: 8px 14px; font-size: 11.5px; font-weight: 700;
+    background: var(--blanco); border: 1px solid var(--gris-medio); border-radius: 20px;
+    color: var(--gris-texto); margin-bottom: 0;
+  }
+  .cat-tab.active { background: var(--negro); border-color: var(--negro); color: var(--blanco); }
+
+  .cat-content { max-height: 360px; }
+  .cat-item { padding: 12px 14px; border-bottom: 1px solid var(--gris-medio); }
+  .cat-item-name { font-size: 13.5px; white-space: normal; }
+  .cat-item-price { font-size: 11.5px; margin-top: 3px; }
+  .cat-item-add { width: 34px; height: 34px; font-size: 20px; border-radius: 4px; }
+
+  .cat-custom { padding: 14px; }
+  .custom-input { padding: 9px 10px; font-size: 13px; }
+  .btn-custom-add { padding: 9px 16px; }
+
   .main { padding: 16px 14px 60px; }
 
   .meta-row { grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 14px; }

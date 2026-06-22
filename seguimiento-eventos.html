@@ -987,6 +987,9 @@ function renderDetail(id){
     <!-- Semáforo: estado + avance de facturación -->
     <div class="det-section">
       <div class="det-sec-title">Semáforo</div>
+      ${e.estado==='finalizado'
+        ? `<button class="btn btn-gh" style="width:100%;margin-bottom:10px" onclick="reactivarEvento('${e.id}')">↩ Reactivar (volver a Activo)</button>`
+        : `<button class="btn btn-ok" style="width:100%;margin-bottom:10px" onclick="abrirRatingModal('${e.id}')">✓ Evento Finalizado</button>`}
       <select id="d-estado" style="width:100%;padding:8px 10px;border:1px solid var(--gris-m);font-family:inherit;font-size:12px;border-radius:2px;outline:none;margin-bottom:10px">
         <option value="activo" ${e.estado==='activo'?'selected':''}>🟡 Activo</option>
         <option value="finalizado" ${e.estado==='finalizado'?'selected':''}>🟢 Finalizado</option>
@@ -1129,11 +1132,12 @@ function saveDetail(id){
   scheduleSave(); renderMain();
 }
 
-function cambiarEstado(id, nuevoEstado){
+function reactivarEvento(id){
   const e=db.find(x=>x.id===id);
   if(!e) return;
-  e.estado=nuevoEstado;
-  selId=null; scheduleSave(); renderMain();
+  e.estado='activo';
+  scheduleSave();
+  renderMain();
 }
 
 function closeDetail(){ selId=null; renderMain(); }

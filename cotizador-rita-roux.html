@@ -170,7 +170,18 @@ header { background: var(--negro); display: flex; align-items: stretch; position
   .hdr-actions .btn { flex: 0 0 auto; padding: 7px 10px; font-size: 9.5px; }
 
   .app { flex-direction: column; }
+
+  /* En móvil, primero los datos del evento/cliente, recién después el catálogo
+     para ir agregando servicios (en vez de mostrar el catálogo primero) */
+  .main { display: contents; }
+  .meta-row { order: 1; margin: 14px 14px 0; }
+  #quote-sections { order: 3; padding: 14px 14px 0; }
+  .add-section-wrap { order: 4; padding: 0 14px; }
+  .totals-wrap { order: 5; padding: 0 14px; }
+  .vista-previa-wrap { order: 6; padding: 18px 14px 24px !important; }
+
   .sidebar {
+    order: 2;
     width: 100%; position: static; height: auto; max-height: 480px;
     border-right: none; border-bottom: 3px solid var(--negro);
   }
@@ -199,8 +210,6 @@ header { background: var(--negro); display: flex; align-items: stretch; position
   .cat-custom { padding: 14px; }
   .custom-input { padding: 9px 10px; font-size: 13px; }
   .btn-custom-add { padding: 9px 16px; }
-
-  .main { padding: 16px 14px 60px; }
 
   .meta-row { grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px 14px; }
 
@@ -294,7 +303,7 @@ header { background: var(--negro); display: flex; align-items: stretch; position
       </div>
     </div>
 
-    <div style="padding:18px 20px 24px;display:flex;justify-content:flex-end">
+    <div class="vista-previa-wrap" style="padding:18px 20px 24px;display:flex;justify-content:flex-end">
       <button class="btn btn-primary" onclick="mostrarVistaPrevia()" style="padding:12px 32px;font-size:12px;letter-spacing:1.5px">👁 Vista Previa y Guardar</button>
     </div>
 

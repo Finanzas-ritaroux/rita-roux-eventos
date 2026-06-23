@@ -254,6 +254,7 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
     <p>Facturación · Cobros · Proveedores · Alertas</p>
   </div>
   <div class="hdr-act">
+    <button class="btn btn-sec" style="width:34px;height:34px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px" onclick="abrirInfoEmpresaModal()" title="Datos de la empresa">👤</button>
     <button class="btn btn-sec" onclick="location.href='historico-presupuestos.html'">Histórico Cotizaciones</button>
     <button class="btn btn-sec" onclick="location.href='dashboard.html'">📊 Dashboard</button>
     <button class="btn btn-pr" onclick="location.href='cotizador-rita-roux.html'">+ Nueva Cotización</button>
@@ -380,7 +381,45 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
   </div>
 </div>
 
+<!-- MODAL DATOS DE LA EMPRESA -->
+<div id="empresa-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9995;align-items:center;justify-content:center">
+  <div style="background:#fff;width:92%;max-width:540px;border-radius:4px;overflow:hidden">
+    <div style="background:var(--negro);color:#fff;padding:13px 16px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center">
+      <span>👤 Datos de la Empresa</span>
+      <button onclick="cerrarInfoEmpresaModal()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div class="empresa-grid" style="display:grid;grid-template-columns:1fr 1fr">
+      <div style="padding:18px 18px;border-right:1px solid var(--gris-m);border-bottom:1px solid var(--gris-m)">
+        <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--rojo);margin-bottom:10px">🏦 Depósito Bancario</div>
+        <div style="font-size:12.5px;line-height:2">
+          <div><b>Banco:</b> Santander</div>
+          <div><b>N° Cuenta:</b> 90557599</div>
+          <div><b>Titular:</b> Inversiones Verónica Méndez Risopátrón E.I.R.L.</div>
+          <div><b>RUT:</b> 76.208.211-K</div>
+          <div><b>Mail:</b> finanzas@ritaroux.cl</div>
+        </div>
+      </div>
+      <div style="padding:18px 18px;border-bottom:1px solid var(--gris-m)">
+        <div style="font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--rojo);margin-bottom:10px">🧾 Facturación</div>
+        <div style="font-size:12.5px;line-height:2">
+          <div><b>Razón Social:</b> Inversiones Verónica Méndez Risopátrón E.I.R.L.</div>
+          <div><b>RUT:</b> 76.208.211-K</div>
+          <div><b>Giro:</b> Clases Culturales y Eventos</div>
+          <div><b>Dirección:</b> Mac Iver 484, Oficina 105</div>
+          <div><b>Mail:</b> finanzas@ritaroux.cl</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+@media (max-width:600px){ .empresa-grid{grid-template-columns:1fr!important} .empresa-grid>div:first-child{border-right:none!important} }
+</style>
+
 <script>
+function abrirInfoEmpresaModal(){ document.getElementById('empresa-modal').style.display='flex'; }
+function cerrarInfoEmpresaModal(){ document.getElementById('empresa-modal').style.display='none'; }
+
 // ═══════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════
@@ -527,9 +566,9 @@ async function cargarDesdeGS(){
   try{
     const res = await gsGet(`${TAB.SEG}!A2:T`);
     db = (res.values||[]).map(r=>{
-      let extras=[];    try{ extras=JSON.parse(r[17]||'[]'); }catch(e){}
-      let extrasNVs=[]; try{ extrasNVs=JSON.parse(r[18]||'[]'); }catch(e){}
-      let compras={};   try{ compras=JSON.parse(r[19]||'{}'); }catch(e){}
+      let extras=[];      try{ extras=JSON.parse(r[17]||'[]'); }catch(e){}
+      let extrasNVs=[];   try{ extrasNVs=JSON.parse(r[18]||'[]'); }catch(e){}
+      let listaCompras=[];try{ listaCompras=JSON.parse(r[19]||'[]'); }catch(e){}
       return {
         id: uid(),
         estado:     r[0]||'activo',
@@ -549,7 +588,7 @@ async function cargarDesdeGS(){
         pagado:     +r[14]||0,
         dif:        +r[15]||0,
         comentarios:r[16]||'',
-        extras, extrasNVs, compras
+        extras, extrasNVs, listaCompras
       };
     });
     saveCache();
@@ -571,7 +610,7 @@ async function guardarEnGS(){
       e.estado, e.tipo, e.notaVenta, e.nombre, e.cliente, e.fecha,
       e.oc, e.f50, e.p50, e.f100, e.p100, e.fRec, e.fPag,
       e.total, e.pagado, e.dif, e.comentarios,
-      JSON.stringify(e.extras||[]), JSON.stringify(e.extrasNVs||[]), JSON.stringify(e.compras||{})
+      JSON.stringify(e.extras||[]), JSON.stringify(e.extrasNVs||[]), JSON.stringify(e.listaCompras||[])
     ]);
     await gsClear(`${TAB.SEG}!A2:T`);
     if(rows.length) await gsAppend(`${TAB.SEG}!A2:T`, rows);
@@ -1160,7 +1199,7 @@ function openNew(){
     notaVenta:'', nombre:'', cliente:'', fecha:'',
     oc:'', f50:'', p50:'', f100:'', p100:'', fRec:'', fPag:'',
     pagado:0, total:0, dif:0, comentarios:'',
-    extras:[], extrasNVs:[], compras:{}
+    extras:[], extrasNVs:[], listaCompras:[]
   };
   db.unshift(nuevo);
   scheduleSave(); selId=nuevo.id;
@@ -1419,7 +1458,12 @@ function obtenerIngredientesProducto(desc){
   return Array.from({length:N_INGREDIENTES_PLACEHOLDER}, (_,i)=>({ nombre:`Ingrediente ${i+1}`, cantidad:'' }));
 }
 
+// Genera la lista la primera vez que se abre (desde NV + extras + catálogo) y
+// la deja guardada en e.listaCompras — de ahí en adelante es 100% editable y
+// persiste tal cual quede (agregar/editar/eliminar productos e ingredientes).
 async function construirListaCompras(e){
+  if(e.listaCompras && e.listaCompras.length) return e.listaCompras;
+
   let nota=_nvCache[e.notaVenta];
   if(!nota && e.notaVenta && gsConnected()){
     try{ const row=await buscarFilaNV(e.notaVenta); if(row){ nota=filaToNota(row); _nvCache[e.notaVenta]=nota; } }catch(err){}
@@ -1429,11 +1473,16 @@ async function construirListaCompras(e){
     (sec.items||[]).forEach(i=>{ if(i.desc) productos.push(i.desc); });
   });
   (e.extras||[]).forEach(x=>{ if(x.desc) productos.push(x.desc); });
-  return productos.map(p=>({ producto:p, ingredientes: obtenerIngredientesProducto(p) }));
+
+  e.listaCompras = productos.map(p=>({
+    producto:p,
+    ingredientes: obtenerIngredientesProducto(p).map(ing=>({ nombre:ing.nombre, cantidad:ing.cantidad||'', comprado:false }))
+  }));
+  scheduleSave();
+  return e.listaCompras;
 }
 
 let comprasEventId=null;
-let _comprasListaActual=[];
 
 async function abrirListaCompras(id){
   comprasEventId=id;
@@ -1443,47 +1492,100 @@ async function abrirListaCompras(id){
   document.getElementById('compras-body').innerHTML='<div style="font-size:11px;color:var(--gris-t)">Cargando…</div>';
   document.getElementById('compras-progreso').textContent='';
   document.getElementById('compras-modal').style.display='flex';
-  _comprasListaActual=await construirListaCompras(e);
+  await construirListaCompras(e);
   renderListaComprasBody();
 }
 
 function renderListaComprasBody(){
   const e=db.find(x=>x.id===comprasEventId);
   if(!e) return;
-  if(!e.compras) e.compras={};
-  const lista=_comprasListaActual;
+  const lista=e.listaCompras||[];
+  const btnAgregarProducto=`<button class="btn btn-gh" style="width:100%;font-size:10px;margin-top:4px" onclick="agregarGrupoCompra()">+ Agregar producto</button>`;
+
   if(!lista.length){
-    document.getElementById('compras-body').innerHTML='<div style="font-size:11px;color:var(--gris-t);font-style:italic">No hay productos asociados a este evento todavía.</div>';
+    document.getElementById('compras-body').innerHTML=
+      `<div style="font-size:11px;color:var(--gris-t);font-style:italic;margin-bottom:10px">No hay productos asociados a este evento todavía.</div>${btnAgregarProducto}`;
     document.getElementById('compras-progreso').textContent='';
     return;
   }
+
   let total=0, marcados=0;
-  const html=lista.map((grupo,gi)=>`<div style="margin-bottom:12px">
-      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gris-t);margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid var(--gris-m)">${escHtmlCal(grupo.producto)}</div>
-      ${grupo.ingredientes.map((ing,ii)=>{
-        const key=`${grupo.producto}__${ing.nombre}`;
-        const checked=!!e.compras[key];
-        total++; if(checked) marcados++;
-        return `<label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer">
-          <input type="checkbox" ${checked?'checked':''} onchange="toggleCompra(${gi},${ii},this.checked)" style="width:14px;height:14px;cursor:pointer;flex-shrink:0">
-          <span style="flex:1;font-size:12px;${checked?'text-decoration:line-through;color:var(--gris-t)':''}">${escHtmlCal(ing.nombre)}</span>
-          ${ing.cantidad?`<span style="font-size:10px;color:var(--gris-t);font-weight:600">${escHtmlCal(ing.cantidad)}</span>`:''}
-        </label>`;
-      }).join('')}
-    </div>`).join('');
-  document.getElementById('compras-body').innerHTML=html;
+  const html=lista.map((grupo,gi)=>{
+    const filas=grupo.ingredientes.map((ing,ii)=>{
+      total++; if(ing.comprado) marcados++;
+      return `<div style="display:flex;align-items:center;gap:5px;padding:3px 0">
+        <input type="checkbox" ${ing.comprado?'checked':''} onchange="toggleCompra(${gi},${ii},this.checked)" style="width:14px;height:14px;cursor:pointer;flex-shrink:0">
+        <input value="${escHtmlCal(ing.nombre)}" onchange="editarItemCompra(${gi},${ii},'nombre',this.value)" style="flex:2;min-width:0;border:1px solid transparent;background:transparent;font-size:12px;padding:3px 4px;outline:none;border-radius:2px;${ing.comprado?'text-decoration:line-through;color:var(--gris-t)':''}" onfocus="this.style.borderColor='var(--gris-m)'" onblur="this.style.borderColor='transparent'">
+        <input value="${escHtmlCal(ing.cantidad)}" placeholder="Cant." onchange="editarItemCompra(${gi},${ii},'cantidad',this.value)" style="width:60px;border:1px solid transparent;background:transparent;font-size:10px;color:var(--gris-t);padding:3px 4px;outline:none;text-align:right;border-radius:2px" onfocus="this.style.borderColor='var(--gris-m)'" onblur="this.style.borderColor='transparent'">
+        <button onclick="eliminarItemCompra(${gi},${ii})" title="Eliminar ítem" style="background:none;border:none;color:var(--gris-t);cursor:pointer;font-size:14px;padding:0 2px;flex-shrink:0">×</button>
+      </div>`;
+    }).join('');
+    return `<div style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;padding-bottom:4px;border-bottom:1px solid var(--gris-m)">
+        <input value="${escHtmlCal(grupo.producto)}" onchange="editarGrupoCompra(${gi},this.value)" style="flex:1;border:none;background:transparent;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gris-t);padding:2px;outline:none">
+        <button onclick="eliminarGrupoCompra(${gi})" title="Eliminar producto" style="background:none;border:none;color:var(--gris-t);cursor:pointer;font-size:13px;padding:0 2px">🗑</button>
+      </div>
+      ${filas}
+      <button class="btn btn-gh" style="font-size:9px;padding:4px 8px;margin-top:4px" onclick="agregarItemCompra(${gi})">+ ítem</button>
+    </div>`;
+  }).join('');
+
+  document.getElementById('compras-body').innerHTML=html+btnAgregarProducto;
   document.getElementById('compras-progreso').textContent=`${marcados} de ${total} comprados`;
 }
 
 function toggleCompra(gi, ii, checked){
+  const ing=db.find(x=>x.id===comprasEventId)?.listaCompras?.[gi]?.ingredientes?.[ii];
+  if(!ing) return;
+  ing.comprado=checked;
+  scheduleSave();
+  renderListaComprasBody();
+}
+
+function editarItemCompra(gi, ii, campo, valor){
+  const ing=db.find(x=>x.id===comprasEventId)?.listaCompras?.[gi]?.ingredientes?.[ii];
+  if(!ing) return;
+  ing[campo]=valor;
+  scheduleSave();
+}
+
+function editarGrupoCompra(gi, valor){
+  const grupo=db.find(x=>x.id===comprasEventId)?.listaCompras?.[gi];
+  if(!grupo) return;
+  grupo.producto=valor;
+  scheduleSave();
+}
+
+function agregarItemCompra(gi){
+  const grupo=db.find(x=>x.id===comprasEventId)?.listaCompras?.[gi];
+  if(!grupo) return;
+  grupo.ingredientes.push({ nombre:'Nuevo ítem', cantidad:'', comprado:false });
+  scheduleSave();
+  renderListaComprasBody();
+}
+
+function eliminarItemCompra(gi, ii){
+  const grupo=db.find(x=>x.id===comprasEventId)?.listaCompras?.[gi];
+  if(!grupo) return;
+  grupo.ingredientes.splice(ii,1);
+  scheduleSave();
+  renderListaComprasBody();
+}
+
+function agregarGrupoCompra(){
   const e=db.find(x=>x.id===comprasEventId);
   if(!e) return;
-  const grupo=_comprasListaActual[gi];
-  if(!grupo) return;
-  const ing=grupo.ingredientes[ii];
-  const key=`${grupo.producto}__${ing.nombre}`;
-  if(!e.compras) e.compras={};
-  e.compras[key]=checked;
+  if(!e.listaCompras) e.listaCompras=[];
+  e.listaCompras.push({ producto:'Producto nuevo', ingredientes:[{nombre:'Nuevo ítem', cantidad:'', comprado:false}] });
+  scheduleSave();
+  renderListaComprasBody();
+}
+
+function eliminarGrupoCompra(gi){
+  const e=db.find(x=>x.id===comprasEventId);
+  if(!e || !e.listaCompras) return;
+  if(!confirm('¿Eliminar este producto y todos sus ítems de la lista de compras?')) return;
+  e.listaCompras.splice(gi,1);
   scheduleSave();
   renderListaComprasBody();
 }
@@ -1491,7 +1593,6 @@ function toggleCompra(gi, ii, checked){
 function cerrarComprasModal(){
   document.getElementById('compras-modal').style.display='none';
   comprasEventId=null;
-  _comprasListaActual=[];
 }
 
 function generarPDFNV(nota){

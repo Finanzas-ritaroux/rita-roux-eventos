@@ -1804,6 +1804,7 @@ function renderAvisos(avisos){
   gsInit(async () => {
     actualizarGSBar();
     await gsEnsureTab(TAB.AVISOS, ['Fecha','Origen','Tipo','Mensaje','RefID']);
+    await gsEnsureTab(TAB.RESERVAS, ['Fecha','Nombre / Cliente','Nº Personas','Comentarios','Hora','Estado','Origen','ID']);
     const ok = await cargarDesdeGS();
     await cargarReservasGS();
     await cargarRecetasGS();

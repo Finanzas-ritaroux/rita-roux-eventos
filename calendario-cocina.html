@@ -510,6 +510,7 @@ function renderAvisos(avisos){
   gsInit(async () => {
     actualizarBanner();
     await gsEnsureTab(TAB.AVISOS, ['Fecha','Origen','Tipo','Mensaje','RefID']);
+    await gsEnsureTab(TAB.RESERVAS, ['Fecha','Nombre / Cliente','Nº Personas','Comentarios','Hora','Estado','Origen','ID']);
     await cargarEventos();
     await cargarReservasGS();
     datosListos = true;

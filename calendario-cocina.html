@@ -509,8 +509,10 @@ function renderAvisos(avisos){
   renderCalendario();
   gsInit(async () => {
     actualizarBanner();
-    await gsEnsureTab(TAB.AVISOS, ['Fecha','Origen','Tipo','Mensaje','RefID']);
-    await gsEnsureTab(TAB.RESERVAS, ['Fecha','Nombre / Cliente','Nº Personas','Comentarios','Hora','Estado','Origen','ID']);
+    // No se esperan estas dos — crear pestañas no debe poder bloquear ni
+    // retrasar la carga de eventos/reservas si Sheets tarda o falla en esto.
+    gsEnsureTab(TAB.AVISOS, ['Fecha','Origen','Tipo','Mensaje','RefID']).catch(()=>{});
+    gsEnsureTab(TAB.RESERVAS, ['Fecha','Nombre / Cliente','Nº Personas','Comentarios','Hora','Estado','Origen','ID']).catch(()=>{});
     await cargarEventos();
     await cargarReservasGS();
     datosListos = true;

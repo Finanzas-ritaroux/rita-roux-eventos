@@ -1803,8 +1803,10 @@ function renderAvisos(avisos){
   setTab('ac', document.querySelector('.tbtn'));
   gsInit(async () => {
     actualizarGSBar();
-    await gsEnsureTab(TAB.AVISOS, ['Fecha','Origen','Tipo','Mensaje','RefID']);
-    await gsEnsureTab(TAB.RESERVAS, ['Fecha','Nombre / Cliente','Nº Personas','Comentarios','Hora','Estado','Origen','ID']);
+    // No se esperan estas dos — crear pestañas no debe poder bloquear ni
+    // retrasar la carga de eventos/reservas si Sheets tarda o falla en esto.
+    gsEnsureTab(TAB.AVISOS, ['Fecha','Origen','Tipo','Mensaje','RefID']).catch(()=>{});
+    gsEnsureTab(TAB.RESERVAS, ['Fecha','Nombre / Cliente','Nº Personas','Comentarios','Hora','Estado','Origen','ID']).catch(()=>{});
     const ok = await cargarDesdeGS();
     await cargarReservasGS();
     await cargarRecetasGS();

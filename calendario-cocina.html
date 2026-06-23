@@ -25,6 +25,9 @@ header{background:var(--negro);display:flex;align-items:stretch}
 .banner{background:var(--blanco);border-bottom:1px solid var(--gris-m);padding:10px 22px;display:flex;align-items:center;gap:14px;font-size:12px;color:var(--gris-t)}
 .banner.ok{background:var(--verde-bg);color:var(--verde)}
 
+.aviso{background:#FFF8E1;border-bottom:1px solid var(--s23);padding:9px 22px;display:flex;align-items:center;gap:10px;font-size:12px;color:#7A5800}
+.aviso button{background:none;border:none;color:#7A5800;font-size:16px;cursor:pointer;line-height:1;margin-left:auto;padding:0 4px}
+
 .main{max-width:760px;margin:0 auto;padding:24px 18px}
 
 .cal-wrap{background:var(--blanco);border:1px solid var(--gris-m);border-radius:5px;overflow:hidden}
@@ -77,6 +80,8 @@ header{background:var(--negro);display:flex;align-items:stretch}
   <span id="gs-status">⚪ No conectado a Google — conecta para ver y agregar reservas.</span>
   <button class="btn btn-gh" style="font-size:9px;padding:6px 12px;margin-left:auto" onclick="gsAuth()">Conectar Google</button>
 </div>
+
+<div id="avisos-bar"></div>
 
 <div class="main">
   <div class="cal-wrap">
@@ -155,9 +160,61 @@ function fmtFechaLarga(s){
   if(!s) return '—';
   return new Date(s+'T00:00:00').toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 }
+function fmtFechaCorta(s){
+  if(!s) return '';
+  const d=new Date(s+'T00:00:00');
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+}
 
 let eventos = [];
 let reservas = [];
+
+// ═══════════════════════════════════════════════════════
+// JUSTO — lectura directa desde la API (Make.com solo avisa qué IDs existen,
+// vía webhook → hoja "Reservas"; el detalle se trae en vivo desde aquí porque
+// la API de Justo no tiene un endpoint para listar reservas, solo GET por ID)
+// ═══════════════════════════════════════════════════════
+const JUSTO_API_BASE  = 'https://api.service.getjusto.com/v3';
+const JUSTO_API_TOKEN = 'PEGA_AQUI_TU_TOKEN_DE_JUSTO'; // generado en developers.getjusto.com (permiso Reservations)
+
+async function justoGetReservation(id){
+  try{
+    const res = await fetch(`${JUSTO_API_BASE}/reservations/reservation/${id}`, {
+      headers: { Authorization: `Bearer ${JUSTO_API_TOKEN}` }
+    });
+    const json = await res.json();
+    return json.success ? json.data : null;
+  }catch(e){ console.warn('Error consultando reserva en Justo:', id, e); return null; }
+}
+
+function justoAFechaHora(iso){
+  if(!iso) return { fecha:'', hora:'' };
+  const d = new Date(iso);
+  return {
+    fecha: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`,
+    hora:  `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+  };
+}
+
+// Para cada reserva de Justo vigente (hoy o futura) trae el detalle fresco
+// directo desde la API de Justo. Si la consulta falla, se mantiene el último
+// valor conocido (el que ya estaba cargado) en vez de dejarlo vacío.
+async function enriquecerReservasJusto(){
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const pendientes = reservas.filter(r=>
+    r.origen==='justo' && r.estado!=='cancelada' && r.fecha && new Date(r.fecha+'T00:00:00')>=hoy
+  );
+  await Promise.all(pendientes.map(async r=>{
+    const data = await justoGetReservation(r.id);
+    if(!data) return;
+    const { fecha, hora } = justoAFechaHora(data.startsAt);
+    if(fecha) r.fecha = fecha;
+    r.hora        = hora;
+    r.nombre       = `${data.clientData?.firstName||''} ${data.clientData?.lastName||''}`.trim() || r.nombre;
+    r.personas     = data.partySize ?? r.personas;
+    r.comentarios  = data.specialRequests || '';
+  }));
+}
 
 async function cargarEventos(){
   if(!gsConnected()) return;
@@ -186,6 +243,7 @@ async function cargarReservasGS(){
     // Filas antiguas (creadas antes de este esquema) no tenían ID propio — se les
     // asigna uno y se persiste una sola vez para que quede estable en futuras cargas.
     if(faltanIds) await guardarReservasGS();
+    await enriquecerReservasJusto();
   }catch(e){ console.warn('Error cargando reservas:', e); }
 }
 
@@ -324,20 +382,28 @@ async function guardarReservaModal(){
   const comentarios=document.getElementById('rv-com').value;
   if(!fecha||!nombre){ alert('Completa al menos la fecha y el nombre.'); return; }
 
+  const esNueva = !resvEditId;
   const btn=document.getElementById('rv-save-btn');
   const txtOriginal=btn.textContent;
   btn.disabled=true; btn.textContent='Guardando…';
   try{
     // Refresca primero para no pisar reservas nuevas llegadas desde Justo entre medio.
     await cargarReservasGS();
+    let nuevaReserva=null;
     if(resvEditId){
       const r=reservas.find(x=>x.id===resvEditId);
       if(r){ r.fecha=fecha; r.hora=hora; r.nombre=nombre; r.personas=personas; r.comentarios=comentarios; }
-      else reservas.push({ id:uid(), fecha, hora, nombre, personas, comentarios, estado:'confirmada', origen:'manual' });
+      else { nuevaReserva={ id:uid(), fecha, hora, nombre, personas, comentarios, estado:'confirmada', origen:'manual' }; reservas.push(nuevaReserva); }
     } else {
-      reservas.push({ id:uid(), fecha, hora, nombre, personas, comentarios, estado:'confirmada', origen:'manual' });
+      nuevaReserva={ id:uid(), fecha, hora, nombre, personas, comentarios, estado:'confirmada', origen:'manual' };
+      reservas.push(nuevaReserva);
     }
     await guardarReservasGS();
+    if(esNueva && nuevaReserva){
+      gsAgregarAviso('cocina', 'reserva_nueva',
+        `Nueva reserva: ${nombre} · ${personas||'?'} pers. · ${fmtFechaCorta(fecha)}${hora?' '+hora:''}`,
+        nuevaReserva.id);
+    }
     cerrarResvModal();
     renderCalendario();
   }catch(err){
@@ -393,17 +459,62 @@ function iniciarRefrescoAutomatico(){
     await cargarEventos();
     await cargarReservasGS();
     renderCalendario();
+    await cargarYMostrarAvisos();
   }, 60000);
+}
+
+// ═══════════════════════════════════════════════════════
+// AVISOS CRUZADOS — notifica en seguimiento-eventos.html cuando se agrega una
+// reserva nueva aquí, y viceversa. Se muestran por 3 días y se pueden cerrar
+// a mano (el cierre solo se recuerda en este navegador).
+// ═══════════════════════════════════════════════════════
+const AVISO_ORIGEN  = 'cocina';
+const AVISO_TTL_MS  = 3*24*60*60*1000;
+const AVISOS_VISTOS_KEY = 'rr_avisos_vistos_cocina';
+
+function _avisosVistos(){
+  try{ return new Set(JSON.parse(localStorage.getItem(AVISOS_VISTOS_KEY)||'[]')); }catch(e){ return new Set(); }
+}
+function marcarAvisoVisto(refId){
+  const s=_avisosVistos(); s.add(refId);
+  localStorage.setItem(AVISOS_VISTOS_KEY, JSON.stringify([...s]));
+}
+
+async function cargarYMostrarAvisos(){
+  if(!gsConnected()) return;
+  try{
+    const res = await gsGet(`${TAB.AVISOS}!A2:E`);
+    const ahora=Date.now(), vistos=_avisosVistos();
+    const avisos = (res.values||[]).map(r=>({
+      fecha:r[0]||'', origen:r[1]||'', tipo:r[2]||'', mensaje:r[3]||'', refId:r[4]||''
+    })).filter(a=>
+      a.origen && a.origen!==AVISO_ORIGEN && a.fecha &&
+      (ahora-new Date(a.fecha).getTime())<AVISO_TTL_MS && !vistos.has(a.refId)
+    );
+    renderAvisos(avisos);
+  }catch(e){ console.warn('Error cargando avisos:', e); }
+}
+
+function renderAvisos(avisos){
+  const cont=document.getElementById('avisos-bar');
+  if(!cont) return;
+  cont.innerHTML = avisos.map(a=>`
+    <div class="aviso">
+      <span>🔔 ${escHtmlCal(a.mensaje)} <i style="opacity:.65">— desde Eventos</i></span>
+      <button onclick="marcarAvisoVisto('${a.refId}');this.closest('.aviso').remove()" title="Cerrar">×</button>
+    </div>`).join('');
 }
 
 (async function init(){
   renderCalendario();
   gsInit(async () => {
     actualizarBanner();
+    await gsEnsureTab(TAB.AVISOS, ['Fecha','Origen','Tipo','Mensaje','RefID']);
     await cargarEventos();
     await cargarReservasGS();
     datosListos = true;
     renderCalendario();
+    await cargarYMostrarAvisos();
     iniciarRefrescoAutomatico();
   }, { requireAuth: true });
 })();

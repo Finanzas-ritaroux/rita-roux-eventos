@@ -14,6 +14,7 @@ const TAB = {
   RESERVAS     : 'Reservas',
   CATALOGO     : 'Catalogo',
   CLIENTES     : 'HistoricoClientes',
+  AVISOS       : 'Avisos',
 };
 
 // ─── CATÁLOGO DE SERVICIOS (cotizador + editar-servicios + lista de compras) ───
@@ -290,6 +291,35 @@ async function gsDriveUpload(blob, filename, folderName) {
       method: 'POST', headers: { Authorization: `Bearer ${gs_token}` }, body: form
     });
   } catch(e) { console.warn('Error subiendo a Drive:', e); return null; }
+}
+
+// Crea la pestaña indicada si no existe (vía batchUpdate) y le pone encabezados
+// si está vacía. A diferencia de gsInitSheet, esta sí puede crear la pestaña.
+async function gsEnsureTab(nombre, hdr) {
+  if (!gsConnected()) return;
+  try {
+    const meta = await (await fetch(_gsShUrl('?fields=sheets.properties.title'), { headers: _gsHdr() })).json();
+    const existe = (meta.sheets || []).some(s => s.properties.title === nombre);
+    if (!existe) {
+      await fetch(_gsShUrl(':batchUpdate'), {
+        method: 'POST', headers: _gsHdr(),
+        body: JSON.stringify({ requests: [{ addSheet: { properties: { title: nombre } } }] })
+      });
+    }
+    const res = await gsGet(`${nombre}!A1:A1`);
+    if (!res.values || !res.values.length) {
+      await gsUpdate(`${nombre}!A1`, [hdr]);
+    }
+  } catch (e) { console.warn('Error asegurando hoja', nombre, e); }
+}
+
+// Registra un aviso cruzado entre calendario-cocina.html y seguimiento-eventos.html
+// (ej. "nueva reserva agregada"), para que el otro flujo lo muestre como notificación.
+async function gsAgregarAviso(origen, tipo, mensaje, refId) {
+  if (!gsConnected()) return;
+  try {
+    await gsAppend(`${TAB.AVISOS}!A2:E`, [[new Date().toISOString(), origen, tipo, mensaje, refId || '']]);
+  } catch (e) { console.warn('Error agregando aviso:', e); }
 }
 
 // Crea los headers en cada pestaña de la hoja si aún están vacíos

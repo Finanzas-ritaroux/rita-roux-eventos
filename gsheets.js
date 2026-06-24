@@ -6,6 +6,10 @@ const GS_CLIENT_ID = '7720731839-diiq519n6prur6ucjegbuk44lkgn2ojr.apps.googleuse
 const GS_SHEET_ID  = '1Uum5_SUQWd2yZJC9B7qcOmTDDpY7mXntMzJpEl72TsE';
 const GS_SCOPES    = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
 
+// Espacios físicos reservables (calendario-cocina + cotizador) — usados para
+// detectar choques de horario: dos reservas no pueden compartir espacio+fecha+hora.
+const ESPACIOS = ['Salón Victoriano', 'Pérgola', 'Espino'];
+
 const TAB = {
   PRESUPUESTOS : 'Presupuestos',
   NOTAS_VENTA  : 'NotasVenta',
@@ -329,7 +333,7 @@ async function gsInitSheet() {
     { name: TAB.PRESUPUESTOS, hdr: ['Nº Cotización','Fecha','Cliente','Evento','Fecha Evento','Nº Personas','Subtotal','IVA','Total','Estado','Servicios'] },
     { name: TAB.NOTAS_VENTA,  hdr: ['Nº NV','Nº Cotización','Fecha Emisión','Nombre Contacto','Empresa','Teléfono','Mail Contacto','Razón Social','RUT','Giro','Dirección','Mail Facturación','Nombre Evento','Fecha Evento','Nº Personas','Subtotal','IVA','Total'] },
     { name: TAB.SEG,          hdr: ['Estado','Tipo','Nº NV','Nombre','Cliente','Fecha','OC','Factura 50%','Pago 50%','Factura 100%','Pago 100%','Fact. Prov. Recibidas','Fact. Prov. Pagadas','Total','Pagado','Diferencia','Comentarios','Extras','Extras NV','Compras','Pagos'] },
-    { name: TAB.RESERVAS,     hdr: ['Fecha','Nombre / Cliente','Nº Personas','Comentarios','Hora','Estado','Origen','ID'] },
+    { name: TAB.RESERVAS,     hdr: ['Fecha','Nombre / Cliente','Nº Personas','Comentarios','Hora','Estado','Origen','ID','Espacio'] },
     { name: TAB.CATALOGO,     hdr: ['Categoría','Nombre Servicio','Precio Recomendado','Unidad','Grupo','Ingredientes'] },
     { name: TAB.CLIENTES,     hdr: ['Fecha','Cliente','Evento','Calificación','Comentario','Nº NV'] },
   ];

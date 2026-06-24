@@ -257,7 +257,7 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
     <p>Facturación · Cobros · Proveedores · Alertas</p>
   </div>
   <div class="hdr-act">
-    <button class="btn btn-sec" style="width:34px;height:34px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px" onclick="abrirInfoEmpresaModal()" title="Datos de la empresa">👤</button>
+    <button class="btn btn-sec" style="width:34px;height:34px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px" onclick="abrirInfoEmpresaModal()" title="Datos de la empresa, Guía Rápida y Manual de Uso">👤</button>
     <button class="btn btn-sec" onclick="location.href='historico-presupuestos.html'">Histórico Cotizaciones</button>
     <button class="btn btn-sec" onclick="location.href='dashboard.html'">📊 Dashboard</button>
     <button class="btn btn-pr" onclick="location.href='cotizador-rita-roux.html'">+ Nueva Cotización</button>
@@ -347,6 +347,15 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
       <div style="display:flex;gap:10px">
         <div class="det-field" style="flex:1"><label>Fecha</label><input type="date" id="rv-fecha"></div>
         <div class="det-field" style="flex:1"><label>Hora</label><input type="time" id="rv-hora"></div>
+      </div>
+      <div class="det-field">
+        <label>Espacio</label>
+        <select id="rv-espacio">
+          <option value="">— Reserva de mesa (sin espacio) —</option>
+          <option value="Salón Victoriano">Salón Victoriano</option>
+          <option value="Pérgola">Pérgola</option>
+          <option value="Espino">Espino</option>
+        </select>
       </div>
       <div class="det-field"><label>Nombre / Cliente</label><input type="text" id="rv-nombre" placeholder="Ej: Familia Pérez"></div>
       <div class="det-field"><label>Nº Personas</label><input type="number" id="rv-personas" placeholder="0"></div>
@@ -439,11 +448,38 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
         </div>
       </div>
     </div>
+    <div style="padding:12px 16px;background:var(--gris);display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-gh" onclick="cerrarInfoEmpresaModal(); abrirDocModal('Guia%20Rapida.html','📘 Guía Rápida')">📘 Guía Rápida</button>
+      <button class="btn btn-gh" onclick="cerrarInfoEmpresaModal(); abrirDocModal('Manual%20de%20Uso.html','📖 Manual de Uso')">📖 Manual de Uso</button>
+    </div>
   </div>
 </div>
 <style>
 @media (max-width:600px){ .empresa-grid{grid-template-columns:1fr!important} .empresa-grid>div:first-child{border-right:none!important} }
 </style>
+
+<!-- MODAL GUÍA RÁPIDA / MANUAL DE USO — se abren dentro de esta misma pantalla -->
+<div id="doc-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9993;align-items:center;justify-content:center;flex-direction:column">
+  <div style="background:#fff;width:94%;max-width:900px;height:90vh;display:flex;flex-direction:column;border-radius:4px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <div style="background:var(--negro);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <span id="doc-modal-titulo" style="color:#fff;font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase"></span>
+      <button onclick="cerrarDocModal()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <iframe id="doc-modal-iframe" style="flex:1;border:none;width:100%"></iframe>
+  </div>
+</div>
+
+<script>
+function abrirDocModal(src, titulo){
+  document.getElementById('doc-modal-titulo').textContent = titulo;
+  document.getElementById('doc-modal-iframe').src = src;
+  document.getElementById('doc-modal').style.display='flex';
+}
+function cerrarDocModal(){
+  document.getElementById('doc-modal').style.display='none';
+  document.getElementById('doc-modal-iframe').src = 'about:blank';
+}
+</script>
 
 <script>
 function abrirInfoEmpresaModal(){ document.getElementById('empresa-modal').style.display='flex'; }
@@ -493,14 +529,14 @@ function saveCacheReservas(){ localStorage.setItem(KEY_RESV, JSON.stringify(rese
 async function cargarReservasGS(){
   if(!gsConnected()) return false;
   try{
-    const res = await gsGet(`${TAB.RESERVAS}!A2:H`);
+    const res = await gsGet(`${TAB.RESERVAS}!A2:I`);
     let faltanIds=false;
     reservas = (res.values||[]).map(r=>{
       let id = r[7]||'';
       if(!id){ id=uid(); faltanIds=true; }
       return {
         id, fecha:r[0]||'', nombre:r[1]||'', personas:r[2]||'', comentarios:r[3]||'',
-        hora:r[4]||'', estado:r[5]||'confirmada', origen:r[6]||'manual'
+        hora:r[4]||'', estado:r[5]||'confirmada', origen:r[6]||'manual', espacio:r[8]||''
       };
     });
     saveCacheReservas();
@@ -522,9 +558,9 @@ async function actualizarCalendario(){
 
 async function guardarReservasGS(){
   if(!gsConnected()) return;
-  const rows = reservas.map(r=>[r.fecha, r.nombre, r.personas, r.comentarios, r.hora||'', r.estado||'confirmada', r.origen||'manual', r.id]);
-  await gsClear(`${TAB.RESERVAS}!A2:H`);
-  if(rows.length) await gsAppend(`${TAB.RESERVAS}!A2:H`, rows);
+  const rows = reservas.map(r=>[r.fecha, r.nombre, r.personas, r.comentarios, r.hora||'', r.estado||'confirmada', r.origen||'manual', r.id, r.espacio||'']);
+  await gsClear(`${TAB.RESERVAS}!A2:I`);
+  if(rows.length) await gsAppend(`${TAB.RESERVAS}!A2:I`, rows);
 }
 
 let resvEditId=null;
@@ -533,6 +569,7 @@ function abrirResvModal(id){
   const r = id ? reservas.find(x=>x.id===id) : null;
   document.getElementById('rv-fecha').value     = r?.fecha||'';
   document.getElementById('rv-hora').value      = r?.hora||'';
+  document.getElementById('rv-espacio').value   = r?.espacio||'';
   document.getElementById('rv-nombre').value    = r?.nombre||'';
   document.getElementById('rv-personas').value  = r?.personas||'';
   document.getElementById('rv-com').value       = r?.comentarios||'';
@@ -541,15 +578,26 @@ function abrirResvModal(id){
 }
 function cerrarResvModal(){ document.getElementById('resv-modal').style.display='none'; resvEditId=null; }
 
+// Dos reservas no pueden compartir el mismo espacio (Salón Victoriano/Pérgola/Espino)
+// el mismo día y hora — las reservas de mesa sin espacio asignado nunca chocan.
+function reservaEnConflicto(fecha, hora, espacio, excludeId){
+  if(!espacio) return null;
+  return reservas.find(r=>
+    r.id!==excludeId && r.espacio===espacio && r.fecha===fecha && r.hora===hora && r.estado!=='cancelada'
+  ) || null;
+}
+
 async function guardarReservaModal(){
   if(!gsConnected()){ alert('Conéctate a Google para guardar la reserva — sin conexión no se puede guardar.'); return; }
   if(!datosListos){ alert('Aún se está cargando la información. Espera unos segundos e intenta de nuevo.'); return; }
   const fecha=document.getElementById('rv-fecha').value;
   const hora=document.getElementById('rv-hora').value;
+  const espacio=document.getElementById('rv-espacio').value;
   const nombre=document.getElementById('rv-nombre').value.trim();
   const personas=document.getElementById('rv-personas').value;
   const comentarios=document.getElementById('rv-com').value;
   if(!fecha||!nombre){ alert('Completa al menos la fecha y el nombre.'); return; }
+  if(espacio && !hora){ alert(`Indica la hora para reservar un espacio (${ESPACIOS.join(', ')}).`); return; }
 
   const esNueva = !resvEditId;
   const btn=document.getElementById('rv-save-btn');
@@ -558,13 +606,19 @@ async function guardarReservaModal(){
   try{
     // Refresca primero para no pisar reservas nuevas llegadas desde Justo u otra pestaña.
     await cargarReservasGS();
+    const conflicto=reservaEnConflicto(fecha, hora, espacio, resvEditId);
+    if(conflicto){
+      alert(`Ya existe una reserva en ${espacio} el ${fmtFechaCorta(fecha)} a las ${hora} (${conflicto.nombre||'sin nombre'}). Elige otro horario.`);
+      renderCalendario();
+      return;
+    }
     let nuevaReserva=null;
     if(resvEditId){
       const r=reservas.find(x=>x.id===resvEditId);
-      if(r){ r.fecha=fecha; r.hora=hora; r.nombre=nombre; r.personas=personas; r.comentarios=comentarios; }
-      else { nuevaReserva={ id:uid(), fecha, hora, nombre, personas, comentarios, estado:'confirmada', origen:'manual' }; reservas.push(nuevaReserva); }
+      if(r){ r.fecha=fecha; r.hora=hora; r.espacio=espacio; r.nombre=nombre; r.personas=personas; r.comentarios=comentarios; }
+      else { nuevaReserva={ id:uid(), fecha, hora, espacio, nombre, personas, comentarios, estado:'confirmada', origen:'manual' }; reservas.push(nuevaReserva); }
     } else {
-      nuevaReserva={ id:uid(), fecha, hora, nombre, personas, comentarios, estado:'confirmada', origen:'manual' };
+      nuevaReserva={ id:uid(), fecha, hora, espacio, nombre, personas, comentarios, estado:'confirmada', origen:'manual' };
       reservas.push(nuevaReserva);
     }
     saveCacheReservas();
@@ -805,7 +859,8 @@ function renderCalendario(){
       ${evs.slice(0,3).map(e=>{
         if(e.__tipo==='reserva'){
           const hora = e.hora ? e.hora+' · ' : '';
-          return `<span class="cal-evt resv" title="${hora}${escHtmlCal(e.nombre)}${e.personas?' · '+e.personas+' pers.':''}" onclick="abrirResvModal('${e.id}')">🍽 ${escHtmlCal(e.nombre)||'(reserva)'}</span>`;
+          const etiqueta = e.espacio ? `${e.espacio} · ${escHtmlCal(e.nombre)||'(reserva)'}` : (escHtmlCal(e.nombre)||'(reserva)');
+          return `<span class="cal-evt resv" title="${hora}${e.espacio?e.espacio+' · ':''}${escHtmlCal(e.nombre)}${e.personas?' · '+e.personas+' pers.':''}" onclick="abrirResvModal('${e.id}')">🍽 ${etiqueta}</span>`;
         }
         return `<span class="cal-evt ${e.estado==='finalizado'?'fin':''}" title="${escHtmlCal(e.nombre)} · ${escHtmlCal(e.cliente)}" onclick="selEv('${e.id}')">${escHtmlCal(e.nombre)||'(sin nombre)'}</span>`;
       }).join('')}
@@ -1888,7 +1943,7 @@ function renderAvisos(avisos){
     // No se esperan estas dos — crear pestañas no debe poder bloquear ni
     // retrasar la carga de eventos/reservas si Sheets tarda o falla en esto.
     gsEnsureTab(TAB.AVISOS, ['Fecha','Origen','Tipo','Mensaje','RefID']).catch(()=>{});
-    gsEnsureTab(TAB.RESERVAS, ['Fecha','Nombre / Cliente','Nº Personas','Comentarios','Hora','Estado','Origen','ID']).catch(()=>{});
+    gsEnsureTab(TAB.RESERVAS, ['Fecha','Nombre / Cliente','Nº Personas','Comentarios','Hora','Estado','Origen','ID','Espacio']).catch(()=>{});
     const ok = await cargarDesdeGS();
     await cargarReservasGS();
     await cargarRecetasGS();

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guía Rápida — Sistema de Eventos Rita Roux</title>
+<style>
+  :root{
+    --rojo:#CC1F1F; --rojo-osc:#A01818; --rojo-cl:#FFF5F5; --rojo-borde:#F0C0C0;
+    --negro:#1A1A1A; --gris:#F4F4F4; --gris-m:#E0E0E0; --gris-t:#666666;
+    --verde:#2E7D32; --azul:#1565C0; --naranja:#E65100;
+  }
+  *{box-sizing:border-box}
+  body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:var(--negro);font-size:13px;line-height:1.6;margin:0;background:#fff}
+  .wrap{max-width:760px;margin:0 auto;padding:0 22px 50px}
+
+  .top{background:var(--negro);padding:26px 22px 22px;margin-bottom:26px}
+  .top .brand{font-size:13px;letter-spacing:4px;font-weight:900;font-style:italic;text-transform:uppercase;color:var(--rojo);margin-bottom:6px}
+  .top h1{font-size:23px;font-weight:800;color:#fff;margin:0 0 4px}
+  .top p{font-size:12px;color:#ccc;margin:0}
+
+  h1.sec{font-size:16px;color:var(--negro);border-bottom:3px solid var(--rojo);padding-bottom:6px;margin:30px 0 12px}
+  h1.sec .num{color:var(--rojo);margin-right:6px}
+  h2{font-size:12.5px;color:var(--rojo-osc);margin:14px 0 6px}
+  p{margin:7px 0}
+  ol.steps{margin:8px 0 14px;padding-left:0;list-style:none;counter-reset:step}
+  ol.steps>li{counter-increment:step;margin:0 0 9px;padding-left:30px;position:relative}
+  ol.steps>li::before{content:counter(step);position:absolute;left:0;top:0;width:20px;height:20px;border-radius:50%;background:var(--rojo);color:#fff;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  ul.bullets{margin:6px 0 14px;padding-left:18px}
+  ul.bullets li{margin-bottom:5px}
+  .btn{display:inline-block;background:var(--negro);color:#fff;font-size:10.5px;font-weight:700;letter-spacing:.3px;padding:2px 8px;border-radius:3px;font-family:monospace}
+  .btn.pr{background:var(--rojo)}
+  .field{display:inline-block;background:#fff;border:1px solid var(--gris-m);font-size:10.5px;font-family:monospace;padding:1px 7px;border-radius:3px}
+  .file{font-family:monospace;font-size:10.5px;background:var(--gris);padding:1px 6px;border-radius:3px}
+
+  .box{border-radius:4px;padding:10px 14px;margin:12px 0;font-size:12px;border-left:4px solid}
+  .box.tip{background:#F0F7FF;border-color:var(--azul)}
+  .box.warn{background:#FFF8E1;border-color:#F9A825}
+  .box.danger{background:var(--rojo-cl);border-color:var(--rojo)}
+  .box.info{background:var(--gris);border-color:var(--gris-t)}
+  .box b.lbl{display:block;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
+  .box.tip b.lbl{color:var(--azul)} .box.warn b.lbl{color:#a66000} .box.danger b.lbl{color:var(--rojo)} .box.info b.lbl{color:var(--gris-t)}
+
+  footer.foot{font-size:10.5px;color:var(--gris-t);margin-top:30px;padding-top:14px;border-top:1px solid var(--gris-m)}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand">Rita&nbsp;Roux</div>
+  <h1>Guía Rápida — Sistema de Eventos</h1>
+  <p>Para Teresa · Cotizaciones, Notas de Venta y coordinación con Cocina</p>
+</div>
+
+<div class="wrap">
+
+<p>¡Hola Teresa! Esta guía resume, en pocos pasos, cómo usar el sistema para cotizar eventos, cerrar la venta con el cliente y coordinarte con Cocina. No necesitas memorizarla — tenla a mano y revísala cuando la necesites.</p>
+
+<div class="box danger">
+<b class="lbl">Antes de empezar: conéctate a Google</b>
+Todas las pantallas tienen un botón <span class="btn">☁ Conectar Google</span> arriba. Apriétalo al empezar tu día e inicia sesión con la cuenta de Rita Roux. Así tus cotizaciones, notas de venta y reservas quedan guardadas para todo el equipo, no solo en tu computador.
+</div>
+
+<h1 class="sec"><span class="num">1.</span>Crear una cotización</h1>
+<p><b>Pantalla:</b> Cotizador de Eventos</p>
+<ul class="bullets">
+<li>Completa los datos generales: cliente, tipo de evento, fecha y número de personas.</li>
+<li>En el catálogo de la izquierda elige una categoría — Locaciones, Catering, Flores, Audio o Generales — y aprieta el botón <span class="btn">+</span> junto a cada servicio que el cliente quiere.</li>
+<li>¿Falta algo en el catálogo? Escríbelo en "Ítem personalizado" y agrégalo con el precio que corresponda.</li>
+<li>Ajusta cantidades y precios si hace falta — el total con IVA se calcula solo.</li>
+<li>Cuando esté todo listo, aprieta "👁 Vista Previa y Guardar", revisa el PDF y confirma para descargarlo.</li>
+</ul>
+
+<div class="box tip">
+<b class="lbl">Nuevo</b>
+Al escribir la <span class="field">Fecha del Evento</span>, conectado a Google aparece un aviso debajo mostrando qué otros eventos o reservas de Cocina ya existen para ese mismo día (con espacio y hora si corresponde). No te impide guardar la cotización — es solo para que revises antes de comprometer un horario con el cliente. Más detalle en la sección 6.
+</div>
+
+<div class="box warn">
+<b class="lbl">Tip</b>
+Una cotización confirmada no se puede editar después. Si hay un error, crea una nueva con "↺ Nueva".
+</div>
+
+<h1 class="sec"><span class="num">2.</span>Editar el catálogo de servicios</h1>
+<p><b>Pantalla:</b> Editar Servicios — se accede desde un botón en Histórico de Cotizaciones. Úsala cuando necesites agregar un servicio nuevo, cambiar un precio, o agregarle ingredientes a un servicio (para que después aparezcan solos en la Lista de Compras).</p>
+<ul class="bullets">
+<li>Elige la categoría arriba — Locaciones, Catering, Flores, Audio o Generales.</li>
+<li>Edita el nombre, grupo, precio o unidad de cualquier servicio directo en la tabla.</li>
+<li>Para agregar uno nuevo, complétalo en la fila de abajo y aprieta "+ Agregar servicio".</li>
+<li>Aprieta el botón "🧂 N ingredientes" de un servicio para agregarle los ingredientes que necesita.</li>
+</ul>
+<div class="box tip">
+<b class="lbl">Tip</b>
+Los cambios que haces aquí se reflejan de inmediato en el catálogo del Cotizador — no hace falta avisarle a nadie más.
+</div>
+
+<h1 class="sec"><span class="num">3.</span>Histórico de Cotizaciones</h1>
+<p>Aquí ves todas las cotizaciones que has hecho. Puedes volver a descargar el PDF de cualquiera, y cuando el cliente aprueba el presupuesto, aprieta "Emitir NV →" para convertirla en Nota de Venta — no necesitas volver a escribir nada, todo viaja precargado.</p>
+
+<h1 class="sec"><span class="num">4.</span>Emitir la Nota de Venta</h1>
+<p>La Nota de Venta es el documento que cierra formalmente el trato con el cliente.</p>
+<ul class="bullets">
+<li>Si vienes del Histórico con "Emitir NV →", los datos ya están cargados.</li>
+<li>Completa los datos de facturación del cliente — Razón Social y RUT son obligatorios (el sistema valida el RUT automáticamente).</li>
+<li>Aprieta "Generar Nota de Venta →".</li>
+<li>Se abre una vista previa: puedes descargar el PDF o ir directo a "Eventos Activos".</li>
+</ul>
+<div class="box tip">
+<b class="lbl">Tip</b>
+El sistema no te deja emitir dos veces la Nota de Venta de la misma cotización, así que no hay riesgo de duplicarla por error.
+</div>
+
+<h1 class="sec"><span class="num">5.</span>El calendario de eventos</h1>
+<p>En la pantalla de Inicio (Seguimiento de Eventos) hay un calendario con todos los eventos confirmados y, junto a ellos, las reservas hechas desde Cocina. Revísalo antes de cerrar una fecha nueva con un cliente, para evitar choques.</p>
+
+<h1 class="sec"><span class="num">6.</span>Coordinación con Cocina: Calendario y Espacios</h1>
+<p><b>Pantalla:</b> Calendario de Cocina — la usa el equipo de cocina para ver los eventos confirmados y para reservar espacios o mesas, sin tocar cotizaciones ni facturación.</p>
+
+<ul class="bullets">
+<li>Cocina ve ahí, en un solo calendario, todos los eventos ya confirmados (de solo lectura) y puede agregar sus propias <b>reservas</b> con el botón "🍽 + Agregar Reserva".</li>
+<li>Al crear una reserva, además de fecha, hora, nombre y comentarios, hay un campo <span class="field">Espacio</span> opcional con tres opciones: <b>Salón Victoriano</b>, <b>Pérgola</b> y <b>Espino</b>. Se deja vacío para una reserva de mesa común (no genera conflicto con nada).</li>
+<li>Si eliges uno de los tres espacios, el sistema exige una hora y revisa que ningún otro evento o reserva tenga ya ocupado ese mismo espacio, ese mismo día, a esa misma hora.</li>
+</ul>
+
+<div class="box danger">
+<b class="lbl">Bloqueo automático de choques</b>
+Si Pérgola ya está reservada el martes 30 a las 15:30, el sistema no permite guardar otra reserva para Pérgola ese mismo día y hora — avisa con quién choca para que se elija otro horario. Esto pasa tanto desde el Calendario de Cocina como desde Seguimiento de Eventos (tienen el mismo formulario de reservas).
+</div>
+
+<p>Cada vez que se agrega una reserva nueva desde Cocina, aparece un aviso (🔔) arriba en Seguimiento de Eventos avisando que llegó — y al revés, si se agrega algo desde Eventos, Cocina recibe el mismo tipo de aviso. Así ambos equipos se enteran sin tener que avisarse por WhatsApp.</p>
+
+<div class="box tip">
+<b class="lbl">Recuerda</b>
+El Cotizador (sección 1) avisa qué eventos y reservas hay para una fecha, pero no bloquea la cotización — el único bloqueo real por horario y espacio ocurre al guardar una reserva en el Calendario de Cocina o en Seguimiento de Eventos.
+</div>
+
+<h1 class="sec"><span class="num">7.</span>Extras y Lista de Compras</h1>
+<p>Si durante la organización de un evento surge algo nuevo que cobrar (por ejemplo, horas extra de un servicio), entra al evento desde Seguimiento de Eventos y agrégalo en la sección "Extras" — se cobra aparte, sin modificar la Nota de Venta original.</p>
+<p>Para organizar las compras de un evento, entra al evento y aprieta "🛒 Lista de Compras": ahí puedes ver, editar y marcar como comprados los ingredientes de cada servicio.</p>
+
+<h1 class="sec"><span class="num">8.</span>Dashboard de Eventos</h1>
+<p><b>Pantalla:</b> Dashboard de Eventos — un resumen general de cómo va el negocio, pensado para revisar de un vistazo (botón "📊 Dashboard" desde Seguimiento de Eventos).</p>
+<ul class="bullets">
+<li>Tarjetas arriba: cuántos eventos activos hay, cuánto se ha facturado en total, cuánto se ha cobrado y cuánto falta por cobrar.</li>
+<li>Gráficos: facturación por mes, distribución por estado (semáforo), eventos por tipo, y finalizados vs. cancelados.</li>
+</ul>
+<div class="box tip">
+<b class="lbl">Tip</b>
+El Dashboard es solo de lectura — no se edita nada ahí. Si algo se ve mal, la corrección se hace desde Seguimiento de Eventos.
+</div>
+
+<h1 class="sec"><span class="num">9.</span>Datos de la empresa, esta guía y el Manual</h1>
+<p>Arriba en Seguimiento de Eventos hay un botón redondo 👤. Ábrelo cuando lo necesites: además de los datos de la empresa (listos para copiar y enviar a un cliente), ahí mismo aparecen dos botones más — 📘 esta Guía Rápida y 📖 el Manual de Uso completo — que se abren sin salir de la pantalla ni descargar nada.</p>
+
+<div class="box info" style="margin-top:24px">
+<b class="lbl">Tips para tu día a día</b>
+<ul class="bullets" style="margin-bottom:0">
+<li>Conéctate a Google al empezar el día.</li>
+<li>Revisa bien el RUT y los datos de facturación antes de generar la Nota de Venta — después no se puede editar desde la pantalla.</li>
+<li>Antes de prometerle una fecha y hora a un cliente, revisa el aviso de disponibilidad del Cotizador y el Calendario de Cocina.</li>
+<li>Si algo no se ve bien o se traba, avísale a Gerardo o pide ayuda — no hace falta resolverlo sola.</li>
+</ul>
+</div>
+
+<footer class="foot">Rita Roux Eventos · Guía Rápida actualizada el 24 de junio de 2026</footer>
+
+</div>
+</body>
+</html>

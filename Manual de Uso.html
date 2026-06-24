@@ -107,8 +107,8 @@
 
   <div class="meta">
     <div><b>Empresa:</b> Inversiones Verónica Méndez Risopátrón E.I.R.L. · RUT 76.208.211-K</div>
-    <div><b>Sistema:</b> carpeta <span class="file">Nota de Ventas/</span> — 6 páginas web + conector Google Sheets</div>
-    <div><b>Versión del manual:</b> 19 de junio de 2026</div>
+    <div><b>Sistema:</b> carpeta <span class="file">Nota de Ventas/</span> — 7 páginas web + conector Google Sheets</div>
+    <div><b>Versión del manual:</b> 24 de junio de 2026</div>
   </div>
 </div>
 
@@ -130,6 +130,7 @@
 <li><a href="#s12">Glosario</a></li>
 <li><a href="#s13">Buenas prácticas y advertencias</a></li>
 <li><a href="#s14">Preguntas frecuentes</a></li>
+<li><a href="#s15">Comunicación con Cocina — Calendario, Espacios y Disponibilidad</a></li>
 </ol>
 </div>
 
@@ -181,8 +182,8 @@ Si <u>no</u> conectas Google, todo lo que hagas (cotizaciones, Notas de Venta, c
 
 <!-- ============ 3. MAPA DEL SISTEMA ============ -->
 <section id="s3">
-<h1><span class="num">3.</span>Mapa del sistema — las 6 pantallas</h1>
-<p>El sistema está formado por 6 páginas web que se abren en el navegador (doble clic sobre el archivo, o desde los botones de navegación de cada pantalla) y comparten una misma planilla de Google Sheets con 4 pestañas: <span class="file">Presupuestos</span>, <span class="file">NotasVenta</span>, <span class="file">Seguimiento</span> y <span class="file">Contador</span>.</p>
+<h1><span class="num">3.</span>Mapa del sistema — las 7 pantallas</h1>
+<p>El sistema está formado por 7 páginas web que se abren en el navegador (doble clic sobre el archivo, o desde los botones de navegación de cada pantalla) y comparten una misma planilla de Google Sheets con varias pestañas, entre ellas <span class="file">Presupuestos</span>, <span class="file">NotasVenta</span>, <span class="file">Seguimiento</span>, <span class="file">Reservas</span> y <span class="file">Contador</span>.</p>
 
 <table>
 <tr><th>Archivo</th><th>Nombre en pantalla</th><th>Para qué sirve</th></tr>
@@ -191,6 +192,7 @@ Si <u>no</u> conectas Google, todo lo que hagas (cotizaciones, Notas de Venta, c
 <tr><td><span class="file">rita-roux-notas-venta.html</span></td><td>Notas de Venta</td><td>Emitir el documento oficial de cierre comercial</td></tr>
 <tr><td><span class="file">seguimiento-eventos.html</span></td><td>Seguimiento de Eventos</td><td>Pantalla "Inicio": estado, cobros y pendientes de cada evento</td></tr>
 <tr><td><span class="file">dashboard.html</span></td><td>Dashboard de Eventos</td><td>Resumen gerencial: facturación, cobros y avance general</td></tr>
+<tr><td><span class="file">calendario-cocina.html</span></td><td>Calendario de Cocina</td><td>Eventos confirmados + reservas de mesa/espacio para el equipo de Cocina (ver sección 15)</td></tr>
 <tr><td><span class="file">flujo-eventos-rita-roux.html</span></td><td>Flujo de Gestión de Eventos</td><td>Página de referencia que explica el proceso comercial completo (ver sección 11)</td></tr>
 </table>
 
@@ -348,6 +350,7 @@ Una vez generada, la Nota de Venta no tiene botón de edición ni de borrado en 
 <li><b>Filtro de estado</b>: Todos los estados / Finalizado / Casi listo / En proceso / Iniciando / Sin iniciar.</li>
 <li><b>Filtro de mes</b>: por mes de la fecha del evento. Botón <span class="btn">✕</span> limpia todos los filtros.</li>
 <li><b>+ Nuevo</b>: crea un evento en blanco directamente en Seguimiento, sin pasar por Cotizador ni Notas de Venta (útil para reservas rápidas que no requieren cotización formal).</li>
+<li><b>Botón redondo 👤 arriba</b>: abre los datos de la empresa (para copiar a un cliente) y, abajo de esa misma ventana, dos botones más — 📘 esta Guía Rápida y 📖 el Manual de Uso completo. Los tres se abren dentro de la misma pantalla, sin descargar nada.</li>
 </ul>
 
 <p>La tabla de <b>Activos</b> muestra por evento: Nombre/Cliente, Tipo, Nº de Nota de Venta (con botón <span class="btn">⬇</span> para volver a descargar su PDF), Fecha (con aviso "HOY", "en Xd" o "hace Xd"), Estado (semáforo), Progreso (6 puntos, uno por cada paso de facturación) y monto <b>$ Pendiente</b> (en rojo si falta cobrar, ✓ si está pagado).</p>
@@ -381,7 +384,7 @@ Una vez generada, la Nota de Venta no tiene botón de edición ni de borrado en 
 <ol class="steps">
 <li>En "Seguimiento de Eventos", ubica el evento (pestaña Activos, buscador o filtros) y haz clic en su fila. Se abre el <b>panel de detalle</b> a la derecha.</li>
 <li>Arriba verás el % de avance con su color y, debajo, secciones de información de solo lectura: <b>Tipo</b> de evento y <b>Nº de Nota de Venta</b> (con descarga de PDF), y el <b>Detalle de la Nota de Venta</b> (cliente e ítems, cargado automáticamente desde Google Sheets).</li>
-<li><b>Montos:</b> el campo <span class="field">Depositado</span> es editable — actualízalo cada vez que llegue un pago, con el <u>monto acumulado</u> recibido hasta la fecha (no el abono individual). El <b>Saldo pendiente</b> se recalcula solo (Saldo total − Depositado) y se pone en verde con ✓ cuando llega a $0.</li>
+<li><b>Montos:</b> el campo <span class="field">Depositado</span> ya no se escribe directamente — usa el botón <span class="btn">+ Agregar nuevo pago</span>, indica la fecha y el monto de ese depósito y confirma. El sistema guarda cada pago por separado (puedes ver el historial completo y borrar uno si te equivocaste) y suma todos para mostrar el total <b>Depositado</b>. El <b>Saldo pendiente</b> se recalcula solo (Saldo total − suma de pagos) y se pone en verde con ✓ cuando llega a $0.</li>
 <li><b>Semáforo:</b> cambia el menú <span class="field">Estado</span> entre 🟡 Activo, 🟢 Finalizado o 🔴 Cancelado según corresponda.</li>
 <li>Marca las casillas de <b>Avance de facturación</b> a medida que ocurren, en este orden sugerido:
   <table style="margin-top:6px">
@@ -401,7 +404,7 @@ Una vez generada, la Nota de Venta no tiene botón de edición ni de borrado en 
 
 <div class="box tip">
 <b class="lbl">Guardado automático</b>
-Las casillas de facturación y el campo "Depositado" se guardan solos al tocarlos (con una breve demora de sincronización con Google). El botón "Guardar" asegura además que Estado, Fecha y Comentarios queden sincronizados.
+Las casillas de facturación y los pagos que agregas se guardan solos al confirmarlos (con una breve demora de sincronización con Google). El botón "Guardar" asegura además que Estado, Fecha y Comentarios queden sincronizados.
 </div>
 
 <div class="box danger">
@@ -498,7 +501,8 @@ De toda esa hoja de ruta, lo que <u>ya está construido y en uso</u> son exactam
 <tr><td><b>Estado del evento</b></td><td>Activo / Finalizado / Cancelado — distinto del semáforo de avance</td></tr>
 <tr><td><b>Semáforo</b></td><td>Avance de facturación: Sin iniciar → Iniciando → En proceso → Casi listo → Finalizado</td></tr>
 <tr><td><b>Tipo "Sala"</b></td><td>Variante simplificada (OC, Pago 50%, Pago 100%) que aparece solo si fue cargada manualmente en la planilla de Google; el botón "+ Nuevo" de Seguimiento siempre crea tipo "Evento"</td></tr>
-<tr><td><b>Depositado</b></td><td>Monto acumulado recibido del cliente hasta la fecha (no el último abono individual)</td></tr>
+<tr><td><b>Depositado</b></td><td>Suma de todos los pagos registrados para el evento (se agregan uno por uno con fecha y monto, no se escribe un total a mano)</td></tr>
+<tr><td><b>Espacio</b></td><td>Salón Victoriano, Pérgola o Espino — lugar físico reservable que no puede compartirse entre dos reservas a la misma fecha y hora (sección 15)</td></tr>
 </table>
 </section>
 
@@ -512,6 +516,7 @@ De toda esa hoja de ruta, lo que <u>ya está construido y en uso</u> son exactam
 <li><b>Revisa el Dashboard semanalmente</b> (Administrador) para detectar cobros atrasados a tiempo.</li>
 <li><b>Antes de "Eliminar" un evento</b> en Seguimiento, confirma que no tenga pagos pendientes de registrar: es una acción irreversible.</li>
 <li><b>Usa "Extras"</b> para cualquier cobro adicional posterior a la Nota de Venta original, en vez de intentar modificarla.</li>
+<li><b>Antes de prometerle a un cliente un espacio físico</b> (Salón Victoriano, Pérgola o Espino) a una fecha y hora, revisa el Calendario de Cocina o el aviso de disponibilidad del Cotizador — evita comprometer un horario que el sistema después no deje guardar.</li>
 </ul>
 </section>
 
@@ -532,13 +537,61 @@ De toda esa hoja de ruta, lo que <u>ya está construido y en uso</u> son exactam
 <p>No se puede editar desde la pantalla. Corrígelo manualmente en la hoja de Google <span class="file">NotasVenta</span> (y regenera el PDF si es necesario), o coordínalo con el Administrador.</p>
 
 <h3>"¿Cómo registro un pago parcial?"</h3>
-<p>En el panel de detalle del evento (Seguimiento de Eventos), actualiza el campo <span class="field">Depositado</span> con el monto acumulado recibido hasta la fecha.</p>
+<p>En el panel de detalle del evento (Seguimiento de Eventos), usa el botón <span class="btn">+ Agregar nuevo pago</span> e indica la fecha y el monto de ese depósito. Puedes agregar tantos pagos como necesites; el sistema los suma solo para mostrar el total Depositado y el Saldo pendiente.</p>
 
 <h3>"¿Cómo cobro algo adicional que no estaba en la cotización original?"</h3>
 <p>Usa la sección "Extras" en el panel de detalle del evento y genera una 2ª Nota de Venta (sección 9).</p>
 
 <h3>"¿Quién debe marcar cada casilla del semáforo de facturación?"</h3>
 <p>El sistema lo indica junto a cada paso: Gerardo es responsable de las facturas y pagos del cliente y de pagar a proveedores; Teresa es responsable de recopilar las facturas de los proveedores.</p>
+
+<h3>"No me deja guardar una reserva en el Calendario de Cocina"</h3>
+<p>Si elegiste un Espacio (Salón Victoriano, Pérgola o Espino), el sistema revisó y ya existe otra reserva activa con ese mismo espacio, fecha y hora — el mensaje de aviso indica con cuál choca. Elige otra hora, otro espacio, o coordina con quien hizo la reserva original (ver sección 15).</p>
+
+</section>
+
+<!-- ============ 15. COCINA / ESPACIOS ============ -->
+<section id="s15">
+<h1><span class="num">15.</span>Comunicación con Cocina — Calendario, Espacios y Disponibilidad</h1>
+<p>El sistema conecta a Cocina con el resto del equipo en tres puntos: una pantalla propia para Cocina, un control de choques de horario por espacio físico, y un aviso de disponibilidad al cotizar. Esta sección explica los tres.</p>
+
+<h2>15.1 — Calendario de Cocina</h2>
+<p><b>Pantalla:</b> Calendario de Cocina (<span class="file">calendario-cocina.html</span>) · <b>Responsable habitual:</b> equipo de Cocina</p>
+<p>Es la pantalla que usa Cocina para coordinarse, sin acceso a cotizaciones, facturación ni montos. Muestra un calendario mensual con dos tipos de marcas:</p>
+<ul class="bullets">
+<li><b>Eventos confirmados</b> (negro, o verde si ya están finalizados) — de solo lectura, vienen de Seguimiento de Eventos. Un clic abre una tarjeta con nombre, cliente, tipo, fecha y estado.</li>
+<li><b>Reservas</b> (azul) — las agrega Cocina con el botón <span class="btn pr">🍽 + Agregar Reserva</span>, o llegan automáticas desde la app Justo (marcadas con 📲, de solo lectura aquí).</li>
+</ul>
+
+<h2>15.2 — Reservas y el campo Espacio</h2>
+<p>El formulario de reserva (igual en Calendario de Cocina y en Seguimiento de Eventos — es el mismo formulario en ambas pantallas) pide: Fecha, Hora, Nombre/Cliente, Nº de Personas, Comentarios, y un campo <span class="field">Espacio</span>.</p>
+
+<ol class="steps">
+<li><span class="field">Espacio</span> vacío ("— Reserva de mesa (sin espacio) —") es para una reserva de mesa común; nunca genera un choque, sin importar cuántas reservas vacías existan a la misma hora.</li>
+<li>Si eliges <b>Salón Victoriano</b>, <b>Pérgola</b> o <b>Espino</b>, el sistema exige que indiques la Hora (sin hora no se puede revisar si choca con algo).</li>
+<li>Al presionar <span class="btn pr">Guardar</span>, el sistema revisa todas las reservas activas de ese mismo espacio y, si alguna tiene la misma fecha y hora, <b>bloquea el guardado</b> y muestra un aviso con el nombre de la reserva con la que choca.</li>
+</ol>
+
+<div class="box danger">
+<b class="lbl">Ejemplo</b>
+Si "Pérgola" ya está reservada el martes 30 a las 15:30, el sistema no permite guardar otra reserva para "Pérgola" ese mismo día a esa misma hora — hay que elegir otro horario, otro espacio, o coordinar con quien hizo la reserva original.
+</div>
+
+<p>El calendario muestra el espacio reservado junto al nombre (por ejemplo "Pérgola · Cumpleaños Familia Soto"), tanto en Calendario de Cocina como en Seguimiento de Eventos.</p>
+
+<h2>15.3 — Avisos cruzados entre Cocina y Eventos</h2>
+<p>Cuando se agrega una reserva nueva desde el Calendario de Cocina, aparece automáticamente un aviso (🔔) arriba en Seguimiento de Eventos para que el equipo de eventos lo vea sin tener que revisar el calendario completo — y al revés, una reserva agregada desde Seguimiento de Eventos avisa a quien esté mirando el Calendario de Cocina. Cada aviso se puede cerrar con <span class="btn">×</span> (el cierre solo se recuerda en ese navegador) y desaparece solo después de 3 días.</p>
+
+<h2>15.4 — Aviso de disponibilidad en el Cotizador</h2>
+<p>Al escribir la <span class="field">Fecha del Evento</span> en el Cotizador de Eventos, y estando conectado a Google, aparece debajo un aviso que lista los eventos y reservas ya existentes para esa fecha (cliente, espacio y hora cuando corresponde).</p>
+
+<div class="box info">
+<b class="lbl">Esto avisa, no bloquea</b>
+A diferencia de las reservas de Cocina (sección 15.2), este aviso del Cotizador <u>no impide guardar</u> la cotización aunque ya haya algo ese día — el Cotizador no tiene campos de hora ni espacio propios, así que la decisión de ajustar el horario queda en manos de quien está cotizando. Si la fecha está libre, el aviso se muestra en verde; si hay algo, en amarillo con el detalle.
+</div>
+
+<h2>15.5 — Dónde encontrar esta guía y el Manual</h2>
+<p>En la parte superior de Seguimiento de Eventos hay un botón redondo <span class="btn">👤</span>. Al abrirlo, además de los datos de la empresa, aparecen abajo dos botones: <span class="btn">📘 Guía Rápida</span> y <span class="btn">📖 Manual de Uso</span>. Los tres abren su contenido dentro de la misma pantalla — no hace falta buscar ni descargar ningún archivo aparte.</p>
 
 </section>
 

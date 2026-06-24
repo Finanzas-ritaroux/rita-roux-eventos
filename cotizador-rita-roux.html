@@ -278,13 +278,16 @@ header { background: var(--negro); display: flex; align-items: stretch; position
       </div>
       <div class="meta-field">
         <div class="meta-label">Fecha del Evento</div>
-        <input class="meta-input" id="m-fecha" type="date" oninput="saveMeta()">
+        <input class="meta-input" id="m-fecha" type="date" oninput="saveMeta(); chequearDisponibilidadFecha()">
       </div>
       <div class="meta-field">
         <div class="meta-label">Nº Personas</div>
         <input class="meta-input" id="m-personas" type="number" placeholder="0" oninput="saveMeta()">
       </div>
     </div>
+
+    <!-- Disponibilidad del día — avisa qué eventos/reservas ya existen esa fecha -->
+    <div id="disponibilidad-dia" style="display:none;margin-bottom:20px;padding:10px 16px;border-left:3px solid var(--s23);background:#FFF8E1;color:#7A5800;font-size:12px;border-radius:2px"></div>
 
     <!-- Quote sections -->
     <div id="quote-sections"></div>
@@ -368,6 +371,54 @@ function getMeta() {
     fecha:    document.getElementById('m-fecha').value,
     personas: document.getElementById('m-personas').value,
   };
+}
+
+// ── DISPONIBILIDAD DEL DÍA ─────────────────────────────
+// Solo informativo: avisa qué eventos (Seguimiento) y reservas (cocina) ya
+// existen para la fecha elegida, para que Teresa pueda ajustar el horario.
+// No bloquea el guardado de la cotización.
+async function chequearDisponibilidadFecha() {
+  const fecha = document.getElementById('m-fecha').value;
+  const panel = document.getElementById('disponibilidad-dia');
+  if (!fecha || !gsConnected()) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  panel.innerHTML = 'Consultando disponibilidad de ese día…';
+  try {
+    const [resEv, resRv] = await Promise.all([
+      gsGet(`${TAB.SEG}!A2:F`),
+      gsGet(`${TAB.RESERVAS}!A2:I`),
+    ]);
+    const eventosDia = (resEv.values || [])
+      .filter(r => r[5] === fecha && r[0] !== 'cancelado')
+      .map(r => ({ nombre: r[3] || '(sin nombre)', cliente: r[4] || '' }));
+    const reservasDia = (resRv.values || [])
+      .filter(r => r[0] === fecha && r[5] !== 'cancelada')
+      .map(r => ({ nombre: r[1] || '(sin nombre)', hora: r[4] || '', espacio: r[8] || '' }));
+    renderDisponibilidad(eventosDia, reservasDia);
+  } catch (e) {
+    panel.innerHTML = 'No se pudo consultar la disponibilidad de ese día.';
+  }
+}
+
+function renderDisponibilidad(eventosDia, reservasDia) {
+  const panel = document.getElementById('disponibilidad-dia');
+  const total = eventosDia.length + reservasDia.length;
+  if (!total) {
+    panel.style.borderLeftColor = 'var(--verde)';
+    panel.style.background = 'var(--verde-claro)';
+    panel.style.color = 'var(--verde)';
+    panel.innerHTML = '✓ No hay otros eventos ni reservas registradas para esta fecha.';
+    return;
+  }
+  panel.style.borderLeftColor = 'var(--s23)';
+  panel.style.background = '#FFF8E1';
+  panel.style.color = '#7A5800';
+  const items = [
+    ...eventosDia.map(e => `📅 ${escHtml(e.nombre)}${e.cliente ? ' · ' + escHtml(e.cliente) : ''}`),
+    ...reservasDia.map(r => `🍽 ${escHtml(r.nombre)}${r.espacio ? ' · ' + escHtml(r.espacio) : ''}${r.hora ? ' · ' + escHtml(r.hora) : ''}`),
+  ];
+  panel.innerHTML = `<b>⚠ Ya hay ${total} evento(s)/reserva(s) ese día — revisa antes de confirmar el horario:</b>
+    <div style="margin-top:6px;display:flex;flex-direction:column;gap:3px">${items.map(i => `<div>• ${i}</div>`).join('')}</div>`;
 }
 
 // ── PERSISTENCE ───────────────────────────────────────
@@ -1078,6 +1129,7 @@ window.onload = () => {
     if (btn) btn.textContent = '✓ Google';
     const rows = await gsCargarCatalogo();
     if (rows) { CATALOG_CATS = gsFilasACatalogo(rows); renderCatalog(); }
+    chequearDisponibilidadFecha();
   }, { requireAuth: true });
 };
 </script>

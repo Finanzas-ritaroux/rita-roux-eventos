@@ -392,6 +392,24 @@ header{height:var(--hdr);background:var(--negro);display:flex;align-items:stretc
   </div>
 </div>
 
+<!-- MODAL NUEVO PAGO -->
+<div id="pago-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9994;align-items:center;justify-content:center">
+  <div style="background:#fff;width:90%;max-width:340px;border-radius:4px;overflow:hidden">
+    <div style="background:var(--negro);color:#fff;padding:12px 16px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center">
+      <span>💰 Nuevo pago</span>
+      <button onclick="cerrarPagoModal()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div class="det-field"><label>Fecha del pago</label><input type="date" id="pg-fecha"></div>
+      <div class="det-field"><label>Monto</label><input type="number" id="pg-monto" placeholder="0"></div>
+    </div>
+    <div style="padding:12px 16px;background:var(--gris);display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-gh" onclick="cerrarPagoModal()">Cancelar</button>
+      <button class="btn btn-pr" onclick="guardarPagoModal()">Agregar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL DATOS DE LA EMPRESA -->
 <div id="empresa-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9995;align-items:center;justify-content:center">
   <div style="background:#fff;width:92%;max-width:540px;border-radius:4px;overflow:hidden">
@@ -597,11 +615,12 @@ function actualizarGSBar(){
 async function cargarDesdeGS(){
   if(!gsConnected()) return false;
   try{
-    const res = await gsGet(`${TAB.SEG}!A2:T`);
+    const res = await gsGet(`${TAB.SEG}!A2:U`);
     db = (res.values||[]).map(r=>{
       let extras=[];      try{ extras=JSON.parse(r[17]||'[]'); }catch(e){}
       let extrasNVs=[];   try{ extrasNVs=JSON.parse(r[18]||'[]'); }catch(e){}
       let listaCompras=[];try{ listaCompras=JSON.parse(r[19]||'[]'); }catch(e){}
+      let pagos=[];        try{ pagos=JSON.parse(r[20]||'[]'); }catch(e){}
       return {
         id: uid(),
         estado:     r[0]||'activo',
@@ -621,7 +640,7 @@ async function cargarDesdeGS(){
         pagado:     +r[14]||0,
         dif:        +r[15]||0,
         comentarios:r[16]||'',
-        extras, extrasNVs, listaCompras
+        extras, extrasNVs, listaCompras, pagos
       };
     });
     saveCache();
@@ -643,10 +662,10 @@ async function guardarEnGS(){
       e.estado, e.tipo, e.notaVenta, e.nombre, e.cliente, e.fecha,
       e.oc, e.f50, e.p50, e.f100, e.p100, e.fRec, e.fPag,
       e.total, e.pagado, e.dif, e.comentarios,
-      JSON.stringify(e.extras||[]), JSON.stringify(e.extrasNVs||[]), JSON.stringify(e.listaCompras||[])
+      JSON.stringify(e.extras||[]), JSON.stringify(e.extrasNVs||[]), JSON.stringify(e.listaCompras||[]), JSON.stringify(e.pagos||[])
     ]);
-    await gsClear(`${TAB.SEG}!A2:T`);
-    if(rows.length) await gsAppend(`${TAB.SEG}!A2:T`, rows);
+    await gsClear(`${TAB.SEG}!A2:U`);
+    if(rows.length) await gsAppend(`${TAB.SEG}!A2:U`, rows);
   }catch(e){ console.warn('Error guardando en Google Sheets:', e); }
 }
 
@@ -1037,13 +1056,15 @@ function renderDetail(id){
         </div>
         <div style="text-align:center;background:#E8F5E9;padding:9px 6px;border-radius:3px">
           <div style="font-size:8px;color:var(--verde);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Depositado</div>
-          <input type="number" id="d-pagado" value="${e.pagado||0}" onchange="actualizarPagado('${e.id}',this.value)" style="width:100%;border:none;background:transparent;text-align:center;font-size:13px;font-weight:700;color:var(--verde);outline:none;font-family:inherit">
+          <div id="d-pagado-val" style="font-size:13px;font-weight:700;color:var(--verde)">${fmtM(e.pagado||0)}</div>
         </div>
         <div id="box-saldo" style="text-align:center;background:${(e.dif||0)>0?'#FFF5F5':'#E8F5E9'};padding:9px 6px;border-radius:3px">
           <div style="font-size:8px;color:${(e.dif||0)>0?'var(--rojo)':'var(--verde)'};text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">Saldo pendiente</div>
           <div id="box-saldo-val" style="font-size:13px;font-weight:700;color:${(e.dif||0)>0?'var(--rojo)':'var(--verde)'}">${(e.dif||0)>0?fmtM(e.dif):'✓ 0'}</div>
         </div>
       </div>
+      <div id="pagos-list" style="margin-top:10px">${renderPagosListHTML(e)}</div>
+      <button class="btn btn-gh" style="width:100%;margin-top:8px;font-size:10px" onclick="abrirPagoModal('${e.id}')">+ Agregar nuevo pago</button>
     </div>
 
     <!-- Extras: acumulan para una 2ª Nota de Venta, no tocan la original -->
@@ -1236,7 +1257,7 @@ function openNew(){
     notaVenta:'', nombre:'', cliente:'', fecha:'',
     oc:'', f50:'', p50:'', f100:'', p100:'', fRec:'', fPag:'',
     pagado:0, total:0, dif:0, comentarios:'',
-    extras:[], extrasNVs:[], listaCompras:[]
+    extras:[], extrasNVs:[], listaCompras:[], pagos:[]
   };
   db.unshift(nuevo);
   scheduleSave(); selId=nuevo.id;
@@ -1326,13 +1347,15 @@ function renderNVDetalleHTML(nota){
   return html;
 }
 
-// ── Monto depositado editable ──────────────────────────────────────────────
-function actualizarPagado(id, val){
-  const e=db.find(x=>x.id===id);
-  if(!e) return;
-  e.pagado=Math.max(0, parseFloat(val)||0);
-  e.dif=Math.max(0, (e.total||0)-e.pagado);
-  scheduleSave();
+// ── Pagos (depósitos) — registro de abonos con fecha y monto ───────────────
+function recalcPagado(e){
+  e.pagado = (e.pagos||[]).reduce((s,p)=>s+(+p.monto||0),0);
+  e.dif = Math.max(0, (e.total||0)-e.pagado);
+}
+
+function refreshMontosUI(e){
+  const pagadoVal=document.getElementById('d-pagado-val');
+  if(pagadoVal) pagadoVal.textContent = fmtM(e.pagado||0);
   const saldoBox=document.getElementById('box-saldo');
   const saldoVal=document.getElementById('box-saldo-val');
   if(saldoVal) saldoVal.textContent = e.dif>0 ? fmtM(e.dif) : '✓ 0';
@@ -1343,7 +1366,66 @@ function actualizarPagado(id, val){
     if(lbl) lbl.style.color = pend?'var(--rojo)':'var(--verde)';
     if(saldoVal) saldoVal.style.color = pend?'var(--rojo)':'var(--verde)';
   }
+  const lista=document.getElementById('pagos-list');
+  if(lista) lista.innerHTML = renderPagosListHTML(e);
   renderTblActivos(); renderTblFinalizados();
+}
+
+function fmtFechaCorta(s){
+  if(!s) return '—';
+  const d=new Date(s+'T00:00:00');
+  return d.toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+
+function renderPagosListHTML(e){
+  const pagos=(e.pagos||[]).slice().sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  if(!pagos.length) return `<div style="font-size:10px;color:var(--gris-t);font-style:italic">Sin pagos registrados todavía</div>`;
+  return pagos.map(p=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--gris-m);font-size:11px">
+      <span style="color:var(--gris-t)">${fmtFechaCorta(p.fecha)}</span>
+      <span style="font-weight:600;flex:1;text-align:right">${fmtM(p.monto)}</span>
+      <button onclick="eliminarPago('${e.id}','${p.id}')" title="Eliminar pago" style="background:none;border:none;color:var(--gris-t);cursor:pointer;font-size:13px;padding:0 2px;flex-shrink:0">×</button>
+    </div>`).join('');
+}
+
+let pagoEventId=null;
+
+function abrirPagoModal(id){
+  pagoEventId=id;
+  document.getElementById('pg-fecha').value=new Date().toISOString().slice(0,10);
+  document.getElementById('pg-monto').value='';
+  document.getElementById('pago-modal').style.display='flex';
+  setTimeout(()=>document.getElementById('pg-monto')?.focus(),100);
+}
+
+function cerrarPagoModal(){
+  document.getElementById('pago-modal').style.display='none';
+  pagoEventId=null;
+}
+
+function guardarPagoModal(){
+  const e=db.find(x=>x.id===pagoEventId);
+  if(!e) return;
+  const fecha=document.getElementById('pg-fecha').value;
+  const monto=parseFloat(document.getElementById('pg-monto').value)||0;
+  if(!fecha){ alert('Indica la fecha del pago.'); return; }
+  if(monto<=0){ alert('Indica un monto válido.'); return; }
+  if(!e.pagos) e.pagos=[];
+  e.pagos.push({ id:uid(), fecha, monto });
+  recalcPagado(e);
+  scheduleSave();
+  cerrarPagoModal();
+  refreshMontosUI(e);
+}
+
+function eliminarPago(id, pagoId){
+  const e=db.find(x=>x.id===id);
+  if(!e || !e.pagos) return;
+  if(!confirm('¿Eliminar este pago?')) return;
+  e.pagos=e.pagos.filter(p=>p.id!==pagoId);
+  recalcPagado(e);
+  scheduleSave();
+  refreshMontosUI(e);
 }
 
 // ── Extras (acumulan para una 2ª Nota de Venta) ─────────────────────────────

@@ -669,7 +669,7 @@ function actualizarGSBar(){
 async function cargarDesdeGS(){
   if(!gsConnected()) return false;
   try{
-    const res = await gsGet(`${TAB.SEG}!A2:U`);
+    const res = await gsGet(`${TAB.SEG}!A2:V`);
     db = (res.values||[]).map(r=>{
       let extras=[];      try{ extras=JSON.parse(r[17]||'[]'); }catch(e){}
       let extrasNVs=[];   try{ extrasNVs=JSON.parse(r[18]||'[]'); }catch(e){}
@@ -694,7 +694,8 @@ async function cargarDesdeGS(){
         pagado:     +r[14]||0,
         dif:        +r[15]||0,
         comentarios:r[16]||'',
-        extras, extrasNVs, listaCompras, pagos
+        extras, extrasNVs, listaCompras, pagos,
+        tipoEvento: r[21]||''
       };
     });
     saveCache();
@@ -716,10 +717,11 @@ async function guardarEnGS(){
       e.estado, e.tipo, e.notaVenta, e.nombre, e.cliente, e.fecha,
       e.oc, e.f50, e.p50, e.f100, e.p100, e.fRec, e.fPag,
       e.total, e.pagado, e.dif, e.comentarios,
-      JSON.stringify(e.extras||[]), JSON.stringify(e.extrasNVs||[]), JSON.stringify(e.listaCompras||[]), JSON.stringify(e.pagos||[])
+      JSON.stringify(e.extras||[]), JSON.stringify(e.extrasNVs||[]), JSON.stringify(e.listaCompras||[]), JSON.stringify(e.pagos||[]),
+      e.tipoEvento||''
     ]);
-    await gsClear(`${TAB.SEG}!A2:U`);
-    if(rows.length) await gsAppend(`${TAB.SEG}!A2:U`, rows);
+    await gsClear(`${TAB.SEG}!A2:V`);
+    if(rows.length) await gsAppend(`${TAB.SEG}!A2:V`, rows);
   }catch(e){ console.warn('Error guardando en Google Sheets:', e); }
 }
 
@@ -1312,7 +1314,7 @@ function openNew(){
     notaVenta:'', nombre:'', cliente:'', fecha:'',
     oc:'', f50:'', p50:'', f100:'', p100:'', fRec:'', fPag:'',
     pagado:0, total:0, dif:0, comentarios:'',
-    extras:[], extrasNVs:[], listaCompras:[], pagos:[]
+    extras:[], extrasNVs:[], listaCompras:[], pagos:[], tipoEvento:''
   };
   db.unshift(nuevo);
   scheduleSave(); selId=nuevo.id;

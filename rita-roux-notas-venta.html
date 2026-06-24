@@ -820,7 +820,7 @@ async function agregarEventoSeguimiento(nota) {
     if (existentes.includes(nota.nv)) return true;
     const fechaISO = parseFechaFlexible(nota.fecha_evento);
     const cliente = nota.empresa_contacto || nota.empresa || '';
-    await gsAppend(`${TAB.SEG}!A:Q`, [[
+    await gsAppend(`${TAB.SEG}!A:V`, [[
       'activo',
       'evento',
       nota.nv,
@@ -830,7 +830,9 @@ async function agregarEventoSeguimiento(nota) {
       '',
       '', '', '', '', '', '',
       nota.total, 0, nota.total,
-      ''
+      '',
+      '', '', '', '',
+      nota.tipo_evento || ''
     ]]);
     // Marcar presupuesto como convertido si tiene referencia
     if (nota.nCot && gsConnected()) {
@@ -850,10 +852,17 @@ window.onload = () => {
   gsInit(async () => {
     document.getElementById('auth-status').textContent = '🟢 Conectado a Google';
     document.getElementById('auth-status').className = 'auth-status connected';
-    await loadHistorial();
-    await gsInitSheet();
-    await loadPresupuestosStep1();
-    await checkCotizacionPendiente();
+    // gsInitSheet() solo crea encabezados si faltan (caso ya cubierto en la práctica);
+    // se deja en segundo plano para no retrasar la pantalla con 6 llamadas de chequeo.
+    gsInitSheet();
+    // Estas tres no dependen entre sí — en paralelo en vez de en cadena, así el
+    // Paso 2 (si venimos de "Emitir NV →") aparece apenas estén listas, no después
+    // de sumar el tiempo de las tres.
+    await Promise.all([
+      loadHistorial(),
+      loadPresupuestosStep1(),
+      checkCotizacionPendiente(),
+    ]);
   }, { requireAuth: true });
   renderHistoricoLocal();
 };
@@ -1195,13 +1204,18 @@ async function generarNota() {
   historial = local;
 
   const nvNum = parseInt(nota.nv.split('-')[2]) || 1;
-  let eventoAgregado = false;
   if (gsConnected()) {
-    await escribirContadorNV(nvNum);
-    await agregarAlHistorialGS(nota);
-    eventoAgregado = await agregarEventoSeguimiento(nota);
     const pdfFilename = `${nota.nv}_${nota.razon_social.replace(/\s+/g,'_')}.pdf`;
-    await gsDriveUpload(pdfBlob, pdfFilename, 'Notas de Venta Rita Roux');
+    // Estas cuatro escrituras no dependen entre sí (contador, historial NV, evento
+    // de seguimiento, PDF a Drive) — antes se esperaban una por una y la suma de
+    // los 4 viajes de red era lo que se sentía como "se demora mucho en generarse
+    // la nota de venta". En paralelo, la espera total es la del más lento, no la suma.
+    await Promise.all([
+      escribirContadorNV(nvNum),
+      agregarAlHistorialGS(nota),
+      agregarEventoSeguimiento(nota),
+      gsDriveUpload(pdfBlob, pdfFilename, 'Notas de Venta Rita Roux'),
+    ]);
   }
 
   // Mostrar modal vista previa en lugar de step 3

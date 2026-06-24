@@ -270,23 +270,31 @@ async function gsClear(range) {
   return r.json();
 }
 
-// Sube un Blob PDF a Google Drive (crea la carpeta si no existe)
+// Sube un Blob PDF a Google Drive (crea la carpeta si no existe).
+// El ID de la carpeta se guarda en memoria por nombre — así, en la misma sesión,
+// la 2ª nota de venta en adelante no repite la búsqueda de carpeta (1 viaje de
+// red menos en el paso más lento de "Generar Nota de Venta").
+const _gsDriveFolderCache = {};
 async function gsDriveUpload(blob, filename, folderName) {
   if (!gsConnected()) return null;
   try {
-    const q  = encodeURIComponent(`name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-    const fl = await (await fetch(
-      `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`,
-      { headers: { Authorization: `Bearer ${gs_token}` } }
-    )).json();
-    let fid = fl.files && fl.files.length ? fl.files[0].id : null;
+    let fid = _gsDriveFolderCache[folderName];
     if (!fid) {
-      const c = await (await fetch('https://www.googleapis.com/drive/v3/files', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${gs_token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder' })
-      })).json();
-      fid = c.id;
+      const q  = encodeURIComponent(`name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+      const fl = await (await fetch(
+        `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`,
+        { headers: { Authorization: `Bearer ${gs_token}` } }
+      )).json();
+      fid = fl.files && fl.files.length ? fl.files[0].id : null;
+      if (!fid) {
+        const c = await (await fetch('https://www.googleapis.com/drive/v3/files', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${gs_token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder' })
+        })).json();
+        fid = c.id;
+      }
+      _gsDriveFolderCache[folderName] = fid;
     }
     const form = new FormData();
     form.append('metadata', new Blob([JSON.stringify({ name: filename, parents: [fid], mimeType: 'application/pdf' })], { type: 'application/json' }));
@@ -332,7 +340,7 @@ async function gsInitSheet() {
   const tabs = [
     { name: TAB.PRESUPUESTOS, hdr: ['Nº Cotización','Fecha','Cliente','Evento','Fecha Evento','Nº Personas','Subtotal','IVA','Total','Estado','Servicios'] },
     { name: TAB.NOTAS_VENTA,  hdr: ['Nº NV','Nº Cotización','Fecha Emisión','Nombre Contacto','Empresa','Teléfono','Mail Contacto','Razón Social','RUT','Giro','Dirección','Mail Facturación','Nombre Evento','Fecha Evento','Nº Personas','Subtotal','IVA','Total'] },
-    { name: TAB.SEG,          hdr: ['Estado','Tipo','Nº NV','Nombre','Cliente','Fecha','OC','Factura 50%','Pago 50%','Factura 100%','Pago 100%','Fact. Prov. Recibidas','Fact. Prov. Pagadas','Total','Pagado','Diferencia','Comentarios','Extras','Extras NV','Compras','Pagos'] },
+    { name: TAB.SEG,          hdr: ['Estado','Tipo','Nº NV','Nombre','Cliente','Fecha','OC','Factura 50%','Pago 50%','Factura 100%','Pago 100%','Fact. Prov. Recibidas','Fact. Prov. Pagadas','Total','Pagado','Diferencia','Comentarios','Extras','Extras NV','Compras','Pagos','Tipo Evento'] },
     { name: TAB.RESERVAS,     hdr: ['Fecha','Nombre / Cliente','Nº Personas','Comentarios','Hora','Estado','Origen','ID','Espacio'] },
     { name: TAB.CATALOGO,     hdr: ['Categoría','Nombre Servicio','Precio Recomendado','Unidad','Grupo','Ingredientes'] },
     { name: TAB.CLIENTES,     hdr: ['Fecha','Cliente','Evento','Calificación','Comentario','Nº NV'] },

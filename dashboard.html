@@ -139,7 +139,7 @@ let allItems=[];
 async function cargarDatos(){
   if(gsConnected()){
     try{
-      const res = await gsGet(`${TAB.SEG}!A2:Q`);
+      const res = await gsGet(`${TAB.SEG}!A2:V`);
       allItems = (res.values||[]).filter(r=>r[2]||r[3]).map(r=>({
         estado:  r[0]||'activo',
         tipo:    r[1]||'evento',
@@ -147,7 +147,7 @@ async function cargarDatos(){
         nombre:  r[3]||'',
         cliente: r[4]||'',
         fecha:   r[5]||'',
-        tev:     r[6]||'corp',
+        tev:     r[21]||'',
         f50:r[7], p50:r[8], f100:r[9], p100:r[10], fRec:r[11], fPag:r[12],
         total:+r[13]||0, pagado:+r[14]||0, dif:+r[15]||0
       }));
@@ -228,9 +228,9 @@ function render(){
     </div>`).join('') : `<div class="empty">Sin eventos activos</div>`;
 
   // By tipo (activos)
-  const TIPOS={corp:'Corporativo',matr:'Matrimonio',foto:'Fotografía',otro:'Otro'};
+  const TIPOS={corp:'Corporativo',matr:'Matrimonio',foto:'Fotografía',otro:'Otro','':'Sin definir'};
   const tipoCount={};
-  activos.forEach(e=>{ const t=e.tev||'corp'; tipoCount[t]=(tipoCount[t]||0)+1; });
+  activos.forEach(e=>{ const t=e.tev||''; tipoCount[t]=(tipoCount[t]||0)+1; });
   document.getElementById('byTipo').innerHTML = activos.length ? Object.entries(tipoCount).map(([k,v])=>`
     <span class="tipo-pill"><b>${v}</b> ${TIPOS[k]||k}</span>`).join('') : `<div class="empty">Sin datos</div>`;
 

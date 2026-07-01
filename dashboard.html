@@ -194,22 +194,23 @@ function render(){
     <div class="card"><div class="card-lbl">Por cobrar</div><div class="card-val ${totalPend>0?'c-rojo':''}">${fmtM(totalPend)}</div><div class="card-sub">${allItems.filter(e=>e.dif>0).length} eventos con saldo</div></div>
   `;
 
-  // By month (activos)
+  // By month (activos) — keyed by YYYY-MM for reliable chronological sort
   const meses = {};
   activos.forEach(e=>{
     if(!e.fecha) return;
     const d = new Date(e.fecha+'T00:00:00');
     if(isNaN(d)) return;
-    const key = d.toLocaleDateString('es-CL',{month:'long',year:'numeric'});
-    meses[key] = (meses[key]||0) + (e.total||0);
+    const sortKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    if(!meses[sortKey]) meses[sortKey] = { display: d.toLocaleDateString('es-CL',{month:'long',year:'numeric'}), total: 0 };
+    meses[sortKey].total += (e.total||0);
   });
-  const maxMes = Math.max(1, ...Object.values(meses));
-  const monthEntries = Object.entries(meses).sort((a,b)=>new Date('01 '+a[0])-new Date('01 '+b[0]));
-  document.getElementById('byMonth').innerHTML = monthEntries.length ? monthEntries.map(([m,v])=>`
+  const maxMes = Math.max(1, ...Object.values(meses).map(m=>m.total));
+  const monthEntries = Object.entries(meses).sort((a,b)=>a[0].localeCompare(b[0]));
+  document.getElementById('byMonth').innerHTML = monthEntries.length ? monthEntries.map(([,m])=>`
     <div class="bar-row">
-      <div class="bar-lbl">${m.split(' de ')[0]}</div>
-      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(v/maxMes*100)}%"></div></div>
-      <div class="bar-val">${fmtM(v)}</div>
+      <div class="bar-lbl">${m.display.split(' de ')[0]}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(m.total/maxMes*100)}%"></div></div>
+      <div class="bar-val">${fmtM(m.total)}</div>
     </div>`).join('') : `<div class="empty">Sin datos de fecha</div>`;
 
   // By semaphore (activos)

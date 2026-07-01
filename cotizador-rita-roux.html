@@ -42,12 +42,11 @@ header { background: var(--negro); display: flex; align-items: stretch; position
 .sidebar-header { padding: 14px 16px 10px; border-bottom: 1px solid var(--gris-medio); }
 .sidebar-header h2 { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--gris-texto); }
 
-/* Category tabs */
-.cat-tabs { display: flex; overflow-x: auto; border-bottom: 2px solid var(--gris-medio); scrollbar-width: none; }
-.cat-tabs::-webkit-scrollbar { display: none; }
-.cat-tab { flex-shrink: 0; padding: 8px 12px; font-size: 11px; font-weight: 600; cursor: pointer; color: var(--gris-texto); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .15s; white-space: nowrap; }
-.cat-tab:hover { color: var(--negro); }
-.cat-tab.active { color: var(--rojo); border-bottom-color: var(--rojo); }
+/* Category tabs — pill style to avoid horizontal scrolling */
+.cat-tabs { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px 10px; border-bottom: 1px solid var(--gris-medio); }
+.cat-tab { flex-shrink: 0; padding: 5px 10px; font-size: 10px; font-weight: 700; cursor: pointer; color: var(--gris-texto); border: 1.5px solid var(--gris-medio); border-radius: 16px; transition: all .15s; white-space: nowrap; }
+.cat-tab:hover { border-color: var(--negro); color: var(--negro); }
+.cat-tab.active { background: var(--negro); border-color: var(--negro); color: var(--blanco); }
 
 /* Items list */
 .cat-content { flex: 1; overflow-y: auto; padding: 8px 0; }
@@ -79,7 +78,7 @@ header { background: var(--negro); display: flex; align-items: stretch; position
 /* Meta row */
 .meta-row {
   background: var(--blanco); border: 1px solid var(--gris-medio); padding: 14px 18px;
-  display: grid; grid-template-columns: 2fr 2fr 1fr 1fr; gap: 12px; margin-bottom: 20px;
+  display: grid; grid-template-columns: 2fr 1.5fr 1.5fr 1fr 1fr; gap: 12px; margin-bottom: 20px;
 }
 .meta-field { display: flex; flex-direction: column; gap: 3px; }
 .meta-label { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--gris-texto); }
@@ -187,19 +186,9 @@ header { background: var(--negro); display: flex; align-items: stretch; position
   }
   .sidebar-header { padding: 14px 16px; }
 
-  /* Catálogo en móvil: pestañas tipo pastilla (como en Editar Servicios) en vez
-     de la franja angosta con scroll horizontal, y filas más grandes para tocar */
-  .cat-tabs {
-    flex-wrap: wrap; gap: 6px; overflow-x: visible;
-    border-bottom: none; padding: 10px 14px;
-  }
-  .cat-tabs::-webkit-scrollbar { display: none; }
-  .cat-tab {
-    padding: 8px 14px; font-size: 11.5px; font-weight: 700;
-    background: var(--blanco); border: 1px solid var(--gris-medio); border-radius: 20px;
-    color: var(--gris-texto); margin-bottom: 0;
-  }
-  .cat-tab.active { background: var(--negro); border-color: var(--negro); color: var(--blanco); }
+  /* Catálogo en móvil: pastillas más grandes y más padding */
+  .cat-tabs { padding: 10px 14px; gap: 6px; border-bottom: none; }
+  .cat-tab { padding: 8px 14px; font-size: 11.5px; }
 
   .cat-content { max-height: 360px; }
   .cat-item { padding: 12px 14px; border-bottom: 1px solid var(--gris-medio); }
@@ -274,7 +263,26 @@ header { background: var(--negro); display: flex; align-items: stretch; position
       </div>
       <div class="meta-field">
         <div class="meta-label">Tipo de Evento</div>
-        <input class="meta-input" id="m-evento" placeholder="ej: Matrimonio, Aniversario empresa" oninput="saveMeta()">
+        <select class="meta-input" id="m-evento" onchange="saveMeta()" style="cursor:pointer">
+          <option value="">Seleccionar tipo…</option>
+          <option value="Corporativo">Corporativo</option>
+          <option value="Matrimonio">Matrimonio</option>
+          <option value="Fotografía">Fotografía</option>
+          <option value="Cumpleaños">Cumpleaños</option>
+          <option value="Aniversario">Aniversario</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+      <div class="meta-field">
+        <div class="meta-label">¿Cómo llegó?</div>
+        <select class="meta-input" id="m-llegada" onchange="saveMeta()" style="cursor:pointer">
+          <option value="">Seleccionar canal…</option>
+          <option value="Justo">Justo</option>
+          <option value="Mail">Mail</option>
+          <option value="WhatsApp">WhatsApp</option>
+          <option value="Referido">Referido</option>
+          <option value="Otro">Otro</option>
+        </select>
       </div>
       <div class="meta-field">
         <div class="meta-label">Fecha del Evento</div>
@@ -351,6 +359,7 @@ function saveMeta() {
   localStorage.setItem('rr_cotizador_meta', JSON.stringify({
     cliente: document.getElementById('m-cliente').value,
     evento: document.getElementById('m-evento').value,
+    llegada: document.getElementById('m-llegada').value,
     fecha: document.getElementById('m-fecha').value,
     personas: document.getElementById('m-personas').value,
   }));
@@ -360,6 +369,7 @@ function loadMeta() {
   if (document.getElementById('m-cliente')) {
     document.getElementById('m-cliente').value = m.cliente || '';
     document.getElementById('m-evento').value  = m.evento  || '';
+    if (document.getElementById('m-llegada')) document.getElementById('m-llegada').value = m.llegada || '';
     document.getElementById('m-fecha').value   = m.fecha   || '';
     document.getElementById('m-personas').value = m.personas || '';
   }
@@ -368,6 +378,7 @@ function getMeta() {
   return {
     cliente:  document.getElementById('m-cliente').value,
     evento:   document.getElementById('m-evento').value,
+    llegada:  document.getElementById('m-llegada')?.value || '',
     fecha:    document.getElementById('m-fecha').value,
     personas: document.getElementById('m-personas').value,
   };
@@ -711,6 +722,7 @@ function nuevaCotizacion() {
   localStorage.removeItem('rr_cotizador_meta');
   document.getElementById('m-cliente').value  = '';
   document.getElementById('m-evento').value   = '';
+  if (document.getElementById('m-llegada')) document.getElementById('m-llegada').value = '';
   document.getElementById('m-fecha').value    = '';
   document.getElementById('m-personas').value = '';
   renderQuote();
@@ -843,6 +855,7 @@ async function registrarPresupuestoHistorico() {
     fecha: new Date().toISOString().slice(0, 10),
     cliente: meta.cliente || '(sin nombre)',
     evento: meta.evento || '',
+    llegada: meta.llegada || '',
     fechaEvento: meta.fecha || '',
     personas: meta.personas || '',
     subtotal: sub, iva, total
@@ -855,10 +868,10 @@ async function registrarPresupuestoHistorico() {
 
   if (!gsConnected()) return;
   try {
-    await gsAppend(`${TAB.PRESUPUESTOS}!A:K`, [[
+    await gsAppend(`${TAB.PRESUPUESTOS}!A:L`, [[
       registro.cotizacion, registro.fecha, registro.cliente, registro.evento,
       registro.fechaEvento, registro.personas, registro.subtotal, registro.iva, registro.total,
-      'pendiente', JSON.stringify(quoteState)
+      'pendiente', JSON.stringify(quoteState), registro.llegada
     ]]);
   } catch(e) { console.warn('Error guardando presupuesto en Google Sheets:', e); }
 }

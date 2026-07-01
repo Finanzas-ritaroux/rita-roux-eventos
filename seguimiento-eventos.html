@@ -901,7 +901,11 @@ function renderTblActivos(){
         ?`<span class="tipo-badge" style="background:#E8F0FD;color:#1565C0">Sala</span>`
         :`<span class="tipo-badge" style="background:#F3E5F5;color:#6A1B9A">Evento</span>`;
       return`<tr class="${selId===e.id?'sel':''}" onclick="selEv('${e.id}')">
-        <td><span style="font-weight:600">${e.nombre}</span><br><span style="font-size:10px;color:var(--gris-t)">${e.cliente}</span></td>
+        <td>
+          ${e.tipoEvento?`<div style="font-size:9px;font-weight:700;text-transform:uppercase;color:var(--rojo);letter-spacing:.5px;margin-bottom:1px">${TIPOS[e.tipoEvento]||e.tipoEvento}</div>`:''}
+          <span style="font-weight:600">${e.nombre}</span>
+          ${e.cliente?`<br><span style="font-size:10px;color:var(--gris-t)">${e.cliente}</span>`:''}
+        </td>
         <td>${tipoBdg}</td>
         <td><span class="nv-tag">${e.notaVenta||'—'}</span>${e.notaVenta?`<button onclick="event.stopPropagation();descargarNVPDF('${e.notaVenta}')" title="Descargar NV" style="margin-left:4px;padding:1px 6px;font-size:10px;background:var(--gris);border:1px solid var(--gris-m);border-radius:2px;cursor:pointer;color:var(--negro)">⬇</button>`:''}</td>
         <td>${fmtFecha(e.fecha)}</td>
@@ -1124,9 +1128,9 @@ function renderDetail(id){
       <button class="btn btn-gh" style="width:100%;margin-top:8px;font-size:10px" onclick="abrirPagoModal('${e.id}')">+ Agregar nuevo pago</button>
     </div>
 
-    <!-- Extras: acumulan para una 2ª Nota de Venta, no tocan la original -->
+    <!-- Extras: cargos adicionales que se suman al total del evento -->
     <div class="det-section">
-      <div class="det-sec-title">Extras (2ª Nota de Venta)</div>
+      <div class="det-sec-title">Extras</div>
       <div id="extras-list">${renderExtrasListHTML(e)}</div>
       <div style="display:flex;gap:5px;margin-top:8px">
         <input id="ex-desc" placeholder="Descripción" style="flex:1;padding:6px 8px;border:1px solid var(--gris-m);font-size:11px;border-radius:2px;outline:none;font-family:inherit">
@@ -1134,8 +1138,7 @@ function renderDetail(id){
         <input id="ex-price" type="number" placeholder="Precio" style="width:78px;padding:6px;border:1px solid var(--gris-m);font-size:11px;border-radius:2px;outline:none;font-family:inherit">
         <button onclick="agregarExtra('${e.id}')" style="padding:6px 12px;font-size:13px;font-weight:700;background:var(--negro);color:#fff;border:none;border-radius:2px;cursor:pointer">+</button>
       </div>
-      <button onclick="generarSegundaNV('${e.id}')" ${(e.extras&&e.extras.length)?'':'disabled'} style="margin-top:10px;width:100%;padding:9px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:${(e.extras&&e.extras.length)?'var(--rojo)':'var(--gris-m)'};color:#fff;border:none;border-radius:2px;cursor:${(e.extras&&e.extras.length)?'pointer':'not-allowed'}">→ Generar 2ª Nota de Venta</button>
-      ${(e.extrasNVs&&e.extrasNVs.length)?`<div style="font-size:9px;color:var(--gris-t);margin-top:6px">NV adicionales emitidas: ${e.extrasNVs.join(', ')}</div>`:''}
+      <button onclick="agregarExtrasAlTotal('${e.id}')" ${(e.extras&&e.extras.length)?'':'disabled'} style="margin-top:10px;width:100%;padding:9px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:${(e.extras&&e.extras.length)?'var(--rojo)':'var(--gris-m)'};color:#fff;border:none;border-radius:2px;cursor:${(e.extras&&e.extras.length)?'pointer':'not-allowed'}">+ Agregar extras al total</button>
     </div>
 
     <!-- Semáforo: estado + avance de facturación -->
@@ -1522,6 +1525,20 @@ function eliminarExtra(id, idx){
   renderDetail(id);
 }
 
+async function agregarExtrasAlTotal(id){
+  const e=db.find(x=>x.id===id);
+  if(!e||!e.extras||!e.extras.length) return;
+  const subtotal=e.extras.reduce((a,x)=>a+(x.qty||1)*(x.price||0),0);
+  const iva=Math.round(subtotal*0.19);
+  const total=subtotal+iva;
+  if(!confirm(`¿Sumar ${e.extras.length} extra(s) por ${fmtM(total)} (c/IVA) al total de este evento?\n\nEsto actualizará el total y el saldo pendiente.`)) return;
+  e.total=(e.total||0)+total;
+  e.dif=Math.max(0,e.total-(e.pagado||0));
+  e.extras=[];
+  scheduleSave();
+  renderDetail(id);
+}
+
 async function generarSegundaNV(id){
   const e=db.find(x=>x.id===id);
   if(!e||!e.extras||!e.extras.length) return;
@@ -1787,11 +1804,11 @@ function generarPDFNV(nota){
   doc.setTextColor(255,200,200);
   doc.text('CAFÉ · EVENTOS',M,15.5);
   doc.setFontSize(16); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
-  doc.text('NOTA DE VENTA',W-M,10,'right');
+  doc.text('NOTA DE VENTA',W-M,10,{align:'right'});
   doc.setFontSize(10); doc.setFont('helvetica','normal');
-  doc.text(nota.nv,W-M,16,'right');
+  doc.text(nota.nv,W-M,16,{align:'right'});
   doc.setFontSize(8);
-  doc.text(nota.fecha,W-M,21,'right');
+  doc.text(nota.fecha,W-M,21,{align:'right'});
 
   y=34;
 
@@ -1875,7 +1892,7 @@ function generarPDFNV(nota){
     doc.setFontSize(bold?10:9);
     doc.setTextColor(bold?[26,26,26]:[80,80,80]);
     doc.text(lbl,tx,y);
-    doc.text(val,W-M,y,'right');
+    doc.text(val,W-M,y,{align:'right'});
     y+=bold?7:5.5;
   };
   addTot('Subtotal (neto):','$'+Math.round(nota.subtotal||0).toLocaleString('es-CL'),false);
@@ -1887,7 +1904,7 @@ function generarPDFNV(nota){
   y=doc.internal.pageSize.height-14;
   doc.setDrawColor(224,224,224); doc.line(M,y,W-M,y);
   doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(150,150,150);
-  doc.text('Rita Roux Café · Documento generado electrónicamente',W/2,y+5,'center');
+  doc.text('Rita Roux Café · Documento generado electrónicamente',W/2,y+5,{align:'center'});
 
   return doc.output('blob');
 }

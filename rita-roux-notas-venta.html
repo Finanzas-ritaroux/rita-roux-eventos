@@ -507,6 +507,10 @@
     Conectar Google Drive
   </button>
   <div style="width:1px; height:24px; background:var(--gris-medio); margin:0 4px;"></div>
+  <button class="btn-auth" id="btn-copiar-msg" onclick="copiarMensajeNV(this)" style="border-color:#CC1F1F;color:#CC1F1F">
+    📋 Solicitar datos NV
+  </button>
+  <div style="width:1px; height:24px; background:var(--gris-medio); margin:0 4px;"></div>
   <button class="btn-auth" onclick="location.href='seguimiento-eventos.html'">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
     Inicio
@@ -845,6 +849,50 @@ async function agregarEventoSeguimiento(nota) {
     }
     return true;
   } catch(e) { console.warn('Error creando evento de seguimiento:', e); return false; }
+}
+
+// ─── COPIAR MENSAJE SOLICITUD DATOS NV ────────────────────────────────────────
+function copiarMensajeNV(btn) {
+  const msg = `Hola 👋
+
+Para poder emitir la Nota de Venta de tu evento, necesitamos los siguientes datos:
+
+📋 DATOS DE CONTACTO
+• Nombre completo del contacto
+• Empresa / Organización
+• Teléfono
+• Mail de contacto
+
+🧾 DATOS DE FACTURACIÓN
+• Razón Social (nombre legal para la factura)
+• RUT de la empresa
+• Giro comercial
+• Dirección de la empresa
+• Mail para envío de factura SII
+
+📅 DATOS DEL EVENTO
+• Nombre o descripción del evento
+• Fecha del evento
+• Número de personas
+
+Puedes enviarlos por este mismo medio o al correo finanzas@ritaroux.cl
+
+¡Muchas gracias! 🌿`;
+  navigator.clipboard.writeText(msg).then(() => {
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✓ ¡Copiado!';
+    btn.style.background = '#CC1F1F';
+    btn.style.color = '#fff';
+    setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; btn.style.color = '#CC1F1F'; }, 2500);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = msg;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('Mensaje copiado al portapapeles.');
+  });
 }
 
 // ─── GOOGLE AUTH ──────────────────────────────────────────────────────────────
@@ -1206,16 +1254,16 @@ async function generarNota() {
   const nvNum = parseInt(nota.nv.split('-')[2]) || 1;
   if (gsConnected()) {
     const pdfFilename = `${nota.nv}_${nota.razon_social.replace(/\s+/g,'_')}.pdf`;
-    // Estas cuatro escrituras no dependen entre sí (contador, historial NV, evento
-    // de seguimiento, PDF a Drive) — antes se esperaban una por una y la suma de
-    // los 4 viajes de red era lo que se sentía como "se demora mucho en generarse
-    // la nota de venta". En paralelo, la espera total es la del más lento, no la suma.
-    await Promise.all([
-      escribirContadorNV(nvNum),
-      agregarAlHistorialGS(nota),
-      agregarEventoSeguimiento(nota),
-      gsDriveUpload(pdfBlob, pdfFilename, 'Notas de Venta Rita Roux'),
-    ]);
+    try {
+      await Promise.all([
+        escribirContadorNV(nvNum),
+        agregarAlHistorialGS(nota),
+        agregarEventoSeguimiento(nota),
+        gsDriveUpload(pdfBlob, pdfFilename, 'Notas de Venta Rita Roux'),
+      ]);
+    } catch(gsErr) {
+      console.warn('Error guardando en Google Sheets (la NV se generó igualmente):', gsErr);
+    }
   }
 
   // Mostrar modal vista previa en lugar de step 3

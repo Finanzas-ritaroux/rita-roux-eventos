@@ -233,7 +233,9 @@ function eliminarServicio(idx){
   const cat = catalogo.find(c => c.id === activeCat);
   if (!cat || !confirm('¿Eliminar este servicio del catálogo? Ya no aparecerá en el cotizador.')) return;
   cat.items.splice(idx, 1);
-  scheduleSaveCatalogo();
+  // Guardar inmediatamente al eliminar (sin debounce) para que el cotizador vea el cambio al abrir
+  if (gsConnected()) { clearTimeout(saveTimer); gsGuardarCatalogo(catalogo); }
+  else scheduleSaveCatalogo();
   renderTabs();
   renderServicios();
 }

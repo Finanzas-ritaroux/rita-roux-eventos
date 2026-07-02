@@ -15,12 +15,21 @@ header{background:var(--negro);display:flex;align-items:stretch;position:sticky;
 .hdr-info{padding:14px 22px;display:flex;flex-direction:column;justify-content:center;flex:1}
 .hdr-info h1{color:var(--blanco);font-size:15px;font-weight:300;letter-spacing:2px;text-transform:uppercase}
 .hdr-info p{color:var(--rojo);font-size:10px;letter-spacing:1px;margin-top:2px}
-.hdr-act{display:flex;align-items:center;gap:8px;padding:0 22px}
+.hdr-act{display:flex;align-items:center;gap:8px;padding:0 22px;flex-wrap:wrap}
 .btn{padding:8px 16px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:none;font-family:inherit;border-radius:2px;transition:all .15s}
 .btn-sec{background:transparent;color:var(--blanco);border:1.5px solid rgba(255,255,255,.3)}.btn-sec:hover{border-color:var(--blanco)}
 .btn-pr{background:var(--rojo);color:var(--blanco)}.btn-pr:hover{background:var(--rojo-osc)}
 .btn-gh{background:transparent;color:var(--gris-t);border:1.5px solid var(--gris-m)}.btn-gh:hover{border-color:var(--negro);color:var(--negro)}
 .btn-del{background:#7f0000;color:var(--blanco)}.btn-del:hover{background:#4a0000}
+
+#btn-guardar{
+  display:none;
+  background:var(--rojo);color:#fff;border:none;
+  padding:9px 20px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  border-radius:2px;cursor:pointer;animation:pulse-border 1.5s infinite;
+}
+#btn-guardar:disabled{opacity:.6;cursor:not-allowed;animation:none}
+@keyframes pulse-border{0%,100%{box-shadow:0 0 0 0 rgba(204,31,31,.6)}50%{box-shadow:0 0 0 5px rgba(204,31,31,0)}}
 
 .main{max-width:1100px;margin:0 auto;padding:22px 24px}
 
@@ -28,6 +37,9 @@ header{background:var(--negro);display:flex;align-items:stretch;position:sticky;
 .banner.ok{border-color:var(--verde);background:var(--verde-bg)}
 .banner-text{flex:1;font-size:12px;color:var(--gris-t)}
 .banner.ok .banner-text{color:var(--verde)}
+
+.unsaved-bar{display:none;background:#FFF3E0;border:1px solid #FF9800;border-radius:4px;padding:10px 16px;margin-bottom:16px;font-size:12px;color:#E65100;align-items:center;gap:10px}
+.unsaved-bar.show{display:flex}
 
 .cat-tabs-bar{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
 .cat-tab-btn{padding:9px 16px;font-size:11px;font-weight:700;letter-spacing:.5px;cursor:pointer;background:var(--blanco);border:1px solid var(--gris-m);border-radius:20px;color:var(--gris-t);transition:all .15s;font-family:inherit}
@@ -77,6 +89,7 @@ header{background:var(--negro);display:flex;align-items:stretch;position:sticky;
   .hdr-info{padding:8px 12px}
   .hdr-act{width:100%;padding:8px 12px 10px;flex-wrap:wrap;row-gap:8px}
   .hdr-act .btn{flex:0 0 auto;padding:6px 10px;font-size:9px}
+  #btn-guardar{flex:1 0 auto;text-align:center}
 
   .main{padding:14px}
   .tbl{overflow-x:auto}
@@ -95,16 +108,23 @@ header{background:var(--negro);display:flex;align-items:stretch;position:sticky;
     <p>Catálogo usado en cotizaciones · ingredientes para lista de compras</p>
   </div>
   <div class="hdr-act">
-    <button class="btn btn-sec" onclick="location.href='seguimiento-eventos.html'">Inicio</button>
-    <button class="btn btn-sec" onclick="location.href='historico-presupuestos.html'">Histórico Cotizaciones</button>
+    <button class="btn btn-sec" onclick="confirmarSalida('seguimiento-eventos.html')">Inicio</button>
+    <button class="btn btn-sec" onclick="confirmarSalida('historico-presupuestos.html')">Histórico Cotizaciones</button>
     <button class="btn btn-sec" id="btn-google-edsv" onclick="gsAuth()">☁ Google</button>
+    <button id="btn-guardar" onclick="guardarCambios()">💾 Guardar cambios</button>
   </div>
 </header>
 
 <div class="main">
   <div class="banner" id="banner">
-    <div class="banner-text">Conecta con Google para editar el catálogo real. Mientras tanto se muestra el catálogo de respaldo (solo lectura no se guardará).</div>
+    <div class="banner-text">Conecta con Google para editar el catálogo real. Los cambios se guardan solo cuando presionas <strong>"Guardar cambios"</strong>.</div>
     <button class="btn btn-sec" style="background:var(--negro)" onclick="gsAuth()">☁ Conectar Google</button>
+  </div>
+
+  <!-- Barra de cambios pendientes -->
+  <div class="unsaved-bar" id="unsaved-bar">
+    <span>⚠ Tienes cambios sin guardar.</span>
+    <button class="btn btn-pr" style="padding:6px 14px;font-size:10px" onclick="guardarCambios()">💾 Guardar ahora</button>
   </div>
 
   <div class="cat-tabs-bar" id="cat-tabs-bar"></div>
@@ -163,24 +183,85 @@ header{background:var(--negro);display:flex;align-items:stretch;position:sticky;
 let catalogo = [];
 let activeCat = 'locaciones';
 let ingEditIdx = null;
+let isDirty = false;
 
 function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+// ── DIRTY STATE ────────────────────────────────────────────────────────────────
+function marcarDirty(){
+  isDirty = true;
+  document.getElementById('btn-guardar').style.display = 'inline-block';
+  document.getElementById('unsaved-bar').classList.add('show');
+}
+
+function marcarLimpio(){
+  isDirty = false;
+  const btn = document.getElementById('btn-guardar');
+  btn.textContent = '✓ Guardado';
+  btn.disabled = true;
+  document.getElementById('unsaved-bar').classList.remove('show');
+  setTimeout(() => {
+    btn.style.display = 'none';
+    btn.textContent = '💾 Guardar cambios';
+    btn.disabled = false;
+  }, 2000);
+}
+
+// ── GUARDAR EN SHEETS ──────────────────────────────────────────────────────────
+async function guardarCambios(){
+  if (!gsConnected()){
+    alert('Debes conectarte a Google Sheets primero.\nHaz clic en "☁ Google" para conectar y luego intenta guardar de nuevo.');
+    return;
+  }
+  const btn = document.getElementById('btn-guardar');
+  btn.textContent = 'Guardando…';
+  btn.disabled = true;
+  try {
+    await gsGuardarCatalogo(catalogo);
+    marcarLimpio();
+    // Feedback en banner
+    const b = document.getElementById('banner');
+    if (b.classList.contains('ok')){
+      const t = b.querySelector('.banner-text');
+      const prev = t.innerHTML;
+      t.innerHTML = '✓ Catálogo guardado correctamente en Google Sheets.';
+      setTimeout(() => { t.innerHTML = prev; }, 3500);
+    }
+  } catch(e){
+    btn.textContent = '✗ Error — reintentar';
+    btn.disabled = false;
+    alert('Error al guardar en Google Sheets:\n' + (e.message || e));
+  }
+}
+
+// ── NAVEGACIÓN CON AVISO SI HAY CAMBIOS ───────────────────────────────────────
+function confirmarSalida(url){
+  if (isDirty && !confirm('Tienes cambios sin guardar. ¿Salir sin guardar?')) return;
+  location.href = url;
+}
+
+window.addEventListener('beforeunload', e => {
+  if (isDirty){ e.preventDefault(); e.returnValue = ''; }
+});
+
+// ── CARGA ──────────────────────────────────────────────────────────────────────
 async function cargarCatalogo(){
-  if (gsConnected()) {
+  if (gsConnected()){
     const rows = await gsCargarCatalogo();
     catalogo = rows ? gsFilasACatalogo(rows) : gsSeedToCatalogo();
     const b = document.getElementById('banner');
     b.classList.add('ok');
-    b.querySelector('.banner-text').textContent = 'Conectado a Google Sheets · los cambios se guardan automáticamente.';
+    b.querySelector('.banner-text').innerHTML = 'Conectado a Google Sheets · Haz tus cambios y presiona <strong>"Guardar cambios"</strong> para que queden guardados.';
     document.getElementById('btn-google-edsv').textContent = '✓ Google';
   } else {
     catalogo = gsSeedToCatalogo();
   }
+  isDirty = false; // carga fresca = sin cambios pendientes
   renderTabs();
   renderServicios();
 }
 
+// ── RENDER ─────────────────────────────────────────────────────────────────────
 function renderTabs(){
   const el = document.getElementById('cat-tabs-bar');
   el.innerHTML = catalogo.map(c => `
@@ -202,7 +283,7 @@ function renderServicios(){
   document.getElementById('cat-section-sub').textContent = 'Sección PDF: ' + cat.section;
 
   const tbody = document.getElementById('servicios-tbody');
-  if (!cat.items.length) {
+  if (!cat.items.length){
     tbody.innerHTML = `<tr class="empty-row"><td colspan="6">Sin servicios en esta categoría todavía. Agrega el primero abajo.</td></tr>`;
     return;
   }
@@ -221,21 +302,20 @@ function renderServicios(){
     </tr>`).join('');
 }
 
+// ── EDITAR / AGREGAR / ELIMINAR ────────────────────────────────────────────────
 function editarServicio(idx, field, value){
   const cat = catalogo.find(c => c.id === activeCat);
   const it = cat?.items[idx];
   if (!it) return;
   it[field] = field === 'rec' ? (parseFloat(value)||0) : value;
-  scheduleSaveCatalogo();
+  marcarDirty();
 }
 
 function eliminarServicio(idx){
   const cat = catalogo.find(c => c.id === activeCat);
-  if (!cat || !confirm('¿Eliminar este servicio del catálogo? Ya no aparecerá en el cotizador.')) return;
+  if (!cat || !confirm('¿Eliminar este servicio del catálogo? Ya no aparecerá en el cotizador.\n\nRecuerda hacer clic en "Guardar cambios" para que quede guardado en Google Sheets.')) return;
   cat.items.splice(idx, 1);
-  // Guardar inmediatamente al eliminar (sin debounce) para que el cotizador vea el cambio al abrir
-  if (gsConnected()) { clearTimeout(saveTimer); gsGuardarCatalogo(catalogo); }
-  else scheduleSaveCatalogo();
+  marcarDirty();
   renderTabs();
   renderServicios();
 }
@@ -245,25 +325,18 @@ function agregarServicio(){
   const grupo  = document.getElementById('add-grupo').value.trim();
   const precio = parseFloat(document.getElementById('add-precio').value) || 0;
   const unidad = document.getElementById('add-unidad').value;
-  if (!nombre) { alert('Ingresa un nombre para el servicio.'); return; }
+  if (!nombre){ alert('Ingresa un nombre para el servicio.'); return; }
   const cat = catalogo.find(c => c.id === activeCat);
   cat.items.push({ name: nombre, rec: precio, unit: unidad, group: grupo, ingredientes: [] });
   document.getElementById('add-nombre').value = '';
   document.getElementById('add-grupo').value  = '';
   document.getElementById('add-precio').value = '';
-  scheduleSaveCatalogo();
+  marcarDirty();
   renderTabs();
   renderServicios();
 }
 
-let saveTimer = null;
-function scheduleSaveCatalogo(){
-  if (!gsConnected()) return; // sin conexión no hay dónde guardar — los cambios no persisten
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => gsGuardarCatalogo(catalogo), 1000);
-}
-
-// ── INGREDIENTES (alimentan también la Lista de Compras en Seguimiento) ──
+// ── INGREDIENTES ───────────────────────────────────────────────────────────────
 function abrirIngredientesModal(idx){
   ingEditIdx = idx;
   const cat = catalogo.find(c => c.id === activeCat);
@@ -271,6 +344,7 @@ function abrirIngredientesModal(idx){
   if (!it) return;
   document.getElementById('ing-titulo').textContent = `🧂 Ingredientes — ${it.name}`;
   document.getElementById('ing-nuevo').value = '';
+  document.getElementById('ing-cant').value = '';
   renderIngredientesModalBody();
   document.getElementById('ing-modal').style.display = 'flex';
 }
@@ -286,7 +360,7 @@ function renderIngredientesModalBody(){
         <input class="ing-cant-input" value="${escHtml(ing.cantidad||'')}" placeholder="Cant." onchange="editarCantidadIngrediente(${i},this.value)">
         <button onclick="eliminarIngrediente(${i})">×</button>
       </div>`).join('')
-    : `<div style="font-size:11px;color:var(--gris-t);font-style:italic">Sin ingredientes definidos todavía — mientras tanto, la lista de compras usará "Ingrediente 1, 2, 3" como placeholder para este servicio.</div>`;
+    : `<div style="font-size:11px;color:var(--gris-t);font-style:italic">Sin ingredientes definidos todavía.</div>`;
 }
 
 function agregarIngrediente(){
@@ -302,7 +376,7 @@ function agregarIngrediente(){
   nombreInput.value = '';
   cantInput.value = '';
   nombreInput.focus();
-  scheduleSaveCatalogo();
+  marcarDirty();
   renderIngredientesModalBody();
   renderServicios();
 }
@@ -313,7 +387,7 @@ function editarCantidadIngrediente(i, value){
   const ing = it?.ingredientes?.[i];
   if (!ing) return;
   ing.cantidad = value;
-  scheduleSaveCatalogo();
+  marcarDirty();
 }
 
 function eliminarIngrediente(i){
@@ -321,7 +395,7 @@ function eliminarIngrediente(i){
   const it = cat?.items[ingEditIdx];
   if (!it || !it.ingredientes) return;
   it.ingredientes.splice(i, 1);
-  scheduleSaveCatalogo();
+  marcarDirty();
   renderIngredientesModalBody();
   renderServicios();
 }
@@ -331,7 +405,7 @@ function cerrarIngredientesModal(){
   ingEditIdx = null;
 }
 
-// ── INIT ──────────────────────────────────────────────
+// ── INIT ──────────────────────────────────────────────────────────────────────
 (function init(){
   catalogo = gsSeedToCatalogo();
   renderTabs();

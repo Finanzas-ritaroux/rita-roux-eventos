@@ -2,9 +2,10 @@ const _PDF_LOGO_B64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABJcAAAP4CAY
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PLANTILLA PDF "OPCIÓN 2 · NOIR ABSOLUTO" — módulo compartido
-// Usado por cotizador-rita-roux.html e historico-presupuestos.html para que
-// el PDF de cotización se vea siempre igual, sin importar desde dónde se
-// descargue. Basado 1:1 en Nota de Ventas/pdf-opciones/opcion-2-noir-absoluto.html
+// Usado por cotizador-rita-roux.html, historico-presupuestos.html (Cotización) y
+// rita-roux-notas-venta.html (Nota de Venta) para que el PDF se vea siempre igual,
+// sin importar desde dónde se descargue. Basado 1:1 en
+// Nota de Ventas/pdf-opciones/opcion-2-noir-absoluto.html
 // ═══════════════════════════════════════════════════════════════════════════
 
 const _PDF_CSS = `
@@ -90,8 +91,9 @@ function _pdfClienteLinea(data) {
   return partes.join('  ·  ');
 }
 
-// data = { docType, docNum, cliente, evento, fechaEvento, personas, secciones, subtotal, iva, total }
-function buildCotizacionPaperHTML(data) {
+// Constructor genérico, usado tanto por Cotización como por Nota de Venta.
+// data = { docType, docNum, cliente, lineas: string[], secciones, subtotal, iva, total }
+function _buildDocPaperHTML(data) {
   const secciones = _pdfNormalizarSecciones(data.secciones);
 
   const seccionesHTML = secciones.map(sec => `
@@ -105,7 +107,7 @@ function buildCotizacionPaperHTML(data) {
       </table>
     </div>`).join('');
 
-  const clienteLinea = _pdfClienteLinea(data);
+  const lineasHTML = (data.lineas || []).filter(Boolean).map(l => `<p>${_pdfEsc(l)}</p>`).join('');
 
   return `
 <div class="pdf-cot-root"><div class="paper">
@@ -121,7 +123,7 @@ function buildCotizacionPaperHTML(data) {
     <div class="box-cl">
       <div class="box-lbl">Datos Cliente</div>
       <div class="box-name">${_pdfEsc(data.cliente || '(sin nombre)')}</div>
-      ${clienteLinea ? `<p>${_pdfEsc(clienteLinea)}</p>` : ''}
+      ${lineasHTML}
     </div>
   </div>
   ${seccionesHTML}
@@ -148,14 +150,72 @@ function buildCotizacionPaperHTML(data) {
 </div></div>`;
 }
 
+// data = { docType, docNum, cliente, evento, fechaEvento, personas, secciones, subtotal, iva, total }
+function buildCotizacionPaperHTML(data) {
+  return _buildDocPaperHTML(Object.assign({}, data, { lineas: [_pdfClienteLinea(data)] }));
+}
+
+// nota = objeto de Nota de Venta (ver rita-roux-notas-venta.html) con razon_social, rut, giro,
+// nombre_contacto, telefono, mail_contacto, mail_factura, evento, fecha_evento, personas, fecha_emision.
+function buildNotaVentaPaperHTML(nota) {
+  const lineas = [];
+
+  const l1 = [nota.rut ? 'RUT ' + nota.rut : '', nota.giro || ''].filter(Boolean).join('  ·  ');
+  if (l1) lineas.push(l1);
+
+  const mailFactura = nota.mail_factura || nota.mail || '';
+  const contactParts = [
+    nota.nombre_contacto || nota.solicitante || '',
+    nota.telefono || '',
+    (nota.mail_contacto && nota.mail_contacto !== mailFactura) ? nota.mail_contacto : ''
+  ].filter(Boolean);
+  if (contactParts.length) lineas.push(contactParts.join('  ·  '));
+
+  const evPartes = [
+    nota.evento || '',
+    nota.fecha_evento ? _pdfFmtFecha(nota.fecha_evento) : '',
+    nota.personas ? nota.personas + ' personas' : '',
+    nota.fecha_emision ? 'Emisión: ' + _pdfFmtFecha(nota.fecha_emision) : ''
+  ].filter(Boolean);
+  if (evPartes.length) lineas.push(evPartes.join('  ·  '));
+
+  return _buildDocPaperHTML({
+    docType: 'Nota de Venta',
+    docNum: nota.nv,
+    cliente: nota.razon_social || nota.empresa || '',
+    lineas,
+    secciones: nota.secciones,
+    subtotal: nota.subtotal,
+    iva: nota.iva,
+    total: nota.total,
+  });
+}
+
+// html2canvas solo aplica selectores CSS cuyo elemento "ancla" (ej. .pdf-cot-root)
+// está DENTRO del nodo que se le pasa a .from(). Por eso el CSS va en <head> (una
+// sola vez, no en cada contenedor) y el nodo capturado es .pdf-cot-root, no .paper.
+function _pdfEnsureStyle() {
+  if (document.getElementById('_pdf-cot-style')) return;
+  const styleEl = document.createElement('style');
+  styleEl.id = '_pdf-cot-style';
+  styleEl.textContent = _PDF_CSS;
+  document.head.appendChild(styleEl);
+}
+
 function _pdfBuildContainer(innerHTML) {
+  _pdfEnsureStyle();
   const el = document.createElement('div');
   el.style.position = 'fixed';
   el.style.left = '-10000px';
   el.style.top = '0';
   el.style.width = '760px';
-  el.innerHTML = '<style>' + _PDF_CSS + '</style>' + innerHTML;
+  el.innerHTML = innerHTML;
   document.body.appendChild(el);
+  const img = el.querySelector('.logo-img');
+  if (img && img.naturalWidth) {
+    img.width = Math.round(90 * img.naturalWidth / img.naturalHeight);
+    img.height = 90;
+  }
   return el;
 }
 
@@ -170,24 +230,52 @@ function _pdfOptions(filename) {
   };
 }
 
-// Genera el PDF y lo descarga directamente en el navegador.
-async function descargarCotizacionPDF(data, filename) {
-  const container = _pdfBuildContainer(buildCotizacionPaperHTML(data));
-  const paperEl = container.querySelector('.paper');
+async function _pdfSave(paperHTML, filename) {
+  const container = _pdfBuildContainer(paperHTML);
+  const rootEl = container.querySelector('.pdf-cot-root');
   try {
-    await html2pdf().set(_pdfOptions(filename)).from(paperEl).save();
+    await html2pdf().set(_pdfOptions(filename)).from(rootEl).save();
   } finally {
     container.remove();
   }
 }
 
-// Genera el PDF y devuelve un Blob (para vista previa en <iframe>).
-async function generarCotizacionPDFBlob(data) {
-  const container = _pdfBuildContainer(buildCotizacionPaperHTML(data));
-  const paperEl = container.querySelector('.paper');
+async function _pdfBlob(paperHTML) {
+  const container = _pdfBuildContainer(paperHTML);
+  const rootEl = container.querySelector('.pdf-cot-root');
   try {
-    return await html2pdf().set(_pdfOptions()).from(paperEl).outputPdf('blob');
+    return await html2pdf().set(_pdfOptions()).from(rootEl).outputPdf('blob');
   } finally {
     container.remove();
   }
+}
+
+// Genera el PDF de cotización y lo descarga directamente en el navegador.
+async function descargarCotizacionPDF(data, filename) {
+  await _pdfSave(buildCotizacionPaperHTML(data), filename);
+}
+
+// Genera el PDF de cotización y devuelve un Blob (para vista previa en <iframe>).
+async function generarCotizacionPDFBlob(data) {
+  return _pdfBlob(buildCotizacionPaperHTML(data));
+}
+
+// Genera el PDF de Nota de Venta y lo descarga directamente en el navegador.
+async function descargarNotaVentaPDF(nota, filename) {
+  await _pdfSave(buildNotaVentaPaperHTML(nota), filename);
+}
+
+// Genera el PDF de Nota de Venta y devuelve un Blob (para vista previa / subida a Drive).
+async function generarNotaVentaPDFBlob(nota) {
+  return _pdfBlob(buildNotaVentaPaperHTML(nota));
+}
+
+// Nombre de archivo estándar para toda descarga de cotización: Cliente_CotNNN_Fecha.pdf
+function buildCotizacionFilename(cliente, numeroCotizacion, fecha) {
+  const clienteSlug = String(cliente || 'Cliente').trim()
+    .replace(/[<>:"/\\|?*\x00-\x1F]/g, '')
+    .replace(/\s+/g, '_');
+  const numLimpio = String(numeroCotizacion || '').replace(/^COT-?/i, '');
+  const fechaStr = fecha || new Date().toISOString().slice(0, 10);
+  return `${clienteSlug}_Cot${numLimpio}_${fechaStr}.pdf`;
 }

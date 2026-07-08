@@ -172,7 +172,7 @@ async function descargarPresupuesto(idx) {
   const r = registros[idx];
   if (!r) return;
   if (typeof html2pdf === 'undefined') { alert('Librería PDF aún cargando, intenta de nuevo.'); return; }
-  const filename = `Cotizacion_${r.cotizacion}_${(r.cliente||'').replace(/\s+/g,'_').slice(0,20)}.pdf`;
+  const filename = buildCotizacionFilename(r.cliente, r.cotizacion, r.fecha);
   await descargarCotizacionPDF({
     docType: 'Cotización',
     docNum: (r.cotizacion || '') + (r.fecha ? '  ·  ' + fmtF(r.fecha) : ''),

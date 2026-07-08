@@ -842,8 +842,8 @@ async function confirmarPresupuesto() {
   try {
     const registro = await registrarPresupuestoHistorico();
     const data = buildCotizacionPdfData(registro);
-    const slug = (registro.cliente || 'Cotizacion').replace(/\s+/g, '_').slice(0, 20);
-    await descargarCotizacionPDF(data, `Cotizacion_${registro.cotizacion}_${slug}.pdf`);
+    const filename = buildCotizacionFilename(registro.cliente, registro.cotizacion, registro.fecha);
+    await descargarCotizacionPDF(data, filename);
     // Redirige al histórico de cotizaciones
     location.href = 'historico-presupuestos.html';
   } catch(e) {
